@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import { AllegroOffer, MarketplaceId } from '../types/allegro';
 import { autoDetectAttributesFromProduct } from './marketplaceAttributes';
+import { matchProductToEmagCategory } from './excelCategoryMatcher';
 
 export interface ParsedExcelRow {
   ean: string;
@@ -472,64 +473,30 @@ export function convertExcelRowsToOffers(
 
     const displayName = r.marketplaceTitle || r.productName || r.productGroup || `İthal Ürün #${idx + 1}`;
 
-    // Resolve channel specific category IDs and auto-detected characteristics
-    const rawDisplayNameLower = displayName.toLowerCase();
-    const isPetItem = rawDisplayNameLower.includes('psa') || rawDisplayNameLower.includes('pies') || rawDisplayNameLower.includes('kot') || rawDisplayNameLower.includes('köpek') || rawDisplayNameLower.includes('kedi') || rawDisplayNameLower.includes('dom dla psa') || rawDisplayNameLower.includes('mata') || rawDisplayNameLower.includes('łóżko') || rawDisplayNameLower.includes('legowisk') || rawDisplayNameLower.includes('culcus') || rawDisplayNameLower.includes('pet') || rawDisplayNameLower.includes('dog') || rawDisplayNameLower.includes('cat');
-    const isBeddingItem = rawDisplayNameLower.includes('pościel') || rawDisplayNameLower.includes('poszewk') || rawDisplayNameLower.includes('nevresim') || rawDisplayNameLower.includes('bedding');
+    // Intelligent category matching backed by resale projesi-revize.xlsx and eMAG BG taxonomy
+    const matchedCategory = matchProductToEmagCategory({
+      title: displayName,
+      name: displayName,
+      sku: r.sku,
+      url: r.sourceUrl,
+      productType: r.productGroup,
+      categoryCode: r.emagCategoryCode || (r.categoryCode && r.categoryCode !== '0' ? r.categoryCode : undefined),
+      categoryName: r.emagCategoryName || r.categoryName
+    });
 
-    let candidateEmagCatId = r.emagCategoryCode || (r.categoryCode && r.categoryCode !== '0' ? r.categoryCode : undefined);
-    let candidateAllegroCatId = r.allegroCategoryCode || (r.categoryCode && r.categoryCode !== '0' ? r.categoryCode : undefined);
-
-    const isCurtainOrMotor = rawDisplayNameLower.includes('curtain') || rawDisplayNameLower.includes('shutter') || rawDisplayNameLower.includes('motor') || rawDisplayNameLower.includes('roleta') || rawDisplayNameLower.includes('perde');
-    const isLedItem = !isPetItem && !isCurtainOrMotor && (rawDisplayNameLower.includes('led') || rawDisplayNameLower.includes('strip') || rawDisplayNameLower.includes('şerit') || rawDisplayNameLower.includes('rgb') || rawDisplayNameLower.includes('cob'));
-    const isSmartItem = isCurtainOrMotor || (!isLedItem && (rawDisplayNameLower.includes('zigbee') || rawDisplayNameLower.includes('tuya') || rawDisplayNameLower.includes('switch') || rawDisplayNameLower.includes('anahtar') || rawDisplayNameLower.includes('sensor')));
-
-    // Prevent cross-channel taxonomy clash & invalid eMAG category IDs
-    if (isCurtainOrMotor || isSmartItem) {
-      if (candidateEmagCatId === '257548' || !candidateEmagCatId || candidateEmagCatId === '0' || Number(candidateEmagCatId) > 65535) {
-        candidateEmagCatId = '202';
-      }
-      if (!candidateAllegroCatId || candidateAllegroCatId === '0') {
-        candidateAllegroCatId = '12900';
-      }
-    } else if (isPetItem) {
-      if (candidateEmagCatId === '257548' || !candidateEmagCatId || candidateEmagCatId === '0') {
-        candidateEmagCatId = '3122';
-      }
-      if (candidateAllegroCatId === '257548' || !candidateAllegroCatId || candidateAllegroCatId === '0') {
-        candidateAllegroCatId = '3122';
-      }
-    } else if (isBeddingItem) {
-      if (!candidateEmagCatId || candidateEmagCatId === '257548') {
-        candidateEmagCatId = '3690';
-      }
-      if (!candidateAllegroCatId) {
-        candidateAllegroCatId = '3690';
-      }
-    } else if (isLedItem) {
-      // 257548 is the valid permitted eMAG LED Strip category
-      if (candidateEmagCatId === '6001' || !candidateEmagCatId || candidateEmagCatId === '0') {
-        candidateEmagCatId = '257548';
-      }
-      if (!candidateAllegroCatId || candidateAllegroCatId === '0') {
-        candidateAllegroCatId = '12800';
-      }
-    } else if (candidateEmagCatId === '6001') {
-      candidateEmagCatId = '257548';
-    }
+    const finalEmagCatId = String(matchedCategory.categoryId);
+    const finalEmagCatName = matchedCategory.categoryName;
+    const finalAllegroCatId = r.allegroCategoryCode || (r.categoryCode && r.categoryCode !== '0' ? r.categoryCode : finalEmagCatId);
 
     const autoDetected = autoDetectAttributesFromProduct({
       title: displayName,
       name: displayName,
       sku: r.sku || `SKU-${Date.now()}-${idx}`,
       ean: r.ean || undefined,
-      categoryCode: candidateEmagCatId || candidateAllegroCatId,
-      categoryName: r.emagCategoryName || r.allegroCategoryName || r.categoryName
+      categoryCode: finalEmagCatId,
+      categoryName: finalEmagCatName
     });
 
-    const finalEmagCatId = candidateEmagCatId || autoDetected.emagCategoryId;
-    const finalAllegroCatId = candidateAllegroCatId || autoDetected.allegroCategoryId;
-    const finalEmagCatName = r.emagCategoryName || (finalEmagCatId === '3122' ? 'Evcil Hayvan & Köpek Yatakları, Minder ve Kulübeler' : (r.categoryName || autoDetected.detectedCategory));
     const finalEmagPriceBgn = (finalEurPrice * 1.95).toFixed(2);
 
     return {
@@ -577,7 +544,7 @@ export function convertExcelRowsToOffers(
           categoryId: finalEmagCatId,
           categoryName: finalEmagCatName,
           price: { amount: finalEmagPriceBgn, currency: 'BGN' },
-          characteristics: autoDetected.emagCharacteristics
+          characteristics: matchedCategory.characteristics || autoDetected.emagCharacteristics
         }
       },
       isDraft: true,

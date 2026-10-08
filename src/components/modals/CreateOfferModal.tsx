@@ -53,6 +53,7 @@ import {
 } from '../../services/marketplaceAttributes';
 import { emagTaxonomySyncService, EmagCategoryItem } from '../../services/emagTaxonomySyncService';
 import { EmagCategorySelector } from '../common/EmagCategorySelector';
+import { matchProductToEmagCategory } from '../../services/excelCategoryMatcher';
 
 // Bilingual translations dictionary (Turkish Primary + Foreign Original)
 export const PARAMETER_TRANSLATIONS: Record<string, { tr: string; original: string }> = {
@@ -477,47 +478,28 @@ export const CreateOfferModal: React.FC<CreateOfferModalProps> = ({
         const isWatchProduct = !isLedProduct && !isPetProduct && (combinedText.includes('watch') || combinedText.includes('saat') || combinedText.includes('smartwatch') || combinedText.includes('bileklik'));
         const isAudioProduct = combinedText.includes('kulaklık') || combinedText.includes('earphone') || combinedText.includes('headphone') || combinedText.includes('tws');
 
-        let targetAllegroCatId = offerToEdit.channelData?.allegro?.categoryId;
-        let targetEmagCatId = offerToEdit.channelData?.emag?.categoryId ? String(offerToEdit.channelData.emag.categoryId) : '';
-        let hasClashFixed = false;
-        let clashReason = '';
+        const matchedCat = matchProductToEmagCategory({
+          title: offerToEdit.name,
+          name: offerToEdit.name,
+          sku: offerToEdit.sku,
+          url: offerToEdit.excelMetadata?.websiteLinks,
+          productType: offerToEdit.category?.name,
+          categoryCode: offerToEdit.channelData?.emag?.categoryId || offerToEdit.excelMetadata?.emagCategoryCode || offerToEdit.category?.id,
+          categoryName: offerToEdit.excelMetadata?.emagCategoryName || offerToEdit.category?.name
+        });
 
-        const excelEmagCat = offerToEdit.excelMetadata?.emagCategoryCode ? String(offerToEdit.excelMetadata.emagCategoryCode).trim() : '';
-
-        if (isPetProduct) {
-          targetEmagCatId = excelEmagCat && /^\d+$/.test(excelEmagCat) ? excelEmagCat : '3122';
-          targetAllegroCatId = '3122';
-          hasClashFixed = true;
-          clashReason = 'Evcil Hayvan Yatakları (3122) kategorisine eşlendi.';
-        } else if (isLedProduct) {
-          targetAllegroCatId = '12800';
-          targetEmagCatId = '202';
-          hasClashFixed = true;
-          clashReason = 'LED & Şerit Aydınlatma kategorisine eşlendi.';
-        } else if (isBeddingProduct) {
-          targetAllegroCatId = '3690';
-          targetEmagCatId = '3690';
-        } else if (isSmartHomeProduct) {
-          targetAllegroCatId = '12900';
-          targetEmagCatId = '202';
-        } else if (isWatchProduct) {
-          targetAllegroCatId = '257548';
-          targetEmagCatId = '101';
-        } else if (isAudioProduct) {
-          targetAllegroCatId = '66887';
-          targetEmagCatId = '104';
-        } else {
-          targetEmagCatId = excelEmagCat || offerCatCode || autoDetected.emagCategoryId || '202';
-          targetAllegroCatId = offerCatCode || autoDetected.allegroCategoryId || '12800';
-        }
+        let targetAllegroCatId = offerToEdit.channelData?.allegro?.categoryId || autoDetected.allegroCategoryId || '12800';
+        let targetEmagCatId = String(matchedCat.categoryId);
+        let hasClashFixed = true;
+        let clashReason = `${matchedCat.categoryName} (#${matchedCat.categoryId}) [${matchedCat.matchDetail || matchedCat.source}]`;
 
         setAllegroCategoryId(targetAllegroCatId || '12800');
-        setEmagCategoryId(targetEmagCatId || '202');
+        setEmagCategoryId(targetEmagCatId);
 
         setCategoryDiagnosis({
-          detectedGroup: autoDetected.detectedCategory || 'Genel Elektronik & Otomasyon',
-          sourceCategoryName: offerCatName || 'Belirtilmemiş',
-          sourceCategoryCode: offerCatCode || '-',
+          detectedGroup: matchedCat.categoryName,
+          sourceCategoryName: offerCatName || matchedCat.categoryName,
+          sourceCategoryCode: targetEmagCatId,
           hasClashFixed,
           clashReason
         });

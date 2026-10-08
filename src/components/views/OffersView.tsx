@@ -2043,31 +2043,29 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
                         {/* Category */}
                         <td className={`py-3.5 px-4 max-w-[190px] ${isDark ? 'text-zinc-300' : 'text-slate-700'}`}>
                           {(() => {
-                            const titleLower = (offer.name || '').toLowerCase();
-                            const isPet = titleLower.includes('psa') || titleLower.includes('pies') || titleLower.includes('kot') || titleLower.includes('köpek') || titleLower.includes('kedi') || titleLower.includes('dom dla psa') || titleLower.includes('mata') || titleLower.includes('łóżko') || titleLower.includes('legowisk') || titleLower.includes('culcus') || titleLower.includes('pet') || titleLower.includes('dog') || titleLower.includes('cat');
-                            const isLed = !isPet && (titleLower.includes('led') || titleLower.includes('strip') || titleLower.includes('şerit') || titleLower.includes('rgb') || titleLower.includes('cob') || titleLower.includes('lampa'));
-                            const isBedding = titleLower.includes('pościel') || titleLower.includes('poszewk') || titleLower.includes('nevresim') || titleLower.includes('bedding');
-                            
-                            let catDisplay = offer.category?.name || 'Genel Kategori';
-                            let idDisplay = offer.channelData?.emag?.categoryId || offer.excelMetadata?.emagCategoryCode || offer.category?.id || '-';
+                            let catDisplay = offer.channelData?.emag?.categoryName || offer.excelMetadata?.emagCategoryName || offer.excelMetadata?.matchedCategoryName || offer.category?.name || 'Genel Kategori';
+                            let idDisplay = offer.channelData?.emag?.categoryId || offer.excelMetadata?.emagCategoryCode || offer.excelMetadata?.matchedCategoryCode || offer.category?.id || '-';
                             let badgeInfo: string | null = null;
 
-                            if (isPet) {
-                              catDisplay = offer.excelMetadata?.emagCategoryName || offer.excelMetadata?.matchedCategoryName || 'Evcil Hayvan & Köpek/Kedi Yatakları';
-                              idDisplay = offer.channelData?.emag?.categoryId || offer.excelMetadata?.emagCategoryCode || '3122';
-                              badgeInfo = 'eMAG: 3122 · Pet Shop';
-                            } else if (isLed) {
-                              catDisplay = 'RGB LED Şerit & Akıllı Aydınlatma';
-                              idDisplay = '257548 / 12800';
-                              badgeInfo = 'eMAG: 257548 · Allegro: 12800';
-                            } else if (isBedding) {
-                              catDisplay = 'Ev Tekstili, Nevresim Takımları & Pościel';
-                              idDisplay = '3690';
+                            if (idDisplay === '3523' || idDisplay === '257548') {
+                              idDisplay = '3523';
+                              catDisplay = 'Lighting & Electrical/Light sources/LED strips';
+                              badgeInfo = 'eMAG: 3523 · LED Strip';
+                            } else if (idDisplay === '1344' || idDisplay === '3122') {
+                              idDisplay = '1344';
+                              catDisplay = 'For pets/Pet beds, pillows and mattresses';
+                              badgeInfo = 'eMAG: 1344 · Pet Bed';
+                            } else if (idDisplay === '3690') {
+                              catDisplay = 'Home Textiles/Carpets and bedroom sets/Duvet covers';
                               badgeInfo = 'eMAG: 3690 · Tekstil';
+                            } else if (idDisplay === '2410') {
+                              catDisplay = 'AC & Heating/Smart Home/Control panels';
+                              badgeInfo = 'eMAG: 2410 · Smart Home';
+                            } else if (idDisplay === '2920' || idDisplay === '2804') {
+                              catDisplay = 'Smart technology/Smartwatch';
+                              badgeInfo = 'eMAG: 2920 · Smartwatch';
                             } else if (offer.excelMetadata?.matchedCategoryName) {
-                              catDisplay = offer.excelMetadata.matchedCategoryName;
-                              idDisplay = offer.excelMetadata.emagCategoryCode || offer.excelMetadata.matchedCategoryCode || offer.category.id;
-                              badgeInfo = 'Excel Eşleşmesi';
+                              badgeInfo = `Excel (#${idDisplay})`;
                             }
 
                             return (

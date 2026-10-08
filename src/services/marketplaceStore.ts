@@ -15,6 +15,7 @@ import {
   AutomationRule,
   PlatformCredentials
 } from '../types/allegro';
+import { matchProductToEmagCategory } from './excelCategoryMatcher';
 import {
   INITIAL_OFFERS,
   INITIAL_ORDERS,
@@ -2491,15 +2492,18 @@ export class MarketplaceStore {
 
     const rawCatId = customPayload?.category_id || customPayload?.categoryId || offer.channelData?.emag?.categoryId || offer.excelMetadata?.emagCategoryCode || offer.excelMetadata?.matchedCategoryCode || offer.category?.id;
     const parsedCatId = parseInt(String(rawCatId || '').replace(/\D/g, ''), 10);
-    const offerTitleLower = (offer.name || '').toLowerCase();
-    const isLed = offerTitleLower.includes('led') || offerTitleLower.includes('strip') || offerTitleLower.includes('rgb') || offerTitleLower.includes('cob');
-    const isPet = offerTitleLower.includes('psa') || offerTitleLower.includes('pies') || offerTitleLower.includes('kot') || offerTitleLower.includes('köpek') || offerTitleLower.includes('kedi') || offerTitleLower.includes('dom dla psa') || offerTitleLower.includes('mata') || offerTitleLower.includes('łóżko') || offerTitleLower.includes('legowisk') || offerTitleLower.includes('pet') || offerTitleLower.includes('dog') || offerTitleLower.includes('cat');
 
     let validEmagCategoryId = parsedCatId;
-    if (validEmagCategoryId === 6001 || validEmagCategoryId === 257548 || isLed) {
-      validEmagCategoryId = 3523; // Official eMAG BG LED strips
-    } else if (isNaN(validEmagCategoryId) || validEmagCategoryId <= 0) {
-      validEmagCategoryId = isPet ? 1344 : 3523;
+    if (isNaN(validEmagCategoryId) || validEmagCategoryId <= 0 || validEmagCategoryId === 6001 || validEmagCategoryId === 257548 || validEmagCategoryId === 3122) {
+      const match = matchProductToEmagCategory({
+        title: offer.name,
+        name: offer.name,
+        sku: offer.sku,
+        url: offer.excelMetadata?.websiteLinks,
+        productType: offer.category?.name,
+        categoryCode: parsedCatId > 0 ? parsedCatId : undefined
+      });
+      validEmagCategoryId = match.categoryId;
     }
 
     const rawPnk = customPayload?.part_number || customPayload?.sku || offer.sku || (offer.id ? `SKU-${offer.id}` : `SKU-${Date.now()}`);

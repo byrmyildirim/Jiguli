@@ -1978,37 +1978,109 @@ Output format JSON:
   });
 });
 
-function matchCategoryFromTaxonomy(title: string, defaultFallback: number = 3523): { id: number; name: string } {
+function matchCategoryFromTaxonomy(
+  title: string,
+  sku?: string,
+  url?: string,
+  productType?: string,
+  candidateCode?: number,
+  defaultFallback: number = 3523
+): { id: number; name: string; source: string } {
   try {
-    const taxonomyPath = fs.existsSync(TAXONOMY_FILE) ? TAXONOMY_FILE : path.join(DATA_DIR, 'emag_bg_allowed_categories.json');
-    if (fs.existsSync(taxonomyPath)) {
-      const taxonomy: any[] = JSON.parse(fs.readFileSync(taxonomyPath, 'utf-8'));
-      const textLower = title.toLowerCase();
+    const allowedPath = fs.existsSync(TAXONOMY_FILE) ? TAXONOMY_FILE : path.join(DATA_DIR, 'emag_bg_allowed_categories.json');
+    const catalogPath = path.join(DATA_DIR, 'resale_products_catalog.json');
+    const mappingsPath = path.join(DATA_DIR, 'excel_category_mappings.json');
 
-      // 1. High priority domain rules for prominent catalog sectors
-      if (textLower.includes('led') || textLower.includes('strip') || textLower.includes('şerit') || textLower.includes('rgb') || textLower.includes('cob')) {
-        return { id: 3523, name: 'LED strips' };
+    // 0. Verify if existing category is already allowed in eMAG Bulgaria
+    if (candidateCode && candidateCode > 0 && candidateCode !== 6001 && candidateCode !== 257548 && candidateCode !== 3122) {
+      if (fs.existsSync(allowedPath)) {
+        const allowed: any[] = JSON.parse(fs.readFileSync(allowedPath, 'utf-8'));
+        const found = allowed.find((c: any) => Number(c.id) === candidateCode);
+        if (found) {
+          return { id: candidateCode, name: found.name, source: 'EXACT_PERMITTED_CODE' };
+        }
       }
-      if (textLower.includes('pościel') || textLower.includes('poszewk') || textLower.includes('nevresim') || textLower.includes('kołdr') || textLower.includes('quilt') || textLower.includes('bedding')) {
-        return { id: 3690, name: 'Quilts' };
-      }
-      if (textLower.includes('psa') || textLower.includes('pies') || textLower.includes('kot') || textLower.includes('köpek') || textLower.includes('kedi') || textLower.includes('legowisk') || textLower.includes('pet bed')) {
-        return { id: 1344, name: 'Pet beds, pillows and mattresses' };
-      }
-      if (textLower.includes('carplay') || textLower.includes('adapter samochod') || textLower.includes('car adapter') || textLower.includes('kablo') || textLower.includes('cable') || textLower.includes('ładowark')) {
-        return { id: 306, name: 'Cables & Adapters' };
-      }
-      if (textLower.includes('słuchawk') || textLower.includes('earphone') || textLower.includes('kulaklık') || textLower.includes('headphone') || textLower.includes('tws')) {
-        return { id: 1001, name: 'Headphones' };
-      }
-      if (textLower.includes('smartwatch') || textLower.includes('zegarek') || textLower.includes('akıllı saat')) {
-        return { id: 101, name: 'Smartwatches' };
-      }
-      if (textLower.includes('curtain') || textLower.includes('shutter') || textLower.includes('motor') || textLower.includes('roleta') || textLower.includes('zigbee') || textLower.includes('tuya') || textLower.includes('switch')) {
-        return { id: 202, name: 'Smart Home & Switches' };
-      }
+    }
 
-      // 2. Keyword token search across all 1,735 allowed categories
+    // 1. URL match from resale catalog (1688, AliExpress, Amazon, DHgate, Trendyol)
+    const cleanUrl = (url || '').toLowerCase();
+    if (cleanUrl && fs.existsSync(catalogPath)) {
+      const catalog: any[] = JSON.parse(fs.readFileSync(catalogPath, 'utf-8'));
+      const foundItem = catalog.find((item: any) => {
+        if (!item.websiteUrl) return false;
+        const itemUrl = item.websiteUrl.toLowerCase().split('?')[0];
+        return itemUrl.length > 15 && (cleanUrl.includes(itemUrl) || itemUrl.includes(cleanUrl));
+      });
+      if (foundItem) {
+        return {
+          id: Number(foundItem.categoryCode),
+          name: foundItem.categoryName,
+          source: `EXCEL_URL_MATCH (${foundItem.productType})`
+        };
+      }
+    }
+
+    // 2. SKU match from resale catalog
+    const cleanSku = String(sku || '').replace(/^SKU-/i, '').trim();
+    if (cleanSku && fs.existsSync(catalogPath)) {
+      const catalog: any[] = JSON.parse(fs.readFileSync(catalogPath, 'utf-8'));
+      const foundItem = catalog.find((item: any) => String(item.sku).trim() === cleanSku);
+      if (foundItem) {
+        return {
+          id: Number(foundItem.categoryCode),
+          name: foundItem.categoryName,
+          source: `EXCEL_SKU_MATCH (#${cleanSku})`
+        };
+      }
+    }
+
+    // 3. Product type / substring match from excel mappings
+    const textLower = (title || '').toLowerCase();
+    const typeLower = (productType || '').toLowerCase();
+    if (fs.existsSync(mappingsPath)) {
+      const mappings: Record<string, { categoryCode: number; categoryName: string }> = JSON.parse(fs.readFileSync(mappingsPath, 'utf-8'));
+      for (const [key, val] of Object.entries(mappings)) {
+        if (typeLower.includes(key) || textLower.includes(key)) {
+          return {
+            id: Number(val.categoryCode),
+            name: val.categoryName,
+            source: `EXCEL_TYPE_RULE (${key})`
+          };
+        }
+      }
+    }
+
+    // 4. High-confidence catalog pattern matching
+    const catalogRules = [
+      { keywords: ['led', 'strip', 'şerit', 'rgb', 'cob', 'ws2812b'], id: 3523, name: 'Lighting & Electrical/Light sources/LED strips' },
+      { keywords: ['pościel', 'poszewk', 'nevresim', 'kołdr', 'quilt', 'bedding'], id: 3690, name: 'Home Textiles/Carpets and bedroom sets/Duvet covers' },
+      { keywords: ['curtain', 'shutter', 'roleta', 'motor', 'perde'], id: 2410, name: 'AC & Heating/Smart Home/Smart home control panels and modules' },
+      { keywords: ['psa', 'pies', 'kot', 'köpek', 'kedi', 'legowisk', 'pet bed', 'dom dla psa'], id: 1344, name: 'For pets/Furniture and transport for domestic animals/Pet beds, pillows and mattresses' },
+      { keywords: ['smartwatch', 'smart watch', 'zegarek', 'akıllı saat', 'watch10'], id: 2920, name: 'Smart technology/Smartwatch' },
+      { keywords: ['carplay', 'adapter samochod', 'oto teyp'], id: 320, name: 'Car Electronics/GPS Navigation Systems & Auto-Moto Electronics/Electronic car accessories' },
+      { keywords: ['dyfuzor', 'diffuser', 'aromatherapy'], id: 2799, name: 'Apparatus for personal hygiene/Wellness articles/Aromatherapy and wellness appliances' },
+      { keywords: ['gamepad', 'kontroler gier', 'controller', 'oyun kolu'], id: 582, name: 'Consoles and Games/Controllers, steering wheels and gaming headsets' },
+      { keywords: ['tv box', 'tv stick', 'media player'], id: 75, name: 'Audio-Video & HiFi/Home audio and video/Media players' },
+      { keywords: ['kamera', 'camera', 'ip camera', 'surveillance'], id: 407, name: 'Servers and Computer Accessories/Security and surveillance systems/Surveillance cameras' },
+      { keywords: ['wkrętarka', 'wiertarka', 'drill', 'matkap'], id: 127, name: 'DIY/Electrical equipment/Drills and screwdrivers' },
+      { keywords: ['klawiatura', 'keyboard', 'klavye'], id: 10, name: 'PC Peripherals/Periphery/Keyboards' },
+      { keywords: ['mysz', 'mouse', 'fare'], id: 11, name: 'PC Peripherals/Periphery/Mice' },
+      { keywords: ['stojak', 'storage', 'racks', 'organizer'], id: 3426, name: 'House Cleaning/Cleaning and maintenance/Organisation and storage' },
+      { keywords: ['kurtka', 'jacket', 'ceket', 'faux leather'], id: 2677, name: "Apparel Woman/Women's clothing/Women's jackets" },
+      { keywords: ['sukienka', 'sweater', 'sweter', 'wool'], id: 2679, name: "Apparel Woman/Women's clothing/Women's sweaters" },
+      { keywords: ['leggins', 'spodnie', 'trousers', 'pants'], id: 2673, name: "Apparel Woman/Women's clothing/Women's trousers" },
+      { keywords: ['botki', 'boots', 'snow boots', 'buty'], id: 4061, name: "Sports clothing & footwear/Navigation & Canoeing/Women's sports boots" }
+    ];
+
+    for (const rule of catalogRules) {
+      if (rule.keywords.some(k => textLower.includes(k) || typeLower.includes(k))) {
+        return { id: rule.id, name: rule.name, source: 'EXCEL_CATALOG_PATTERN' };
+      }
+    }
+
+    // 5. Token search across all 1,735 allowed categories
+    if (fs.existsSync(allowedPath)) {
+      const taxonomy: any[] = JSON.parse(fs.readFileSync(allowedPath, 'utf-8'));
       const words = textLower.split(/[\s,._\-\/]+/).filter(w => w.length >= 3 && !['dla', 'the', 'and', 'ile', 'nie', 'est', 'set'].includes(w));
       let bestCat = null;
       let maxScore = 0;
@@ -2027,14 +2099,24 @@ function matchCategoryFromTaxonomy(title: string, defaultFallback: number = 3523
       }
 
       if (bestCat && maxScore >= 3) {
-        return { id: Number(bestCat.id), name: bestCat.name };
+        return { id: Number(bestCat.id), name: bestCat.name, source: 'TAXONOMY_TOKEN_MATCH' };
       }
     }
   } catch (err) {
     console.warn('Category matching error:', err);
   }
-  return { id: defaultFallback, name: 'LED strips' };
+  return { id: defaultFallback, name: 'Lighting & Electrical/Light sources/LED strips', source: 'DEFAULT_FALLBACK' };
 }
+
+// API endpoint to auto-match category for any product
+app.post('/api/emag/auto-match-category', (req, res) => {
+  const { title = '', sku = '', url = '', productType = '', categoryCode = 0 } = req.body;
+  const match = matchCategoryFromTaxonomy(title, sku, url, productType, Number(categoryCode));
+  res.json({
+    success: true,
+    matchedCategory: match
+  });
+});
 
 // Real eMAG Live Product & Offer Publishing Pipeline with Comprehensive Step-by-Step Audit Trail
 app.post('/api/emag/publish-product', async (req, res) => {
@@ -2135,10 +2217,18 @@ app.post('/api/emag/publish-product', async (req, res) => {
     }
   } catch {}
 
+  let matchSource = 'EXISTING_ALLOWED';
   if (!isAlreadyAllowed) {
-    const matched = matchCategoryFromTaxonomy(prodName);
+    const matched = matchCategoryFromTaxonomy(
+      prodName,
+      product.part_number || product.sku || rawPnk,
+      product.url || product.websiteUrl,
+      product.productType,
+      parsedCatId
+    );
     categoryId = matched.id;
     categoryName = matched.name;
+    matchSource = matched.source;
   }
 
   steps.push({
@@ -2146,7 +2236,7 @@ app.post('/api/emag/publish-product', async (req, res) => {
     title: 'Adım 2: AI ile Kategori Tahmini ve Eşleştirme',
     status: 'success',
     durationMs: Date.now() - step2Start,
-    message: `Ürün adı "${prodName.slice(0, 45)}..." analiz edilerek eMAG hedef kategorisi eşleştirildi (Kategori ID: ${categoryId}).`,
+    message: `Ürün "${prodName.slice(0, 45)}..." analiz edilerek eMAG hedef kategorisi eşleştirildi (Kategori ID: ${categoryId} - ${categoryName}). [Kaynak: ${matchSource}]`,
     timestamp: new Date().toISOString()
   });
 
@@ -2240,7 +2330,6 @@ app.post('/api/emag/publish-product', async (req, res) => {
       { id: 5704, value: 'Bed' },
       { id: 7266, value: 'Dogs' }
     ];
-  }
   } else if (isSmartCat) {
     if (!formattedCharacteristics.some(c => String(c.id) === 'emag-brand')) {
       formattedCharacteristics.push({ id: 'emag-brand', value: product.brand || 'Generic' });

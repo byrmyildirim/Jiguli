@@ -1,0 +1,142 @@
+{
+  "led strip": {
+    "categoryCode": 3523,
+    "categoryName": "Lighting & Electrical/Light sources/LED strips"
+  },
+  "duvet cover set": {
+    "categoryCode": 3690,
+    "categoryName": "Home Textiles/Carpets and bedroom sets/Duvet covers"
+  },
+  "automatic curtain control system": {
+    "categoryCode": 2410,
+    "categoryName": "AC & Heating/Smart Home/Smart home control panels and modules"
+  },
+  "faux leather": {
+    "categoryCode": 2677,
+    "categoryName": "Apparel Woman/Women's clothing/Women's jackets"
+  },
+  "accessory bundles & sets": {
+    "categoryCode": 2789,
+    "categoryName": "Tablets Acc & Services/Accessories for Tablets/Other tablet accessories"
+  },
+  "bags & luggage": {
+    "categoryCode": 2272,
+    "categoryName": "Luggages/Travel bags"
+  },
+  "diffuser aromatherapy": {
+    "categoryCode": 2799,
+    "categoryName": "Apparatus for personal hygiene/Wellness articles/Aromatherapy and wellness appliances"
+  },
+  "set top box": {
+    "categoryCode": 75,
+    "categoryName": "Audio-Video & HiFi/Home audio and video/Media players"
+  },
+  "wool & blends": {
+    "categoryCode": 2679,
+    "categoryName": "Apparel Woman/Women's clothing/Women's sweaters"
+  },
+  "smart watches": {
+    "categoryCode": 2920,
+    "categoryName": "Smart technology/Smartwatch"
+  },
+  "snow boots": {
+    "categoryCode": 4061,
+    "categoryName": "Sports clothing & footwear/Navigation & Canoeing/Women's sports boots"
+  },
+  "storage holders & racks": {
+    "categoryCode": 3426,
+    "categoryName": "House Cleaning/Cleaning and maintenance/Organisation and storage"
+  },
+  "scooter parts & accessories": {
+    "categoryCode": 2936,
+    "categoryName": "Parts for cars/Scooters, ATVs and other vehicles/Motorcycle Accessories"
+  },
+  "gamepads": {
+    "categoryCode": 582,
+    "categoryName": "Consoles and Games/Controllers, steering wheels and gaming headsets"
+  },
+  "children's flats": {
+    "categoryCode": 1393,
+    "categoryName": "Kids Fashion/Children Shoes Fashion/Children's shoes"
+  },
+  "dog beds/mats": {
+    "categoryCode": 1344,
+    "categoryName": "For pets/Furniture and transport for domestic animals/Pet beds, pillows and mattresses"
+  },
+  "snowboarding pants": {
+    "categoryCode": 4042,
+    "categoryName": "Sports clothing & footwear/Sportswear/Women's sports trousers"
+  },
+  "wireless carplay adapter": {
+    "categoryCode": 320,
+    "categoryName": "Car Electronics/GPS Navigation Systems & Auto-Moto Electronics/Electronic car accessories"
+  },
+  "leggings": {
+    "categoryCode": 2673,
+    "categoryName": "Apparel Woman/Women's clothing/Women's trousers"
+  },
+  "ceiling lights": {
+    "categoryCode": 366,
+    "categoryName": "Lighting & Electrical/Sconces and ceiling lights"
+  },
+  "tv stick": {
+    "categoryCode": 75,
+    "categoryName": "Audio-Video & HiFi/Home audio and video/Media players"
+  },
+  "heat press machine": {
+    "categoryCode": 89,
+    "categoryName": "Small Appliances and Accessories/Maintenance of textiles/Sewing machines"
+  },
+  "jackets": {
+    "categoryCode": 2677,
+    "categoryName": "Apparel Woman/Women's clothing/Women's jackets"
+  },
+  "car battery tester & charger tools": {
+    "categoryCode": 2572,
+    "categoryName": "Car Accessories/Professional equipment/Car testers"
+  },
+  "exhaust fan": {
+    "categoryCode": 2838,
+    "categoryName": "Sanitation/Ventilation systems"
+  },
+  "keyboards": {
+    "categoryCode": 10,
+    "categoryName": "PC Peripherals/Periphery/Keyboards"
+  },
+  "electric drill": {
+    "categoryCode": 127,
+    "categoryName": "DIY/Electrical equipment/Drills and screwdrivers"
+  },
+  "pants": {
+    "categoryCode": 2673,
+    "categoryName": "Apparel Woman/Women's clothing/Women's trousers"
+  },
+  "foot rests": {
+    "categoryCode": 2936,
+    "categoryName": "Parts for cars/Scooters, ATVs and other vehicles/Motorcycle Accessories"
+  },
+  "women's boots（do not post in this category）(obsolete)": {
+    "categoryCode": 4061,
+    "categoryName": "Sports clothing & footwear/Navigation & Canoeing/Women's sports boots"
+  },
+  "lighting strings": {
+    "categoryCode": 3479,
+    "categoryName": "Season/Festive decorative decoration/Christmas lights"
+  },
+  "diagnostic tools": {
+    "categoryCode": 2572,
+    "categoryName": "Car Accessories/Professional equipment/Car testers"
+  },
+  "ip camera": {
+    "categoryCode": 407,
+    "categoryName": "Servers and Computer Accessories/Security and surveillance systems/Surveillance cameras"
+  },
+  "mouse": {
+    "categoryCode": 11,
+    "categoryName": "PC Peripherals/Periphery/Mice"
+  },
+  "dance shoes": {
+    "categoryCode": 4057,
+    "categoryName": "Sports clothing & footwear/Navigation & Canoeing/Women's sports shoes"
+  }
+}
