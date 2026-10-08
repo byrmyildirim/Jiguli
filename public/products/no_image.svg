@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" rx="16" fill="url(#bgGrad)"/>
+  <rect x="1" y="1" width="198" height="198" rx="15" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4 3"/>
+  
+  <!-- Image Off / No Picture Icon -->
+  <g transform="translate(100, 85)" text-anchor="middle">
+    <!-- Camera/Image frame -->
+    <rect x="-32" y="-24" width="64" height="48" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="2.5"/>
+    <!-- Circle/Lens -->
+    <circle cx="-10" cy="-6" r="6" fill="#cbd5e1"/>
+    <!-- Mountains -->
+    <path d="M-24 16 L-8 0 L6 14 L16 4 L24 16 Z" fill="#cbd5e1"/>
+    <!-- Slash line -->
+    <line x1="-36" y1="28" x2="36" y2="-28" stroke="#ef4444" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  
+  <text x="100" y="142" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="600" fill="#64748b" text-anchor="middle" letter-spacing="0.5">GÖRSEL YOK</text>
+  <text x="100" y="158" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="9.5" font-weight="400" fill="#94a3b8" text-anchor="middle">Resim Bulunamadı</text>
+</svg>

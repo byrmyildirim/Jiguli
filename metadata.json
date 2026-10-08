@@ -1,0 +1,6 @@
+{
+  "name": "OmniChannel Marketplace Hub - Allegro & Multi-Platform Portal",
+  "description": "Enterprise multi-marketplace seller platform featuring Allegro REST API integration, real-time offer & inventory sync, multi-channel order processing, and modular platform connectors.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

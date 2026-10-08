@@ -1,0 +1,526 @@
+{
+  "101": [
+    {
+      "id": "emag-brand",
+      "categoryId": 101,
+      "name": "Brand",
+      "trName": "Marka",
+      "type": "STRING",
+      "isMandatory": true,
+      "defaultValue": "Generic"
+    },
+    {
+      "id": "emag-color",
+      "categoryId": 101,
+      "name": "Culoare",
+      "trName": "Renk",
+      "type": "DICTIONARY",
+      "isMandatory": true,
+      "options": [
+        "Czarny (Siyah)",
+        "Srebrny (Gümüş)",
+        "Złoty (Altın)",
+        "Szary (Gri)",
+        "Różowy (Pembe)"
+      ]
+    },
+    {
+      "id": "emag-compat",
+      "categoryId": 101,
+      "name": "Compatibilitate Sistem",
+      "trName": "İşletim Sistemi Uyumluluğu",
+      "type": "DICTIONARY",
+      "isMandatory": true,
+      "options": [
+        "Android & iOS (Evrensel)",
+        "Tylko Android",
+        "Tylko iOS"
+      ]
+    }
+  ],
+  "202": [
+    {
+      "id": "emag-brand",
+      "categoryId": 202,
+      "name": "Brand",
+      "trName": "Marka",
+      "type": "STRING",
+      "isMandatory": true,
+      "defaultValue": "Tuya"
+    },
+    {
+      "id": "emag-protocol",
+      "categoryId": 202,
+      "name": "Protocol Comunicare",
+      "trName": "Haberleşme Protokolü",
+      "type": "DICTIONARY",
+      "isMandatory": true,
+      "options": [
+        "Zigbee 3.0",
+        "Tuya WiFi 2.4GHz",
+        "Bluetooth Mesh (SIG)",
+        "Matter over Thread",
+        "RF 433MHz"
+      ]
+    },
+    {
+      "id": "emag-app",
+      "categoryId": 202,
+      "name": "Aplicatie Compatibila",
+      "trName": "Desteklenen Mobil Uygulama",
+      "type": "DICTIONARY",
+      "isMandatory": true,
+      "options": [
+        "Tuya Smart & Smart Life",
+        "Home Assistant",
+        "Apple HomeKit",
+        "Aqara Home",
+        "eWeLink / Sonoff"
+      ]
+    },
+    {
+      "id": "emag-power",
+      "categoryId": 202,
+      "name": "Tip Alimentare",
+      "trName": "Besleme Tipi",
+      "type": "DICTIONARY",
+      "isMandatory": false,
+      "options": [
+        "Nötr Hatlı (L+N)",
+        "Nötrsüz (Tek Faz No-Neutral)",
+        "Pilli (CR2032/CR2450)",
+        "USB 5V"
+      ]
+    }
+  ],
+  "3122": [
+    {
+      "id": "emag-brand",
+      "categoryId": 3122,
+      "name": "Brand",
+      "trName": "Marka",
+      "type": "STRING",
+      "isMandatory": true,
+      "defaultValue": "Generic"
+    },
+    {
+      "id": "emag-pet-type",
+      "categoryId": 3122,
+      "name": "Destinat Pentru",
+      "trName": "Hayvan Türü",
+      "type": "DICTIONARY",
+      "isMandatory": true,
+      "options": [
+        "Caini si Pisici (Köpek & Kedi)",
+        "Caini (Köpek)",
+        "Pisici (Kedi)"
+      ]
+    },
+    {
+      "id": "emag-product-type",
+      "categoryId": 3122,
+      "name": "Tip Produs",
+      "trName": "Ürün Türü",
+      "type": "DICTIONARY",
+      "isMandatory": true,
+      "options": [
+        "Culcus & Saltea (Yatak & Minder)",
+        "Culcus tip Casuta (Ev / Kulübe)",
+        "Saltea Impermeabila (Su Geçirmez Mat)",
+        "Perna Calduroasa (Sıcak Minder)"
+      ]
+    },
+    {
+      "id": "emag-material",
+      "categoryId": 3122,
+      "name": "Material",
+      "trName": "Kumaş / Materyal",
+      "type": "DICTIONARY",
+      "isMandatory": true,
+      "options": [
+        "Oxford Impermeabil & Plus Calduros",
+        "Plus Moale (Yumuşak Peluş)",
+        "Bumbac & Poliester",
+        "Spuma cu Memorie (Visco)"
+      ]
+    },
+    {
+      "id": "emag-color",
+      "categoryId": 3122,
+      "name": "Culoare Principala",
+      "trName": "Renk",
+      "type": "DICTIONARY",
+      "isMandatory": true,
+      "options": [
+        "Multicolor (Kare Desenli / Renkli)",
+        "Gri (Gri)",
+        "Maro (Kahverengi)",
+        "Negru (Siyah)",
+        "Albastru (Mavi)"
+      ]
+    },
+    {
+      "id": "emag-size",
+      "categoryId": 3122,
+      "name": "Talie / Dimensiuni",
+      "trName": "Köpek / Kedi Ebadı",
+      "type": "DICTIONARY",
+      "isMandatory": true,
+      "options": [
+        "Toate Taliile (Tüm Irklar / Universal)",
+        "Mare (Büyük Irk)",
+        "Medie (Orta Irk)",
+        "Mica (Küçük Irk)"
+      ]
+    },
+    {
+      "id": "emag-benefit",
+      "categoryId": 3122,
+      "name": "Beneficii / Proprietati",
+      "trName": "Öne Çıkan Özellikler",
+      "type": "DICTIONARY",
+      "isMandatory": false,
+      "options": [
+        "Impermeabil & Calduros de Iarna (Su Geçirmez & Kışlık Sıcak)",
+        "Husa Detasabila & Lavabila",
+        "Baza Antiderapanta (Kaymaz Taban)"
+      ]
+    }
+  ],
+  "3690": [
+    {
+      "id": "emag-brand",
+      "categoryId": 3690,
+      "name": "Brand",
+      "trName": "Marka",
+      "type": "STRING",
+      "isMandatory": true,
+      "defaultValue": "Generic"
+    },
+    {
+      "id": "emag-product-type",
+      "categoryId": 3690,
+      "name": "Tip Produs",
+      "trName": "Ürün Türü",
+      "type": "DICTIONARY",
+      "isMandatory": true,
+      "options": [
+        "Set Lenjerie de pat (Nevresim Takımı)",
+        "Husa pilota (Yorgan Kılıfı)",
+        "Fete de perna (Yastık Kılıfı)",
+        "Cearsaf (Çarşaf)",
+        "Cuvertura (Yatak Örtüsü)"
+      ]
+    },
+    {
+      "id": "emag-pieces",
+      "categoryId": 3690,
+      "name": "Numar Piese",
+      "trName": "Parça Sayısı",
+      "type": "DICTIONARY",
+      "isMandatory": true,
+      "options": [
+        "3 Piese (3 Parça)",
+        "2 Piese (2 Parça)",
+        "4 Piese (4 Parça)",
+        "6 Piese (6 Parça)",
+        "1 Piesa (Tekli)"
+      ]
+    },
+    {
+      "id": "emag-material",
+      "categoryId": 3690,
+      "name": "Material",
+      "trName": "Kumaş / Malzeme",
+      "type": "DICTIONARY",
+      "isMandatory": true,
+      "options": [
+        "Microfibra (Mikrofiber)",
+        "100% Bumbac (Pamuk)",
+        "Bumbac Satinat (Saten Pamuk)",
+        "Finet",
+        "Poliester",
+        "In (Keten)"
+      ]
+    },
+    {
+      "id": "emag-color",
+      "categoryId": 3690,
+      "name": "Culoare",
+      "trName": "Renk",
+      "type": "DICTIONARY",
+      "isMandatory": true,
+      "options": [
+        "Rosu (Kırmızı)",
+        "Multicolor (Desenli)",
+        "Alb (Beyaz)",
+        "Gri (Gri)",
+        "Verde (Yeşil)",
+        "Albastru (Mavi)"
+      ]
+    },
+    {
+      "id": "emag-size",
+      "categoryId": 3690,
+      "name": "Dimensiuni",
+      "trName": "Ebat / Ölçü",
+      "type": "DICTIONARY",
+      "isMandatory": false,
+      "options": [
+        "160x200 cm + 2x 70x80 cm",
+        "200x220 cm + 2x 70x80 cm",
+        "140x200 cm + 1x 70x80 cm",
+        "220x240 cm"
+      ]
+    },
+    {
+      "id": "emag-theme",
+      "categoryId": 3690,
+      "name": "Stil & Tema",
+      "trName": "Tema / Stil",
+      "type": "DICTIONARY",
+      "isMandatory": false,
+      "options": [
+        "Craciun / Sarbatori (Yılbaşı/Noel)",
+        "Rustic / Wiejski (Kır/Rustik)",
+        "Modern / Geometric",
+        "Floral (Çiçekli)"
+      ]
+    },
+    {
+      "id": "emag-closure",
+      "categoryId": 3690,
+      "name": "Tip Inchidere",
+      "trName": "Kapanış Türü",
+      "type": "DICTIONARY",
+      "isMandatory": false,
+      "options": [
+        "Fermoar (Fermuarlı)",
+        "Nasturi (Düğmeli)",
+        "Plic / Petrecut"
+      ]
+    }
+  ],
+  "6001": [
+    {
+      "id": "emag-brand",
+      "categoryId": 6001,
+      "name": "Brand",
+      "trName": "Marka",
+      "type": "STRING",
+      "isMandatory": true,
+      "defaultValue": "Generic"
+    },
+    {
+      "id": "emag-color",
+      "categoryId": 6001,
+      "name": "Culoare Lumina",
+      "trName": "Işık Rengi / Modu",
+      "type": "DICTIONARY",
+      "isMandatory": true,
+      "options": [
+        "RGB Multicolor (Çok Renkli)",
+        "RGB + Beyaz (RGBW)",
+        "Sıcak Beyaz (3000K-3500K)",
+        "Doğal Günışığı (4000K-4500K)",
+        "Soğuk Beyaz (6000K-6500K)",
+        "Ayarlanabilir CCT (3500K-6500K)"
+      ]
+    },
+    {
+      "id": "emag-power",
+      "categoryId": 6001,
+      "name": "Alimentare / Voltaj",
+      "trName": "Güç / Çalışma Voltajı",
+      "type": "DICTIONARY",
+      "isMandatory": true,
+      "options": [
+        "5V USB Güç Kaynağı",
+        "12V DC Adaptör",
+        "24V DC Adaptör",
+        "220V Şebeke Doğrudan",
+        "Pilli / Dahili Bataryalı"
+      ]
+    },
+    {
+      "id": "emag-protocol",
+      "categoryId": 6001,
+      "name": "Conectivitate / Protocol",
+      "trName": "Bağlantı & Akıllı Kontrolcü",
+      "type": "DICTIONARY",
+      "isMandatory": true,
+      "options": [
+        "Tuya WiFi & Bluetooth Çift Mod",
+        "Zigbee 3.0 Akıllı Ağ",
+        "Bluetooth App & IR Kumanda",
+        "2.4GHz RF Uzaktan Kumanda",
+        "USB Manuel Tuşlu"
+      ]
+    },
+    {
+      "id": "emag-length",
+      "categoryId": 6001,
+      "name": "Lungime Banda",
+      "trName": "Şerit Uzunluğu",
+      "type": "DICTIONARY",
+      "isMandatory": false,
+      "unit": "m",
+      "options": [
+        "1 Metre",
+        "2 Metre",
+        "3 Metre",
+        "5 Metre",
+        "10 Metre (2x5m)",
+        "15 Metre (2x7.5m)",
+        "20 Metre (2x10m)"
+      ]
+    },
+    {
+      "id": "emag-type",
+      "categoryId": 6001,
+      "name": "Tip Banda LED",
+      "trName": "LED Şerit Teknolojisi",
+      "type": "DICTIONARY",
+      "isMandatory": false,
+      "options": [
+        "COB Yüksek Yoğunluklu Pürüzsüz Şerit",
+        "SMD 5050 RGB",
+        "SMD 2835 Monokrom",
+        "Neon Esnek Silikon Şerit"
+      ]
+    },
+    {
+      "id": "emag-ip",
+      "categoryId": 6001,
+      "name": "Grad Protectie",
+      "trName": "Su ve Toz Koruma Sınıfı",
+      "type": "DICTIONARY",
+      "isMandatory": false,
+      "options": [
+        "IP20 (İç Mekan / Korumasız)",
+        "IP65 (Silikon Kaplamalı Suya Dayanıklı)",
+        "IP67 / IP68 (Tam Su Geçirmez Dış Mekan)"
+      ]
+    },
+    {
+      "id": "emag-warranty",
+      "categoryId": 6001,
+      "name": "Garantie",
+      "trName": "Garanti Süresi (Ay)",
+      "type": "INTEGER",
+      "isMandatory": false,
+      "defaultValue": "24"
+    }
+  ],
+  "257548": [
+    {
+      "id": "emag-brand",
+      "categoryId": 257548,
+      "name": "Brand",
+      "trName": "Marka",
+      "type": "STRING",
+      "isMandatory": true,
+      "defaultValue": "Generic"
+    },
+    {
+      "id": "emag-color",
+      "categoryId": 257548,
+      "name": "Culoare Lumina",
+      "trName": "Işık Rengi / Modu",
+      "type": "DICTIONARY",
+      "isMandatory": true,
+      "options": [
+        "RGB Multicolor (Çok Renkli)",
+        "RGB + Beyaz (RGBW)",
+        "Sıcak Beyaz (3000K-3500K)",
+        "Doğal Günışığı (4000K-4500K)",
+        "Soğuk Beyaz (6000K-6500K)",
+        "Ayarlanabilir CCT (3500K-6500K)"
+      ]
+    },
+    {
+      "id": "emag-power",
+      "categoryId": 257548,
+      "name": "Alimentare / Voltaj",
+      "trName": "Güç / Çalışma Voltajı",
+      "type": "DICTIONARY",
+      "isMandatory": true,
+      "options": [
+        "5V USB Güç Kaynağı",
+        "12V DC Adaptör",
+        "24V DC Adaptör",
+        "220V Şebeke Doğrudan",
+        "Pilli / Dahili Bataryalı"
+      ]
+    },
+    {
+      "id": "emag-protocol",
+      "categoryId": 257548,
+      "name": "Conectivitate / Protocol",
+      "trName": "Bağlantı & Akıllı Kontrolcü",
+      "type": "DICTIONARY",
+      "isMandatory": true,
+      "options": [
+        "Tuya WiFi & Bluetooth Çift Mod",
+        "Zigbee 3.0 Akıllı Ağ",
+        "Bluetooth App & IR Kumanda",
+        "2.4GHz RF Uzaktan Kumanda",
+        "USB Manuel Tuşlu"
+      ]
+    },
+    {
+      "id": "emag-length",
+      "categoryId": 257548,
+      "name": "Lungime Banda",
+      "trName": "Şerit Uzunluğu",
+      "type": "DICTIONARY",
+      "isMandatory": false,
+      "unit": "m",
+      "options": [
+        "1 Metre",
+        "2 Metre",
+        "3 Metre",
+        "5 Metre",
+        "10 Metre (2x5m)",
+        "15 Metre (2x7.5m)",
+        "20 Metre (2x10m)"
+      ]
+    },
+    {
+      "id": "emag-type",
+      "categoryId": 257548,
+      "name": "Tip Banda LED",
+      "trName": "LED Şerit Teknolojisi",
+      "type": "DICTIONARY",
+      "isMandatory": false,
+      "options": [
+        "COB Yüksek Yoğunluklu Pürüzsüz Şerit",
+        "SMD 5050 RGB",
+        "SMD 2835 Monokrom",
+        "Neon Esnek Silikon Şerit"
+      ]
+    },
+    {
+      "id": "emag-ip",
+      "categoryId": 257548,
+      "name": "Grad Protectie",
+      "trName": "Su ve Toz Koruma Sınıfı",
+      "type": "DICTIONARY",
+      "isMandatory": false,
+      "options": [
+        "IP20 (İç Mekan / Korumasız)",
+        "IP65 (Silikon Kaplamalı Suya Dayanıklı)",
+        "IP67 / IP68 (Tam Su Geçirmez Dış Mekan)"
+      ]
+    },
+    {
+      "id": "emag-warranty",
+      "categoryId": 257548,
+      "name": "Garantie",
+      "trName": "Garanti Süresi (Ay)",
+      "type": "INTEGER",
+      "isMandatory": false,
+      "defaultValue": "24"
+    }
+  ]
+}
