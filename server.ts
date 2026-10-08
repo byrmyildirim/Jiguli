@@ -2070,18 +2070,18 @@ app.post('/api/emag/publish-product', async (req, res) => {
   const isCable = prodLower.includes('kablo') || prodLower.includes('cable') || prodLower.includes('ładowark') || prodLower.includes('şarj');
 
   let categoryId = parsedCatId;
-  // If user passed 6001 (unauthorized on this eMAG seller account) or is LED, map to permitted 257548
-  if (categoryId === 6001 || (isLed && (!categoryId || categoryId === 6001))) {
-    categoryId = 257548;
+  // Map to permitted eMAG Bulgaria categories
+  if (categoryId === 6001 || categoryId === 257548 || isLed) {
+    categoryId = 3523; // Official eMAG BG LED strips category
   } else if (isNaN(categoryId) || categoryId <= 0) {
     if (isCurtainOrMotor || isSmart) categoryId = 202;
-    else if (isPet) categoryId = 3122;
-    else if (isTextile) categoryId = 3690;
+    else if (isPet) categoryId = 1344; // Official eMAG BG Pet beds category
+    else if (isTextile) categoryId = 3690; // Official eMAG BG Quilts & Bedding category
     else if (isWatch) categoryId = 101;
     else if (isAudio) categoryId = 1001;
     else if (isCable) categoryId = 4001;
-    else if (isLed) categoryId = 257548;
-    else categoryId = 257548;
+    else if (isLed) categoryId = 3523;
+    else categoryId = 3523;
   }
 
   steps.push({
@@ -2143,8 +2143,8 @@ app.post('/api/emag/publish-product', async (req, res) => {
   rawCharsList = parseCharacteristics(product.characteristics);
 
   // Filter out mismatched characteristics
-  const isLedCat = categoryId === 6001 || categoryId === 257548;
-  const isPetCat = categoryId === 3122 || categoryId === 3125 || categoryId === 3120;
+  const isLedCat = categoryId === 3523 || categoryId === 6001 || categoryId === 257548;
+  const isPetCat = categoryId === 1344 || categoryId === 3122 || categoryId === 3125 || categoryId === 3120;
   const isSmartCat = categoryId === 202;
   const isTextileCat = categoryId === 3690;
 
@@ -2170,6 +2170,20 @@ app.post('/api/emag/publish-product', async (req, res) => {
       { id: 5661, value: 'Microfiber' },
       { id: 8025, value: '160 x 200' }
     ];
+  } else if (isLedCat) {
+    // Category 3523 (LED strips) requires specific characteristics IDs
+    formattedCharacteristics = [
+      { id: 5464, value: 'Indoor' },
+      { id: 5704, value: 'LED strip' },
+      { id: 6862, value: '5 m' }
+    ];
+  } else if (isPetCat) {
+    // Category 1344 (Pet beds) requires specific characteristics IDs
+    formattedCharacteristics = [
+      { id: 5704, value: 'Bed' },
+      { id: 7266, value: 'Dogs' }
+    ];
+  }
   } else if (isSmartCat) {
     if (!formattedCharacteristics.some(c => String(c.id) === 'emag-brand')) {
       formattedCharacteristics.push({ id: 'emag-brand', value: product.brand || 'Generic' });
@@ -2295,7 +2309,7 @@ app.post('/api/emag/publish-product', async (req, res) => {
     vatId = Number(product.vat_id);
   }
   // Enforce valid vat_id: eMAG Bulgaria requires vat_id 6 for 20% VAT rate.
-  if (country === 'bg' && (vatId === 4 || vatId === 1 || !vatId)) {
+  if (country === 'bg') {
     vatId = 6;
   }
 
@@ -2345,6 +2359,9 @@ app.post('/api/emag/publish-product', async (req, res) => {
     warranty: product.warranty || 24,
     ...(product.start_date ? { start_date: product.start_date } : {})
   }];
+
+  // Strictly omit part_number_key from payload to prevent error code 1008
+  delete (combinedOfferPayload[0] as any).part_number_key;
 
   steps.push({
     step: 5,

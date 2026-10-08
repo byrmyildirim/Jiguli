@@ -2496,15 +2496,13 @@ export class MarketplaceStore {
     const isPet = offerTitleLower.includes('psa') || offerTitleLower.includes('pies') || offerTitleLower.includes('kot') || offerTitleLower.includes('köpek') || offerTitleLower.includes('kedi') || offerTitleLower.includes('dom dla psa') || offerTitleLower.includes('mata') || offerTitleLower.includes('łóżko') || offerTitleLower.includes('legowisk') || offerTitleLower.includes('pet') || offerTitleLower.includes('dog') || offerTitleLower.includes('cat');
 
     let validEmagCategoryId = parsedCatId;
-    if (validEmagCategoryId === 6001) {
-      validEmagCategoryId = 257548;
+    if (validEmagCategoryId === 6001 || validEmagCategoryId === 257548 || isLed) {
+      validEmagCategoryId = 3523; // Official eMAG BG LED strips
     } else if (isNaN(validEmagCategoryId) || validEmagCategoryId <= 0) {
-      validEmagCategoryId = isPet ? 3122 : isLed ? 257548 : 257548;
-    } else if (isLed && (!validEmagCategoryId || validEmagCategoryId === 6001)) {
-      validEmagCategoryId = 257548;
+      validEmagCategoryId = isPet ? 1344 : 3523;
     }
 
-    const rawPnk = customPayload?.part_number_key || customPayload?.sku || offer.sku || (offer.id ? `SKU-${offer.id}` : `SKU-${Date.now()}`);
+    const rawPnk = customPayload?.part_number || customPayload?.sku || offer.sku || (offer.id ? `SKU-${offer.id}` : `SKU-${Date.now()}`);
     let cleanPnk = String(rawPnk || '').trim();
     if (/^\d+$/.test(cleanPnk)) {
       cleanPnk = `SKU-${cleanPnk}`;
@@ -2518,10 +2516,7 @@ export class MarketplaceStore {
     const characteristicsPayload = customPayload?.characteristics || offer.channelData?.emag?.characteristics || [];
 
     // Valid vat_id: eMAG Bulgaria uses vat_id = 6 for 20% VAT rate
-    let selectedVatId = customPayload?.vat_id ? Number(customPayload.vat_id) : (country.toUpperCase() === 'BG' ? 6 : 1);
-    if (country.toUpperCase() === 'BG' && (selectedVatId === 4 || selectedVatId === 1 || !selectedVatId)) {
-      selectedVatId = 6;
-    }
+    let selectedVatId = country.toUpperCase() === 'BG' ? 6 : (customPayload?.vat_id ? Number(customPayload.vat_id) : 1);
 
     const prodPayload = {
       name: customPayload?.name || customPayload?.title || offer.name,
