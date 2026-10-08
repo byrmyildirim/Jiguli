@@ -1,0 +1,10412 @@
+[
+  {
+    "id": 2,
+    "name": "Processors",
+    "parentId": 657,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3,
+    "name": "Memory RAM",
+    "parentId": 657,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4,
+    "name": "Hard Drives",
+    "parentId": 657,
+    "isEanMandatory": true
+  },
+  {
+    "id": 5,
+    "name": "LCD & LED Monitors",
+    "parentId": 1512,
+    "isEanMandatory": true
+  },
+  {
+    "id": 7,
+    "name": "Compact digital cameras",
+    "parentId": 1494,
+    "isEanMandatory": true
+  },
+  {
+    "id": 8,
+    "name": "Single and Multifunction Printers",
+    "parentId": 398,
+    "isEanMandatory": true
+  },
+  {
+    "id": 9,
+    "name": "PC Speakers",
+    "parentId": 662,
+    "isEanMandatory": true
+  },
+  {
+    "id": 10,
+    "name": "Keyboards",
+    "parentId": 662,
+    "isEanMandatory": true
+  },
+  {
+    "id": 11,
+    "name": "Mouse",
+    "parentId": 662,
+    "isEanMandatory": true
+  },
+  {
+    "id": 12,
+    "name": "Hubs",
+    "parentId": 663,
+    "isEanMandatory": true
+  },
+  {
+    "id": 13,
+    "name": "Network interface cards/NIC",
+    "parentId": 663,
+    "isEanMandatory": true
+  },
+  {
+    "id": 16,
+    "name": "Webcam",
+    "parentId": 662,
+    "isEanMandatory": true
+  },
+  {
+    "id": 18,
+    "name": "Laminators",
+    "parentId": 2620,
+    "isEanMandatory": true
+  },
+  {
+    "id": 19,
+    "name": "Wireless adaptors",
+    "parentId": 690,
+    "isEanMandatory": true
+  },
+  {
+    "id": 20,
+    "name": "Access point",
+    "parentId": 690,
+    "isEanMandatory": true
+  },
+  {
+    "id": 21,
+    "name": "Memory cards",
+    "parentId": 2065,
+    "isEanMandatory": true
+  },
+  {
+    "id": 22,
+    "name": "Graphics tablets",
+    "parentId": 662,
+    "isEanMandatory": true
+  },
+  {
+    "id": 23,
+    "name": "Voice recorders",
+    "parentId": 580,
+    "isEanMandatory": true
+  },
+  {
+    "id": 24,
+    "name": "External Hard Drives",
+    "parentId": 662,
+    "isEanMandatory": true
+  },
+  {
+    "id": 26,
+    "name": "Wireless routers",
+    "parentId": 690,
+    "isEanMandatory": true
+  },
+  {
+    "id": 27,
+    "name": "Projectors Accessories",
+    "parentId": 2666,
+    "isEanMandatory": true
+  },
+  {
+    "id": 28,
+    "name": "UPS",
+    "parentId": 370,
+    "isEanMandatory": true
+  },
+  {
+    "id": 30,
+    "name": "Networking antennas and accessories",
+    "parentId": 690,
+    "isEanMandatory": true
+  },
+  {
+    "id": 31,
+    "name": "Card reader",
+    "parentId": 668,
+    "isEanMandatory": true
+  },
+  {
+    "id": 32,
+    "name": "Espresso machine",
+    "parentId": 846,
+    "isEanMandatory": true
+  },
+  {
+    "id": 33,
+    "name": "Blenders & Choppers",
+    "parentId": 847,
+    "isEanMandatory": true
+  },
+  {
+    "id": 34,
+    "name": "Food processors",
+    "parentId": 847,
+    "isEanMandatory": true
+  },
+  {
+    "id": 35,
+    "name": "Hair dryers",
+    "parentId": 1516,
+    "isEanMandatory": true
+  },
+  {
+    "id": 36,
+    "name": "GPS Navigations",
+    "parentId": 691,
+    "isEanMandatory": true
+  },
+  {
+    "id": 39,
+    "name": "Digital photo frames",
+    "parentId": 824,
+    "isEanMandatory": true
+  },
+  {
+    "id": 40,
+    "name": "Computer Cases",
+    "parentId": 657,
+    "isEanMandatory": true
+  },
+  {
+    "id": 41,
+    "name": "Power Supplies",
+    "parentId": 657,
+    "isEanMandatory": true
+  },
+  {
+    "id": 44,
+    "name": "Irons, Steam generators & ironing presses",
+    "parentId": 812,
+    "isEanMandatory": true
+  },
+  {
+    "id": 45,
+    "name": "Steam cook machines & Dehydrators",
+    "parentId": 850,
+    "isEanMandatory": true
+  },
+  {
+    "id": 46,
+    "name": "Fryers",
+    "parentId": 850,
+    "isEanMandatory": true
+  },
+  {
+    "id": 47,
+    "name": "Toasters",
+    "parentId": 848,
+    "isEanMandatory": true
+  },
+  {
+    "id": 48,
+    "name": "Juice extractors",
+    "parentId": 845,
+    "isEanMandatory": true
+  },
+  {
+    "id": 49,
+    "name": "Mixers",
+    "parentId": 847,
+    "isEanMandatory": true
+  },
+  {
+    "id": 50,
+    "name": "Heaters",
+    "parentId": 3916,
+    "isEanMandatory": true
+  },
+  {
+    "id": 51,
+    "name": "CPU Coolers",
+    "parentId": 779,
+    "isEanMandatory": true
+  },
+  {
+    "id": 52,
+    "name": "Thermal Paste",
+    "parentId": 775,
+    "isEanMandatory": true
+  },
+  {
+    "id": 53,
+    "name": "PC Fans",
+    "parentId": 779,
+    "isEanMandatory": true
+  },
+  {
+    "id": 54,
+    "name": "Mousepad",
+    "parentId": 662,
+    "isEanMandatory": true
+  },
+  {
+    "id": 55,
+    "name": "Laptop bags",
+    "parentId": 450,
+    "isEanMandatory": true
+  },
+  {
+    "id": 56,
+    "name": "Notebook Memory",
+    "parentId": 657,
+    "isEanMandatory": true
+  },
+  {
+    "id": 57,
+    "name": "Notebook Hard drives",
+    "parentId": 657,
+    "isEanMandatory": true
+  },
+  {
+    "id": 58,
+    "name": "Vacuum cleaners",
+    "parentId": 402,
+    "isEanMandatory": true
+  },
+  {
+    "id": 60,
+    "name": "Curling wands",
+    "parentId": 1516,
+    "isEanMandatory": true
+  },
+  {
+    "id": 61,
+    "name": "Hair straighteners",
+    "parentId": 1516,
+    "isEanMandatory": true
+  },
+  {
+    "id": 62,
+    "name": "Corporal scales",
+    "parentId": 811,
+    "isEanMandatory": true
+  },
+  {
+    "id": 63,
+    "name": "Epilators",
+    "parentId": 1514,
+    "isEanMandatory": true
+  },
+  {
+    "id": 64,
+    "name": "Massage devices",
+    "parentId": 533,
+    "isEanMandatory": true
+  },
+  {
+    "id": 65,
+    "name": "Electrical toothbrushes",
+    "parentId": 1513,
+    "isEanMandatory": true
+  },
+  {
+    "id": 66,
+    "name": "Batteries, accumulators and chargers",
+    "parentId": 824,
+    "isEanMandatory": true
+  },
+  {
+    "id": 67,
+    "name": "Dedicated accumulators and chargers",
+    "parentId": 824,
+    "isEanMandatory": true
+  },
+  {
+    "id": 68,
+    "name": "Tripods",
+    "parentId": 824,
+    "isEanMandatory": true
+  },
+  {
+    "id": 70,
+    "name": "Lenses",
+    "parentId": 824,
+    "isEanMandatory": true
+  },
+  {
+    "id": 71,
+    "name": "Other photo accessories",
+    "parentId": 824,
+    "isEanMandatory": true
+  },
+  {
+    "id": 72,
+    "name": "DSLR Filters",
+    "parentId": 824,
+    "isEanMandatory": true
+  },
+  {
+    "id": 74,
+    "name": "Binoculars and spotting scopes",
+    "parentId": 933,
+    "isEanMandatory": true
+  },
+  {
+    "id": 75,
+    "name": "Mediaplayers",
+    "parentId": 938,
+    "isEanMandatory": true
+  },
+  {
+    "id": 76,
+    "name": "Various peripherals",
+    "parentId": 662,
+    "isEanMandatory": true
+  },
+  {
+    "id": 78,
+    "name": "Fans and air coolers",
+    "parentId": 413,
+    "isEanMandatory": true
+  },
+  {
+    "id": 79,
+    "name": "Televisions",
+    "parentId": 1496,
+    "isEanMandatory": true
+  },
+  {
+    "id": 81,
+    "name": "Shredders",
+    "parentId": 2620,
+    "isEanMandatory": true
+  },
+  {
+    "id": 82,
+    "name": "Guillotines and Trimmers",
+    "parentId": 2620,
+    "isEanMandatory": true
+  },
+  {
+    "id": 83,
+    "name": "Laminating Films",
+    "parentId": 2620,
+    "isEanMandatory": true
+  },
+  {
+    "id": 84,
+    "name": "Filed devices and accessories",
+    "parentId": 2620,
+    "isEanMandatory": true
+  },
+  {
+    "id": 85,
+    "name": "Solid-State Drive (SSD)",
+    "parentId": 657,
+    "isEanMandatory": true
+  },
+  {
+    "id": 86,
+    "name": "Power strips",
+    "parentId": 364,
+    "isEanMandatory": true
+  },
+  {
+    "id": 87,
+    "name": "Remotes",
+    "parentId": 682,
+    "isEanMandatory": true
+  },
+  {
+    "id": 89,
+    "name": "Sewing machine",
+    "parentId": 812,
+    "isEanMandatory": true
+  },
+  {
+    "id": 90,
+    "name": "Meat mincers",
+    "parentId": 847,
+    "isEanMandatory": true
+  },
+  {
+    "id": 91,
+    "name": "Scale kitchen",
+    "parentId": 488,
+    "isEanMandatory": true
+  },
+  {
+    "id": 92,
+    "name": "Bread Machines",
+    "parentId": 848,
+    "isEanMandatory": true
+  },
+  {
+    "id": 93,
+    "name": "Food grinders",
+    "parentId": 846,
+    "isEanMandatory": true
+  },
+  {
+    "id": 98,
+    "name": "Voltage Stabilizers",
+    "parentId": 370,
+    "isEanMandatory": true
+  },
+  {
+    "id": 100,
+    "name": "Cleaning Kits",
+    "parentId": 682,
+    "isEanMandatory": true
+  },
+  {
+    "id": 102,
+    "name": "Electric hair brushes",
+    "parentId": 1516,
+    "isEanMandatory": true
+  },
+  {
+    "id": 103,
+    "name": "eBook Readers",
+    "parentId": 808,
+    "isEanMandatory": true
+  },
+  {
+    "id": 104,
+    "name": "Coffeemakers",
+    "parentId": 846,
+    "isEanMandatory": true
+  },
+  {
+    "id": 105,
+    "name": "Slicers",
+    "parentId": 847,
+    "isEanMandatory": true
+  },
+  {
+    "id": 106,
+    "name": "Hair rollers",
+    "parentId": 1516,
+    "isEanMandatory": true
+  },
+  {
+    "id": 108,
+    "name": "Electric toothbrush and irrigator accessories",
+    "parentId": 1513,
+    "isEanMandatory": true
+  },
+  {
+    "id": 109,
+    "name": "Electric shaver accessories",
+    "parentId": 1514,
+    "isEanMandatory": true
+  },
+  {
+    "id": 110,
+    "name": "Door locks",
+    "parentId": 3804,
+    "isEanMandatory": true
+  },
+  {
+    "id": 111,
+    "name": "Painting and plastering tools",
+    "parentId": 2839,
+    "isEanMandatory": true
+  },
+  {
+    "id": 112,
+    "name": "Sanders",
+    "parentId": 360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 113,
+    "name": "Grinders",
+    "parentId": 360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 114,
+    "name": "Electric generators",
+    "parentId": 348,
+    "isEanMandatory": true
+  },
+  {
+    "id": 115,
+    "name": "Compressors",
+    "parentId": 348,
+    "isEanMandatory": true
+  },
+  {
+    "id": 116,
+    "name": "Car cosmetics products",
+    "parentId": 1414,
+    "isEanMandatory": true
+  },
+  {
+    "id": 117,
+    "name": "Transport and lifting equipment accessories",
+    "parentId": 3804,
+    "isEanMandatory": true
+  },
+  {
+    "id": 118,
+    "name": "Wrenches and wrenches kits",
+    "parentId": 351,
+    "isEanMandatory": true
+  },
+  {
+    "id": 119,
+    "name": "Car Compressors",
+    "parentId": 347,
+    "isEanMandatory": true
+  },
+  {
+    "id": 120,
+    "name": "Car vacuum cleaners",
+    "parentId": 1414,
+    "isEanMandatory": true
+  },
+  {
+    "id": 121,
+    "name": "Car Inverters",
+    "parentId": 347,
+    "isEanMandatory": true
+  },
+  {
+    "id": 122,
+    "name": "Flashlights",
+    "parentId": 364,
+    "isEanMandatory": true
+  },
+  {
+    "id": 123,
+    "name": "Optical telescopes",
+    "parentId": 933,
+    "isEanMandatory": true
+  },
+  {
+    "id": 125,
+    "name": "Car Rectifiers",
+    "parentId": 347,
+    "isEanMandatory": true
+  },
+  {
+    "id": 126,
+    "name": "Door lock cylinders",
+    "parentId": 3804,
+    "isEanMandatory": true
+  },
+  {
+    "id": 127,
+    "name": "Drills and Screwdriver",
+    "parentId": 360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 128,
+    "name": "Hacksaws",
+    "parentId": 360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 129,
+    "name": "Hinges",
+    "parentId": 3804,
+    "isEanMandatory": true
+  },
+  {
+    "id": 130,
+    "name": "Welding machines",
+    "parentId": 360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 131,
+    "name": "Electric saw accessories",
+    "parentId": 360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 132,
+    "name": "Chain saw accessories",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 133,
+    "name": "Sprinklers",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 134,
+    "name": "Milling machines",
+    "parentId": 360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 135,
+    "name": "Welding accessories",
+    "parentId": 360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 137,
+    "name": "Gardening forks",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 138,
+    "name": "Electric and Power brushcutters",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 139,
+    "name": "Leaf vacuums, blowers and shredders",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 140,
+    "name": "Chain saws",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 141,
+    "name": "Garden sprayers",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 142,
+    "name": "Hydrophores",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 143,
+    "name": "Mirrorless cameras",
+    "parentId": 1494,
+    "isEanMandatory": true
+  },
+  {
+    "id": 145,
+    "name": "Electric Mixers",
+    "parentId": 360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 146,
+    "name": "Pans",
+    "parentId": 1603,
+    "isEanMandatory": true
+  },
+  {
+    "id": 147,
+    "name": "Pots",
+    "parentId": 1603,
+    "isEanMandatory": true
+  },
+  {
+    "id": 148,
+    "name": "TV accessories",
+    "parentId": 682,
+    "isEanMandatory": true
+  },
+  {
+    "id": 153,
+    "name": "Privacy Filters",
+    "parentId": 2620,
+    "isEanMandatory": true
+  },
+  {
+    "id": 154,
+    "name": "Lawn mowers",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 156,
+    "name": "Snow removal tools",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 157,
+    "name": "Hedge trimmers",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 158,
+    "name": "Electric planers",
+    "parentId": 360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 159,
+    "name": "Compressor accessories",
+    "parentId": 360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 160,
+    "name": "Sets and accessories for drilling and screwing",
+    "parentId": 360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 161,
+    "name": "Boilers",
+    "parentId": 3754,
+    "isEanMandatory": true
+  },
+  {
+    "id": 162,
+    "name": "Coffee",
+    "parentId": 3705,
+    "isEanMandatory": true
+  },
+  {
+    "id": 163,
+    "name": "Accessories for milling",
+    "parentId": 360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 164,
+    "name": "Car Tools",
+    "parentId": 1458,
+    "isEanMandatory": true
+  },
+  {
+    "id": 166,
+    "name": "Gardening hoses",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 167,
+    "name": "Rakes",
+    "parentId": 351,
+    "isEanMandatory": true
+  },
+  {
+    "id": 168,
+    "name": "Tools sets",
+    "parentId": 351,
+    "isEanMandatory": true
+  },
+  {
+    "id": 257,
+    "name": "Scanners",
+    "parentId": 398,
+    "isEanMandatory": true
+  },
+  {
+    "id": 258,
+    "name": "Video Cards",
+    "parentId": 657,
+    "isEanMandatory": true
+  },
+  {
+    "id": 259,
+    "name": "Motherboards",
+    "parentId": 657,
+    "isEanMandatory": true
+  },
+  {
+    "id": 261,
+    "name": "Video Cameras",
+    "parentId": 626,
+    "isEanMandatory": true
+  },
+  {
+    "id": 262,
+    "name": "Matrix Printers",
+    "parentId": 398,
+    "isEanMandatory": true
+  },
+  {
+    "id": 263,
+    "name": "Sound Cards",
+    "parentId": 657,
+    "isEanMandatory": true
+  },
+  {
+    "id": 264,
+    "name": "DVD Writer",
+    "parentId": 657,
+    "isEanMandatory": true
+  },
+  {
+    "id": 265,
+    "name": "Projectors",
+    "parentId": 2666,
+    "isEanMandatory": true
+  },
+  {
+    "id": 266,
+    "name": "Home Cinema",
+    "parentId": 938,
+    "isEanMandatory": true
+  },
+  {
+    "id": 267,
+    "name": "DVD & Blu-Ray Players",
+    "parentId": 938,
+    "isEanMandatory": true
+  },
+  {
+    "id": 268,
+    "name": "Audio Systems",
+    "parentId": 938,
+    "isEanMandatory": true
+  },
+  {
+    "id": 270,
+    "name": "Print Servers",
+    "parentId": 663,
+    "isEanMandatory": true
+  },
+  {
+    "id": 273,
+    "name": "Car Radio, CD & DVD players",
+    "parentId": 691,
+    "isEanMandatory": true
+  },
+  {
+    "id": 276,
+    "name": "Cordless Phones",
+    "parentId": 754,
+    "isEanMandatory": true
+  },
+  {
+    "id": 277,
+    "name": "USB Sticks",
+    "parentId": 662,
+    "isEanMandatory": true
+  },
+  {
+    "id": 278,
+    "name": "External optical drives",
+    "parentId": 662,
+    "isEanMandatory": true
+  },
+  {
+    "id": 279,
+    "name": "MP3 & MP4 Players",
+    "parentId": 580,
+    "isEanMandatory": true
+  },
+  {
+    "id": 280,
+    "name": "Players & Receivers",
+    "parentId": 401,
+    "isEanMandatory": true
+  },
+  {
+    "id": 287,
+    "name": "PC Headphones",
+    "parentId": 662,
+    "isEanMandatory": true
+  },
+  {
+    "id": 288,
+    "name": "Car Speakers & Subwoofers",
+    "parentId": 691,
+    "isEanMandatory": true
+  },
+  {
+    "id": 289,
+    "name": "Copier paper",
+    "parentId": 2603,
+    "isEanMandatory": true
+  },
+  {
+    "id": 291,
+    "name": "Powerball",
+    "parentId": 829,
+    "isEanMandatory": true
+  },
+  {
+    "id": 292,
+    "name": "Electric grill",
+    "parentId": 850,
+    "isEanMandatory": true
+  },
+  {
+    "id": 293,
+    "name": "Rack Hard Drive",
+    "parentId": 775,
+    "isEanMandatory": true
+  },
+  {
+    "id": 294,
+    "name": "Laptop Chargers",
+    "parentId": 450,
+    "isEanMandatory": true
+  },
+  {
+    "id": 295,
+    "name": "Kettles",
+    "parentId": 845,
+    "isEanMandatory": true
+  },
+  {
+    "id": 296,
+    "name": "Electric shavers",
+    "parentId": 1514,
+    "isEanMandatory": true
+  },
+  {
+    "id": 297,
+    "name": "Trimmers",
+    "parentId": 1514,
+    "isEanMandatory": true
+  },
+  {
+    "id": 298,
+    "name": "Bags, Backpacks and Cases",
+    "parentId": 824,
+    "isEanMandatory": true
+  },
+  {
+    "id": 299,
+    "name": "Flashes",
+    "parentId": 824,
+    "isEanMandatory": true
+  },
+  {
+    "id": 303,
+    "name": "Notebook Stands / Coolers",
+    "parentId": 450,
+    "isEanMandatory": true
+  },
+  {
+    "id": 305,
+    "name": "NAS Accessories & Components",
+    "parentId": 950,
+    "isEanMandatory": true
+  },
+  {
+    "id": 306,
+    "name": "Cables & Adapters",
+    "parentId": 682,
+    "isEanMandatory": true
+  },
+  {
+    "id": 307,
+    "name": "TV Stands",
+    "parentId": 682,
+    "isEanMandatory": true
+  },
+  {
+    "id": 308,
+    "name": "Amplituners",
+    "parentId": 401,
+    "isEanMandatory": true
+  },
+  {
+    "id": 309,
+    "name": "Players",
+    "parentId": 401,
+    "isEanMandatory": true
+  },
+  {
+    "id": 311,
+    "name": "Microscopes",
+    "parentId": 933,
+    "isEanMandatory": true
+  },
+  {
+    "id": 312,
+    "name": "Inkjet Print Cartridges",
+    "parentId": 275,
+    "isEanMandatory": true
+  },
+  {
+    "id": 313,
+    "name": "eBook Readers Accessories",
+    "parentId": 808,
+    "isEanMandatory": true
+  },
+  {
+    "id": 314,
+    "name": "Epilator accessories",
+    "parentId": 1514,
+    "isEanMandatory": true
+  },
+  {
+    "id": 315,
+    "name": "Players & Headphones accessories",
+    "parentId": 580,
+    "isEanMandatory": true
+  },
+  {
+    "id": 317,
+    "name": "Pick-ups",
+    "parentId": 401,
+    "isEanMandatory": true
+  },
+  {
+    "id": 318,
+    "name": "Magnifying glass and optical instruments",
+    "parentId": 933,
+    "isEanMandatory": true
+  },
+  {
+    "id": 320,
+    "name": "Auto Electronics & Accessories",
+    "parentId": 691,
+    "isEanMandatory": true
+  },
+  {
+    "id": 323,
+    "name": "Audio Hi-Fi Accessories",
+    "parentId": 401,
+    "isEanMandatory": true
+  },
+  {
+    "id": 326,
+    "name": "NAS",
+    "parentId": 950,
+    "isEanMandatory": true
+  },
+  {
+    "id": 327,
+    "name": "Other laptop accessories",
+    "parentId": 450,
+    "isEanMandatory": true
+  },
+  {
+    "id": 328,
+    "name": "Sandwich-makers",
+    "parentId": 848,
+    "isEanMandatory": true
+  },
+  {
+    "id": 329,
+    "name": "Eyeshadow",
+    "parentId": 1294,
+    "isEanMandatory": true
+  },
+  {
+    "id": 330,
+    "name": "Rotary Hammer",
+    "parentId": 360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 331,
+    "name": "Water spray guns",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 332,
+    "name": "Industrial heaters",
+    "parentId": 348,
+    "isEanMandatory": true
+  },
+  {
+    "id": 333,
+    "name": "PowerLAN Adapters",
+    "parentId": 663,
+    "isEanMandatory": true
+  },
+  {
+    "id": 334,
+    "name": "Welding equipment",
+    "parentId": 348,
+    "isEanMandatory": true
+  },
+  {
+    "id": 343,
+    "name": "Classical photo frames",
+    "parentId": 1547,
+    "isEanMandatory": true
+  },
+  {
+    "id": 344,
+    "name": "Water pumps",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 346,
+    "name": "Tools and measurement devices",
+    "parentId": 351,
+    "isEanMandatory": true
+  },
+  {
+    "id": 350,
+    "name": "Electric saws",
+    "parentId": 360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 361,
+    "name": "Radio stations & Radar Detectors",
+    "parentId": 691,
+    "isEanMandatory": true
+  },
+  {
+    "id": 362,
+    "name": "Sport Video Cameras",
+    "parentId": 626,
+    "isEanMandatory": true
+  },
+  {
+    "id": 363,
+    "name": "Microwave ovens",
+    "parentId": 3965,
+    "isEanMandatory": true
+  },
+  {
+    "id": 365,
+    "name": "Bulbs",
+    "parentId": 364,
+    "isEanMandatory": true
+  },
+  {
+    "id": 366,
+    "name": "Wall lights",
+    "parentId": 364,
+    "isEanMandatory": true
+  },
+  {
+    "id": 367,
+    "name": "Projection Screens",
+    "parentId": 2666,
+    "isEanMandatory": true
+  },
+  {
+    "id": 368,
+    "name": "Blu-ray and DVD movies",
+    "parentId": 869,
+    "isEanMandatory": true
+  },
+  {
+    "id": 371,
+    "name": "Switches with management",
+    "parentId": 670,
+    "isEanMandatory": true
+  },
+  {
+    "id": 372,
+    "name": "Switches without management",
+    "parentId": 670,
+    "isEanMandatory": true
+  },
+  {
+    "id": 376,
+    "name": "UPS Accessories",
+    "parentId": 370,
+    "isEanMandatory": true
+  },
+  {
+    "id": 377,
+    "name": "Office Calculators",
+    "parentId": 2611,
+    "isEanMandatory": true
+  },
+  {
+    "id": 380,
+    "name": "Laptop batteries",
+    "parentId": 450,
+    "isEanMandatory": true
+  },
+  {
+    "id": 384,
+    "name": "Top freezers refrigerators",
+    "parentId": 3966,
+    "isEanMandatory": true
+  },
+  {
+    "id": 385,
+    "name": "Washing machines",
+    "parentId": 3967,
+    "isEanMandatory": true
+  },
+  {
+    "id": 386,
+    "name": "Built in ovens",
+    "parentId": 3965,
+    "isEanMandatory": true
+  },
+  {
+    "id": 387,
+    "name": "Irons, Steam generators & ironing presses accessories and parts",
+    "parentId": 629,
+    "isEanMandatory": true
+  },
+  {
+    "id": 391,
+    "name": "Cookers",
+    "parentId": 3965,
+    "isEanMandatory": true
+  },
+  {
+    "id": 394,
+    "name": "Corporate Systems",
+    "parentId": 1483,
+    "isEanMandatory": true
+  },
+  {
+    "id": 395,
+    "name": "Printer Accessories",
+    "parentId": 275,
+    "isEanMandatory": true
+  },
+  {
+    "id": 399,
+    "name": "Office & Desktop Software",
+    "parentId": 574,
+    "isEanMandatory": false
+  },
+  {
+    "id": 405,
+    "name": "Hobs",
+    "parentId": 3965,
+    "isEanMandatory": true
+  },
+  {
+    "id": 406,
+    "name": "Electric ovens",
+    "parentId": 850,
+    "isEanMandatory": true
+  },
+  {
+    "id": 407,
+    "name": "Surveillance cameras",
+    "parentId": 408,
+    "isEanMandatory": true
+  },
+  {
+    "id": 409,
+    "name": "Psychology",
+    "parentId": 903,
+    "isEanMandatory": true
+  },
+  {
+    "id": 411,
+    "name": "Dishwashers",
+    "parentId": 3967,
+    "isEanMandatory": true
+  },
+  {
+    "id": 414,
+    "name": "Air conditioner accessories",
+    "parentId": 2338,
+    "isEanMandatory": true
+  },
+  {
+    "id": 417,
+    "name": "Connectors",
+    "parentId": 401,
+    "isEanMandatory": true
+  },
+  {
+    "id": 420,
+    "name": "Server Systems",
+    "parentId": 659,
+    "isEanMandatory": true
+  },
+  {
+    "id": 421,
+    "name": "Server Processors",
+    "parentId": 733,
+    "isEanMandatory": true
+  },
+  {
+    "id": 422,
+    "name": "Server Hard Drives",
+    "parentId": 733,
+    "isEanMandatory": true
+  },
+  {
+    "id": 423,
+    "name": "Cables & Accessories",
+    "parentId": 663,
+    "isEanMandatory": true
+  },
+  {
+    "id": 427,
+    "name": "Refrigerator accessories and parts",
+    "parentId": 80,
+    "isEanMandatory": true
+  },
+  {
+    "id": 435,
+    "name": "Large format Printers",
+    "parentId": 398,
+    "isEanMandatory": true
+  },
+  {
+    "id": 438,
+    "name": "Kitchen Sinks",
+    "parentId": 2764,
+    "isEanMandatory": true
+  },
+  {
+    "id": 439,
+    "name": "Vacuum cleaners accessories and parts",
+    "parentId": 629,
+    "isEanMandatory": true
+  },
+  {
+    "id": 440,
+    "name": "Small household accessories",
+    "parentId": 629,
+    "isEanMandatory": true
+  },
+  {
+    "id": 442,
+    "name": "External Hard Drives Accessories",
+    "parentId": 662,
+    "isEanMandatory": true
+  },
+  {
+    "id": 444,
+    "name": "Instant cameras",
+    "parentId": 1494,
+    "isEanMandatory": true
+  },
+  {
+    "id": 447,
+    "name": "Thermal Printers",
+    "parentId": 398,
+    "isEanMandatory": true
+  },
+  {
+    "id": 453,
+    "name": "Monitor accessories",
+    "parentId": 1512,
+    "isEanMandatory": true
+  },
+  {
+    "id": 455,
+    "name": "Server Memory",
+    "parentId": 733,
+    "isEanMandatory": true
+  },
+  {
+    "id": 467,
+    "name": "Switchs Fittings",
+    "parentId": 670,
+    "isEanMandatory": true
+  },
+  {
+    "id": 468,
+    "name": "Media converters",
+    "parentId": 663,
+    "isEanMandatory": true
+  },
+  {
+    "id": 469,
+    "name": "VoIP Equipment",
+    "parentId": 663,
+    "isEanMandatory": true
+  },
+  {
+    "id": 471,
+    "name": "Metal Cabinets",
+    "parentId": 659,
+    "isEanMandatory": true
+  },
+  {
+    "id": 473,
+    "name": "Server Accessories",
+    "parentId": 733,
+    "isEanMandatory": true
+  },
+  {
+    "id": 481,
+    "name": "IT Accessories",
+    "parentId": 657,
+    "isEanMandatory": true
+  },
+  {
+    "id": 482,
+    "name": "Blu Ray",
+    "parentId": 657,
+    "isEanMandatory": true
+  },
+  {
+    "id": 493,
+    "name": "Knives and knife sets",
+    "parentId": 1607,
+    "isEanMandatory": true
+  },
+  {
+    "id": 496,
+    "name": "Hard Drive Coolers",
+    "parentId": 779,
+    "isEanMandatory": true
+  },
+  {
+    "id": 497,
+    "name": "VGA Coolers",
+    "parentId": 779,
+    "isEanMandatory": true
+  },
+  {
+    "id": 500,
+    "name": "Fan Controllers",
+    "parentId": 775,
+    "isEanMandatory": true
+  },
+  {
+    "id": 504,
+    "name": "Conference call systems",
+    "parentId": 663,
+    "isEanMandatory": true
+  },
+  {
+    "id": 505,
+    "name": "Mobile, internet and television services",
+    "parentId": 2306,
+    "isEanMandatory": false
+  },
+  {
+    "id": 507,
+    "name": "Server Powersupplies",
+    "parentId": 733,
+    "isEanMandatory": true
+  },
+  {
+    "id": 510,
+    "name": "Server Optical Drive",
+    "parentId": 733,
+    "isEanMandatory": true
+  },
+  {
+    "id": 515,
+    "name": "Tensiometers",
+    "parentId": 4337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 516,
+    "name": "Thermometers",
+    "parentId": 930,
+    "isEanMandatory": true
+  },
+  {
+    "id": 517,
+    "name": "Glucometers",
+    "parentId": 4337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 519,
+    "name": "Food Vacuum appliances",
+    "parentId": 488,
+    "isEanMandatory": true
+  },
+  {
+    "id": 520,
+    "name": "Filtering cups",
+    "parentId": 3008,
+    "isEanMandatory": true
+  },
+  {
+    "id": 525,
+    "name": "Hoods",
+    "parentId": 3965,
+    "isEanMandatory": true
+  },
+  {
+    "id": 526,
+    "name": "Weather Stations",
+    "parentId": 826,
+    "isEanMandatory": true
+  },
+  {
+    "id": 527,
+    "name": "Portable & Clock Radios",
+    "parentId": 401,
+    "isEanMandatory": true
+  },
+  {
+    "id": 529,
+    "name": "Washing machine and drier accessories and parts",
+    "parentId": 80,
+    "isEanMandatory": true
+  },
+  {
+    "id": 532,
+    "name": "Thermometer",
+    "parentId": 826,
+    "isEanMandatory": true
+  },
+  {
+    "id": 535,
+    "name": "Stove accessories and parts",
+    "parentId": 80,
+    "isEanMandatory": true
+  },
+  {
+    "id": 536,
+    "name": "Sweets machine",
+    "parentId": 850,
+    "isEanMandatory": true
+  },
+  {
+    "id": 539,
+    "name": "Diapers and panties",
+    "parentId": 1370,
+    "isEanMandatory": true
+  },
+  {
+    "id": 540,
+    "name": "Baby video monitors",
+    "parentId": 1355,
+    "isEanMandatory": true
+  },
+  {
+    "id": 541,
+    "name": "Interactive Whiteboards",
+    "parentId": 2666,
+    "isEanMandatory": true
+  },
+  {
+    "id": 542,
+    "name": "Baby bottles, teats and accessories",
+    "parentId": 3942,
+    "isEanMandatory": true
+  },
+  {
+    "id": 545,
+    "name": "Garden repellents",
+    "parentId": 1675,
+    "isEanMandatory": true
+  },
+  {
+    "id": 546,
+    "name": "Faucets",
+    "parentId": 2764,
+    "isEanMandatory": true
+  },
+  {
+    "id": 548,
+    "name": "Laundry detergent",
+    "parentId": 3422,
+    "isEanMandatory": true
+  },
+  {
+    "id": 549,
+    "name": "Dishwasher detergent",
+    "parentId": 3424,
+    "isEanMandatory": true
+  },
+  {
+    "id": 550,
+    "name": "Classical razor blades",
+    "parentId": 1302,
+    "isEanMandatory": true
+  },
+  {
+    "id": 551,
+    "name": "Dental floss",
+    "parentId": 928,
+    "isEanMandatory": true
+  },
+  {
+    "id": 552,
+    "name": "Mouthwash",
+    "parentId": 928,
+    "isEanMandatory": true
+  },
+  {
+    "id": 553,
+    "name": "Oral irrigators",
+    "parentId": 1513,
+    "isEanMandatory": true
+  },
+  {
+    "id": 554,
+    "name": "DVR & NVR Systems",
+    "parentId": 408,
+    "isEanMandatory": true
+  },
+  {
+    "id": 555,
+    "name": "Security and Surveillance Kit",
+    "parentId": 408,
+    "isEanMandatory": true
+  },
+  {
+    "id": 556,
+    "name": "Access Control and Surveillance Accessories",
+    "parentId": 408,
+    "isEanMandatory": true
+  },
+  {
+    "id": 557,
+    "name": "Car Alarms & Parking Sensors",
+    "parentId": 691,
+    "isEanMandatory": true
+  },
+  {
+    "id": 577,
+    "name": "Covers, bags and protective cases",
+    "parentId": 797,
+    "isEanMandatory": true
+  },
+  {
+    "id": 578,
+    "name": "Action cameras mounts",
+    "parentId": 797,
+    "isEanMandatory": true
+  },
+  {
+    "id": 581,
+    "name": "Gimbal stabilizer",
+    "parentId": 824,
+    "isEanMandatory": true
+  },
+  {
+    "id": 587,
+    "name": "Other school accessories",
+    "parentId": 2653,
+    "isEanMandatory": true
+  },
+  {
+    "id": 590,
+    "name": "Arts",
+    "parentId": 894,
+    "isEanMandatory": true
+  },
+  {
+    "id": 604,
+    "name": "Vinyls and CDs",
+    "parentId": 869,
+    "isEanMandatory": true
+  },
+  {
+    "id": 605,
+    "name": "Fiction",
+    "parentId": 872,
+    "isEanMandatory": true
+  },
+  {
+    "id": 610,
+    "name": "Skin masks and gomaches",
+    "parentId": 1302,
+    "isEanMandatory": true
+  },
+  {
+    "id": 630,
+    "name": "Axes",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 631,
+    "name": "Car camera DVR",
+    "parentId": 691,
+    "isEanMandatory": true
+  },
+  {
+    "id": 632,
+    "name": "Children cleaning kits and accessories",
+    "parentId": 868,
+    "isEanMandatory": true
+  },
+  {
+    "id": 641,
+    "name": "3D consumables",
+    "parentId": 573,
+    "isEanMandatory": true
+  },
+  {
+    "id": 642,
+    "name": "Multi tools and accessories",
+    "parentId": 360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 650,
+    "name": "Antivirus",
+    "parentId": 574,
+    "isEanMandatory": false
+  },
+  {
+    "id": 651,
+    "name": "Operating Systems",
+    "parentId": 574,
+    "isEanMandatory": true
+  },
+  {
+    "id": 661,
+    "name": "Tensiometer accessories",
+    "parentId": 4337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 673,
+    "name": "Laundry dryers",
+    "parentId": 3967,
+    "isEanMandatory": true
+  },
+  {
+    "id": 680,
+    "name": "Central Heating",
+    "parentId": 3754,
+    "isEanMandatory": true
+  },
+  {
+    "id": 683,
+    "name": "Shower gels",
+    "parentId": 3779,
+    "isEanMandatory": true
+  },
+  {
+    "id": 684,
+    "name": "Products and devices for locomotion",
+    "parentId": 4338,
+    "isEanMandatory": true
+  },
+  {
+    "id": 686,
+    "name": "Baby audio monitors",
+    "parentId": 1355,
+    "isEanMandatory": true
+  },
+  {
+    "id": 687,
+    "name": "Powder and blush",
+    "parentId": 1294,
+    "isEanMandatory": true
+  },
+  {
+    "id": 688,
+    "name": "Cosmetic mirrors",
+    "parentId": 1294,
+    "isEanMandatory": true
+  },
+  {
+    "id": 700,
+    "name": "Lubricants",
+    "parentId": 3902,
+    "isEanMandatory": true
+  },
+  {
+    "id": 703,
+    "name": "Hearing aids",
+    "parentId": 4337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 714,
+    "name": "Ribbon printers",
+    "parentId": 275,
+    "isEanMandatory": true
+  },
+  {
+    "id": 731,
+    "name": "Protective sheets and laptop stickers",
+    "parentId": 450,
+    "isEanMandatory": true
+  },
+  {
+    "id": 746,
+    "name": "Bottom freezers refrigerators",
+    "parentId": 3966,
+    "isEanMandatory": true
+  },
+  {
+    "id": 747,
+    "name": "First aid kits",
+    "parentId": 937,
+    "isEanMandatory": true
+  },
+  {
+    "id": 748,
+    "name": "Bronze products",
+    "parentId": 3907,
+    "isEanMandatory": true
+  },
+  {
+    "id": 752,
+    "name": "Small kitchen appliances",
+    "parentId": 488,
+    "isEanMandatory": true
+  },
+  {
+    "id": 763,
+    "name": "Gaming console accessories",
+    "parentId": 761,
+    "isEanMandatory": true
+  },
+  {
+    "id": 783,
+    "name": "Laptop keyboards",
+    "parentId": 450,
+    "isEanMandatory": true
+  },
+  {
+    "id": 789,
+    "name": "Hobs accessories and parts",
+    "parentId": 80,
+    "isEanMandatory": true
+  },
+  {
+    "id": 792,
+    "name": "Printer label strips",
+    "parentId": 275,
+    "isEanMandatory": true
+  },
+  {
+    "id": 799,
+    "name": "Other Video Accessories",
+    "parentId": 797,
+    "isEanMandatory": true
+  },
+  {
+    "id": 802,
+    "name": "Laptop security systems",
+    "parentId": 450,
+    "isEanMandatory": true
+  },
+  {
+    "id": 814,
+    "name": "Action cameras batteries and chargers",
+    "parentId": 797,
+    "isEanMandatory": true
+  },
+  {
+    "id": 815,
+    "name": "Soundbars",
+    "parentId": 938,
+    "isEanMandatory": true
+  },
+  {
+    "id": 816,
+    "name": "Glucometer Accessories",
+    "parentId": 4337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 817,
+    "name": "Makeup applicators and brushes",
+    "parentId": 1294,
+    "isEanMandatory": true
+  },
+  {
+    "id": 820,
+    "name": "Steam cleaners",
+    "parentId": 402,
+    "isEanMandatory": true
+  },
+  {
+    "id": 821,
+    "name": "Ovens accessories and parts",
+    "parentId": 80,
+    "isEanMandatory": true
+  },
+  {
+    "id": 830,
+    "name": "Docking stations",
+    "parentId": 450,
+    "isEanMandatory": true
+  },
+  {
+    "id": 832,
+    "name": "Laser Printer Toners",
+    "parentId": 275,
+    "isEanMandatory": true
+  },
+  {
+    "id": 841,
+    "name": "Cosmetics foot files",
+    "parentId": 3051,
+    "isEanMandatory": true
+  },
+  {
+    "id": 842,
+    "name": "Pregnancy and ovulation tests",
+    "parentId": 4189,
+    "isEanMandatory": true
+  },
+  {
+    "id": 849,
+    "name": "Accessories and parts hoods",
+    "parentId": 80,
+    "isEanMandatory": true
+  },
+  {
+    "id": 851,
+    "name": "Dishwasher accessories and parts",
+    "parentId": 80,
+    "isEanMandatory": true
+  },
+  {
+    "id": 853,
+    "name": "Microwave oven accessories and parts",
+    "parentId": 80,
+    "isEanMandatory": true
+  },
+  {
+    "id": 857,
+    "name": "Plush Toys",
+    "parentId": 1501,
+    "isEanMandatory": true
+  },
+  {
+    "id": 859,
+    "name": "Figurines",
+    "parentId": 862,
+    "isEanMandatory": true
+  },
+  {
+    "id": 871,
+    "name": "Audiobooks",
+    "parentId": 876,
+    "isEanMandatory": true
+  },
+  {
+    "id": 874,
+    "name": "Publishing",
+    "parentId": 872,
+    "isEanMandatory": true
+  },
+  {
+    "id": 875,
+    "name": "Poetry, theater, literary studies",
+    "parentId": 872,
+    "isEanMandatory": true
+  },
+  {
+    "id": 878,
+    "name": "School manuals and auxiliaries",
+    "parentId": 877,
+    "isEanMandatory": true
+  },
+  {
+    "id": 879,
+    "name": "Pedagogy and Methodology",
+    "parentId": 877,
+    "isEanMandatory": true
+  },
+  {
+    "id": 881,
+    "name": "Children poetry",
+    "parentId": 880,
+    "isEanMandatory": true
+  },
+  {
+    "id": 883,
+    "name": "Atlases and encyclopedias for children",
+    "parentId": 880,
+    "isEanMandatory": true
+  },
+  {
+    "id": 884,
+    "name": "Fiction for children",
+    "parentId": 880,
+    "isEanMandatory": true
+  },
+  {
+    "id": 885,
+    "name": "Children fairy tales",
+    "parentId": 880,
+    "isEanMandatory": true
+  },
+  {
+    "id": 886,
+    "name": "Extracurricular activities",
+    "parentId": 880,
+    "isEanMandatory": true
+  },
+  {
+    "id": 887,
+    "name": "Dictionaries",
+    "parentId": 877,
+    "isEanMandatory": true
+  },
+  {
+    "id": 889,
+    "name": "Law and Criminology",
+    "parentId": 903,
+    "isEanMandatory": true
+  },
+  {
+    "id": 890,
+    "name": "Foreign language courses",
+    "parentId": 877,
+    "isEanMandatory": true
+  },
+  {
+    "id": 891,
+    "name": "Religion",
+    "parentId": 903,
+    "isEanMandatory": true
+  },
+  {
+    "id": 893,
+    "name": "Pregnancy and childbirth",
+    "parentId": 892,
+    "isEanMandatory": true
+  },
+  {
+    "id": 895,
+    "name": "Personal Development",
+    "parentId": 892,
+    "isEanMandatory": true
+  },
+  {
+    "id": 897,
+    "name": "Biographies, memoirs and journals",
+    "parentId": 872,
+    "isEanMandatory": true
+  },
+  {
+    "id": 898,
+    "name": "Tourist guides",
+    "parentId": 609,
+    "isEanMandatory": true
+  },
+  {
+    "id": 900,
+    "name": "Travel Tips",
+    "parentId": 609,
+    "isEanMandatory": true
+  },
+  {
+    "id": 901,
+    "name": "Maps",
+    "parentId": 609,
+    "isEanMandatory": true
+  },
+  {
+    "id": 902,
+    "name": "Sexual education",
+    "parentId": 892,
+    "isEanMandatory": true
+  },
+  {
+    "id": 904,
+    "name": "Sociology and philosophy",
+    "parentId": 903,
+    "isEanMandatory": true
+  },
+  {
+    "id": 905,
+    "name": "History",
+    "parentId": 903,
+    "isEanMandatory": true
+  },
+  {
+    "id": 907,
+    "name": "Crossword magazines and gaming books",
+    "parentId": 917,
+    "isEanMandatory": true
+  },
+  {
+    "id": 908,
+    "name": "Policy",
+    "parentId": 903,
+    "isEanMandatory": true
+  },
+  {
+    "id": 910,
+    "name": "Comic strip books",
+    "parentId": 917,
+    "isEanMandatory": true
+  },
+  {
+    "id": 911,
+    "name": "Hobby",
+    "parentId": 917,
+    "isEanMandatory": true
+  },
+  {
+    "id": 913,
+    "name": "Gastronomy",
+    "parentId": 917,
+    "isEanMandatory": true
+  },
+  {
+    "id": 914,
+    "name": "Automotive courses and quizzes",
+    "parentId": 917,
+    "isEanMandatory": true
+  },
+  {
+    "id": 915,
+    "name": "House and garden",
+    "parentId": 917,
+    "isEanMandatory": true
+  },
+  {
+    "id": 916,
+    "name": "Design",
+    "parentId": 894,
+    "isEanMandatory": true
+  },
+  {
+    "id": 918,
+    "name": "Medicine and pharmacy",
+    "parentId": 1217,
+    "isEanMandatory": true
+  },
+  {
+    "id": 919,
+    "name": "Spirituality",
+    "parentId": 903,
+    "isEanMandatory": true
+  },
+  {
+    "id": 920,
+    "name": "Grammar and vocabulary / Grammar",
+    "parentId": 877,
+    "isEanMandatory": true
+  },
+  {
+    "id": 921,
+    "name": "Architecture",
+    "parentId": 894,
+    "isEanMandatory": true
+  },
+  {
+    "id": 923,
+    "name": "Science and technology",
+    "parentId": 1217,
+    "isEanMandatory": true
+  },
+  {
+    "id": 925,
+    "name": "Exams and contests",
+    "parentId": 877,
+    "isEanMandatory": true
+  },
+  {
+    "id": 927,
+    "name": "Sun protection products",
+    "parentId": 3907,
+    "isEanMandatory": true
+  },
+  {
+    "id": 929,
+    "name": "Nail clippers",
+    "parentId": 3051,
+    "isEanMandatory": true
+  },
+  {
+    "id": 932,
+    "name": "Hardware nails",
+    "parentId": 3804,
+    "isEanMandatory": true
+  },
+  {
+    "id": 934,
+    "name": "Gun safes and cabinets",
+    "parentId": 3804,
+    "isEanMandatory": true
+  },
+  {
+    "id": 935,
+    "name": "Cords",
+    "parentId": 3804,
+    "isEanMandatory": true
+  },
+  {
+    "id": 936,
+    "name": "Hair conditioner",
+    "parentId": 810,
+    "isEanMandatory": true
+  },
+  {
+    "id": 941,
+    "name": "Sewing machine accessories and parts",
+    "parentId": 629,
+    "isEanMandatory": true
+  },
+  {
+    "id": 942,
+    "name": "Buffing and polishing accessories",
+    "parentId": 360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 943,
+    "name": "Paint sprayers",
+    "parentId": 360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 944,
+    "name": "Work safety shoes",
+    "parentId": 360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 945,
+    "name": "Irrigation timer controllers",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 946,
+    "name": "Pressure washing machines",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 948,
+    "name": "Magazines and Publications",
+    "parentId": 917,
+    "isEanMandatory": true
+  },
+  {
+    "id": 949,
+    "name": "Weed scythes",
+    "parentId": 351,
+    "isEanMandatory": true
+  },
+  {
+    "id": 951,
+    "name": "IT",
+    "parentId": 1217,
+    "isEanMandatory": true
+  },
+  {
+    "id": 952,
+    "name": "Conversation guides",
+    "parentId": 877,
+    "isEanMandatory": true
+  },
+  {
+    "id": 953,
+    "name": "Classical razor accessories",
+    "parentId": 1302,
+    "isEanMandatory": true
+  },
+  {
+    "id": 955,
+    "name": "Antibacterial and sanitizing gel",
+    "parentId": 3779,
+    "isEanMandatory": true
+  },
+  {
+    "id": 956,
+    "name": "Car tool accessories",
+    "parentId": 347,
+    "isEanMandatory": true
+  },
+  {
+    "id": 959,
+    "name": "Kitchen cleaning solutions",
+    "parentId": 3424,
+    "isEanMandatory": true
+  },
+  {
+    "id": 960,
+    "name": "Universal detergents",
+    "parentId": 3425,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1167,
+    "name": "Tricycles",
+    "parentId": 867,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1168,
+    "name": "Children cars and vehicles",
+    "parentId": 867,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1169,
+    "name": "Interactive toys",
+    "parentId": 861,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1170,
+    "name": "Doll strollers and accessories",
+    "parentId": 1202,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1171,
+    "name": "Tests for infection detection",
+    "parentId": 4189,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1173,
+    "name": "Plasters",
+    "parentId": 4336,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1174,
+    "name": "Toy construction vehicles",
+    "parentId": 865,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1175,
+    "name": "Toy Trains",
+    "parentId": 865,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1176,
+    "name": "Educational games",
+    "parentId": 861,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1177,
+    "name": "Puzzle",
+    "parentId": 861,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1178,
+    "name": "Model cars",
+    "parentId": 862,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1182,
+    "name": "Trains",
+    "parentId": 1501,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1183,
+    "name": "Painting and drawing sets",
+    "parentId": 863,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1184,
+    "name": "Toy helicopters, planes and boats",
+    "parentId": 865,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1185,
+    "name": "Craft kits",
+    "parentId": 863,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1186,
+    "name": "Dough, clay and mouldable sand",
+    "parentId": 863,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1187,
+    "name": "Building Sets",
+    "parentId": 864,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1189,
+    "name": "Cubes and bricks",
+    "parentId": 864,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1190,
+    "name": "Other electric vehicles",
+    "parentId": 3924,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1191,
+    "name": "Toy Motorcycles",
+    "parentId": 865,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1192,
+    "name": "Toy Cars",
+    "parentId": 865,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1193,
+    "name": "Remote control toy boats",
+    "parentId": 865,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1196,
+    "name": "Tents and children houses",
+    "parentId": 867,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1198,
+    "name": "Playground and accessories",
+    "parentId": 867,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1203,
+    "name": "Musical Instruments and music boxes",
+    "parentId": 868,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1204,
+    "name": "Children Kitchens",
+    "parentId": 868,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1205,
+    "name": "Doctor play sets",
+    "parentId": 868,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1206,
+    "name": "Workshops and workbenches",
+    "parentId": 868,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1208,
+    "name": "Dolls",
+    "parentId": 1202,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1209,
+    "name": "Board games",
+    "parentId": 861,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1210,
+    "name": "Maintenance and body care devices",
+    "parentId": 811,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1211,
+    "name": "Toy Robots",
+    "parentId": 865,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1213,
+    "name": "Kites and flying toys",
+    "parentId": 867,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1214,
+    "name": "Beach toys and sand",
+    "parentId": 867,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1216,
+    "name": "Doll houses and accessories",
+    "parentId": 1202,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1218,
+    "name": "Marketing",
+    "parentId": 947,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1220,
+    "name": "Management and business administration",
+    "parentId": 947,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1222,
+    "name": "Astrology",
+    "parentId": 1217,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1224,
+    "name": "Fitness",
+    "parentId": 917,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1225,
+    "name": "Nature and the environment",
+    "parentId": 903,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1227,
+    "name": "Math",
+    "parentId": 1217,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1228,
+    "name": "Finance & Accounting",
+    "parentId": 947,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1241,
+    "name": "Perfumes and gift sets",
+    "parentId": 3753,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1295,
+    "name": "Mascara",
+    "parentId": 1294,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1296,
+    "name": "Lipstick and lip pencil",
+    "parentId": 1294,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1297,
+    "name": "Skin foundation and makeup base",
+    "parentId": 1294,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1298,
+    "name": "Nail polish",
+    "parentId": 3051,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1299,
+    "name": "Make-up accessories",
+    "parentId": 1294,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1301,
+    "name": "Makeup sets",
+    "parentId": 1294,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1303,
+    "name": "Skin cleansing products",
+    "parentId": 1302,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1304,
+    "name": "Skin treatments and serums",
+    "parentId": 1302,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1305,
+    "name": "Shaving foam and gel",
+    "parentId": 1302,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1306,
+    "name": "After Shave",
+    "parentId": 1302,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1308,
+    "name": "Gloss and lip balm",
+    "parentId": 1294,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1309,
+    "name": "Skin creams",
+    "parentId": 1302,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1311,
+    "name": "Deodorants and antiperspirants",
+    "parentId": 3779,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1312,
+    "name": "Soaps",
+    "parentId": 3779,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1313,
+    "name": "Cosmetic oils",
+    "parentId": 1302,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1314,
+    "name": "Lotions and body creams",
+    "parentId": 3779,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1315,
+    "name": "Body care treatments",
+    "parentId": 3779,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1316,
+    "name": "Intimate wash lotions and deodorants",
+    "parentId": 628,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1317,
+    "name": "Panty liners and tampons",
+    "parentId": 628,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1318,
+    "name": "Waxes, stripes and depilatory creams",
+    "parentId": 3779,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1320,
+    "name": "Hairbrushes and combs",
+    "parentId": 810,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1321,
+    "name": "Hair shampoo",
+    "parentId": 810,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1322,
+    "name": "Treatments and hair mask",
+    "parentId": 810,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1323,
+    "name": "Hair color and oxidant",
+    "parentId": 810,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1326,
+    "name": "Hair spray and styling foam",
+    "parentId": 810,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1327,
+    "name": "Toothpaste",
+    "parentId": 928,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1330,
+    "name": "Dog food",
+    "parentId": 3535,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1337,
+    "name": "Pet Toys",
+    "parentId": 1329,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1338,
+    "name": "Collars, leashes, harnesses",
+    "parentId": 1331,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1339,
+    "name": "Pet clothes",
+    "parentId": 1331,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1340,
+    "name": "Pet brushes, trimmers and pliers",
+    "parentId": 1331,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1341,
+    "name": "Pet shampoo and conditioner",
+    "parentId": 1332,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1342,
+    "name": "Antiparasitic solutions",
+    "parentId": 1332,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1343,
+    "name": "Pet sheets and substrates",
+    "parentId": 1332,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1344,
+    "name": "Pet beds, pillows and mattresses",
+    "parentId": 1333,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1345,
+    "name": "Pet carriers and travel products",
+    "parentId": 1333,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1346,
+    "name": "Pet carriers and travel accessories",
+    "parentId": 1333,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1347,
+    "name": "Aquariums & Terrariums",
+    "parentId": 3542,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1348,
+    "name": "Aquarium filters and filter materials",
+    "parentId": 3542,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1353,
+    "name": "Breast pumps",
+    "parentId": 1351,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1354,
+    "name": "Maternity cosmetics",
+    "parentId": 1351,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1356,
+    "name": "Men Jewelry",
+    "parentId": 2739,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1357,
+    "name": "Baby playpens",
+    "parentId": 1355,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1359,
+    "name": "Baby strollers",
+    "parentId": 1358,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1360,
+    "name": "Baby crib",
+    "parentId": 3238,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1361,
+    "name": "Baby bedding",
+    "parentId": 3238,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1365,
+    "name": "Baby bath tubs and accessories",
+    "parentId": 1363,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1366,
+    "name": "Towels and Bathrobes",
+    "parentId": 1363,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1367,
+    "name": "Special Laundry Detergents",
+    "parentId": 1363,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1372,
+    "name": "Baby bags",
+    "parentId": 1370,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1379,
+    "name": "Work safety equipment accessories",
+    "parentId": 937,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1380,
+    "name": "Fire extinguishers",
+    "parentId": 937,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1382,
+    "name": "Baby nasal aspirators and accessories",
+    "parentId": 1355,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1383,
+    "name": "Children shampoo and conditioner",
+    "parentId": 3259,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1387,
+    "name": "Feeding and watering products",
+    "parentId": 1386,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1388,
+    "name": "Hair cutting and coloring accessories",
+    "parentId": 810,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1390,
+    "name": "Children trousers",
+    "parentId": 3217,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1393,
+    "name": "Children shoes",
+    "parentId": 3230,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1394,
+    "name": "Women Body Shapers",
+    "parentId": 1391,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1395,
+    "name": "Women Corsets and Girdles",
+    "parentId": 1391,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1400,
+    "name": "Automobiles",
+    "parentId": 1518,
+    "isEanMandatory": false
+  },
+  {
+    "id": 1401,
+    "name": "Drones",
+    "parentId": 1495,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1402,
+    "name": "Measuring and Control Devices",
+    "parentId": 364,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1403,
+    "name": "Stamplers",
+    "parentId": 2611,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1404,
+    "name": "Active foam & car detergents",
+    "parentId": 1414,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1406,
+    "name": "3D Printers",
+    "parentId": 573,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1407,
+    "name": "3D Scanners",
+    "parentId": 573,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1408,
+    "name": "3D Pencils",
+    "parentId": 573,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1409,
+    "name": "3D printing accessories",
+    "parentId": 573,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1412,
+    "name": "Tires",
+    "parentId": 1411,
+    "isEanMandatory": false
+  },
+  {
+    "id": 1413,
+    "name": "Car Rims",
+    "parentId": 1411,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1415,
+    "name": "Motor Oil",
+    "parentId": 1410,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1416,
+    "name": "Brake Fluid",
+    "parentId": 1410,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1417,
+    "name": "Antifreeze",
+    "parentId": 1410,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1418,
+    "name": "Windshield Fluid",
+    "parentId": 1414,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1419,
+    "name": "Gearbox Oil",
+    "parentId": 1410,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1420,
+    "name": "Car Additives",
+    "parentId": 1410,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1421,
+    "name": "Car wipers",
+    "parentId": 1410,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1422,
+    "name": "Car Freshener",
+    "parentId": 1414,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1424,
+    "name": "Lightbulbs and car fuses",
+    "parentId": 1423,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1425,
+    "name": "Car Bateries",
+    "parentId": 1423,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1426,
+    "name": "Projectors, Lamps & LED's",
+    "parentId": 1423,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1428,
+    "name": "Roof Rack",
+    "parentId": 1427,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1429,
+    "name": "Trunk Boxes",
+    "parentId": 1427,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1442,
+    "name": "Car bike mount",
+    "parentId": 1427,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1443,
+    "name": "Ski mount",
+    "parentId": 1427,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1444,
+    "name": "Towing systems",
+    "parentId": 1427,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1445,
+    "name": "Wheel Covers",
+    "parentId": 1427,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1446,
+    "name": "Snow Chains",
+    "parentId": 1427,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1448,
+    "name": "Car Mats",
+    "parentId": 1447,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1449,
+    "name": "Trunk Protection",
+    "parentId": 1447,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1450,
+    "name": "Car arm rests",
+    "parentId": 1447,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1451,
+    "name": "Covers",
+    "parentId": 1447,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1455,
+    "name": "Car Mounts",
+    "parentId": 1447,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1456,
+    "name": "Car Shades",
+    "parentId": 1447,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1459,
+    "name": "Car paint",
+    "parentId": 1458,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1460,
+    "name": "Car safety kits",
+    "parentId": 1458,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1462,
+    "name": "Car Mirrors",
+    "parentId": 1461,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1463,
+    "name": "Exhausts",
+    "parentId": 1461,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1474,
+    "name": "Mud defenders",
+    "parentId": 1461,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1480,
+    "name": "Car Tuning Accesssories",
+    "parentId": 1461,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1498,
+    "name": "Hair cuttting scissors",
+    "parentId": 810,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1509,
+    "name": "Sponges",
+    "parentId": 3779,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1521,
+    "name": "Furniture sets",
+    "parentId": 1535,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1522,
+    "name": "Sofas",
+    "parentId": 1520,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1523,
+    "name": "Living room furniture and bookcases",
+    "parentId": 1520,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1524,
+    "name": "Office desks",
+    "parentId": 1520,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1525,
+    "name": "Shelves",
+    "parentId": 1520,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1526,
+    "name": "Office chairs",
+    "parentId": 1520,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1527,
+    "name": "Living tables",
+    "parentId": 1535,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1528,
+    "name": "Coat racks",
+    "parentId": 1520,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1530,
+    "name": "Bedroom Sets",
+    "parentId": 1529,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1531,
+    "name": "Beds",
+    "parentId": 1529,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1532,
+    "name": "Wardrobes and Cupboards",
+    "parentId": 1529,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1533,
+    "name": "Drawer dressers",
+    "parentId": 1529,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1538,
+    "name": "Tables",
+    "parentId": 1535,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1540,
+    "name": "Furniture consoles",
+    "parentId": 1535,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1542,
+    "name": "Garden Furniture Sets",
+    "parentId": 1541,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1543,
+    "name": "Garden umbrellas and pavilions",
+    "parentId": 1541,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1544,
+    "name": "Garden chairs and sunbeds",
+    "parentId": 1541,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1545,
+    "name": "Garden tables",
+    "parentId": 1541,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1546,
+    "name": "Hammocks and swings",
+    "parentId": 1541,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1548,
+    "name": "Wallpaper",
+    "parentId": 1547,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1549,
+    "name": "Paintings",
+    "parentId": 1547,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1550,
+    "name": "Decorative clocks",
+    "parentId": 1547,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1565,
+    "name": "Decorative bowls and vases",
+    "parentId": 1547,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1566,
+    "name": "Decorative Cushions",
+    "parentId": 1583,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1567,
+    "name": "Decorative Accessories",
+    "parentId": 1547,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1569,
+    "name": "Candles",
+    "parentId": 1568,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1572,
+    "name": "Room freshner",
+    "parentId": 958,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1574,
+    "name": "Accessories for party",
+    "parentId": 1573,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1575,
+    "name": "Gift packaging",
+    "parentId": 2603,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1581,
+    "name": "Mattresses",
+    "parentId": 4291,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1582,
+    "name": "Mattress Protectors",
+    "parentId": 1583,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1584,
+    "name": "Rugs",
+    "parentId": 1583,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1585,
+    "name": "Beds and Blankets",
+    "parentId": 1583,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1586,
+    "name": "Pillows",
+    "parentId": 1583,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1589,
+    "name": "Curtains",
+    "parentId": 1583,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1591,
+    "name": "Towels",
+    "parentId": 1590,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1592,
+    "name": "Bath Robes",
+    "parentId": 1590,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1593,
+    "name": "Bathroom rugs",
+    "parentId": 1590,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1596,
+    "name": "Kitchen aprons",
+    "parentId": 1594,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1597,
+    "name": "Table covers",
+    "parentId": 1594,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1599,
+    "name": "Placemats",
+    "parentId": 1594,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1604,
+    "name": "Lids",
+    "parentId": 1603,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1605,
+    "name": "Turkish coffee pots and milk pots",
+    "parentId": 1603,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1606,
+    "name": "Thermoresistant vessel",
+    "parentId": 1603,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1610,
+    "name": "Fruits and vegetables peelers",
+    "parentId": 1607,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1611,
+    "name": "Bowls",
+    "parentId": 1616,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1613,
+    "name": "Manual juicers and presses",
+    "parentId": 1607,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1617,
+    "name": "Table services",
+    "parentId": 1616,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1618,
+    "name": "Plates",
+    "parentId": 1616,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1619,
+    "name": "Mugs and cups",
+    "parentId": 1616,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1620,
+    "name": "Serving trays",
+    "parentId": 1616,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1622,
+    "name": "Glasses",
+    "parentId": 1621,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1625,
+    "name": "Cocktail Shakers",
+    "parentId": 1621,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1626,
+    "name": "Corkscrews and stoppers",
+    "parentId": 1621,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1627,
+    "name": "Drinking Straws and cocktail decorations",
+    "parentId": 1621,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1629,
+    "name": "Thermos flasks and mugs",
+    "parentId": 1628,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1630,
+    "name": "Kitchen platters",
+    "parentId": 1628,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1631,
+    "name": "Oil and vinegar dispensers",
+    "parentId": 1628,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1632,
+    "name": "Serving Baskets",
+    "parentId": 1628,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1633,
+    "name": "Paper towels and napkins",
+    "parentId": 3424,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1634,
+    "name": "Dessert dishes",
+    "parentId": 1628,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1644,
+    "name": "Gastronorm trays",
+    "parentId": 1628,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1647,
+    "name": "Brooms, Brushes and Mops",
+    "parentId": 1646,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1648,
+    "name": "Broom, Brushes and Mop accessories",
+    "parentId": 1646,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1649,
+    "name": "Window wipers",
+    "parentId": 1646,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1650,
+    "name": "Dish sponge and cleaning cloths",
+    "parentId": 3424,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1651,
+    "name": "Trash bags",
+    "parentId": 3424,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1652,
+    "name": "Trash cans and recycle bins",
+    "parentId": 1646,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1653,
+    "name": "Disposable gloves",
+    "parentId": 4012,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1654,
+    "name": "Entrance Mats",
+    "parentId": 1583,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1655,
+    "name": "Fabric softener",
+    "parentId": 3422,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1657,
+    "name": "Ironing tables",
+    "parentId": 1646,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1658,
+    "name": "Drying racks",
+    "parentId": 1646,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1660,
+    "name": "Barbecues",
+    "parentId": 1659,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1661,
+    "name": "Barbecue utensils",
+    "parentId": 1659,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1676,
+    "name": "Gardening pots and planters",
+    "parentId": 1675,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1677,
+    "name": "Potted plants",
+    "parentId": 1675,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1678,
+    "name": "Trees and shrubs",
+    "parentId": 1675,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1679,
+    "name": "Bulbs, seeds and seedlings",
+    "parentId": 1675,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1680,
+    "name": "Plant soil, fertilizers and pesticides",
+    "parentId": 1675,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1683,
+    "name": "Spice grinders and dispensers",
+    "parentId": 1682,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1684,
+    "name": "Food boxes",
+    "parentId": 1682,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1686,
+    "name": "Ladles, spoons and kitchen tongs",
+    "parentId": 1607,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1689,
+    "name": "Strainers and accessories",
+    "parentId": 1607,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1690,
+    "name": "Cookie cutters",
+    "parentId": 1607,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1691,
+    "name": "Flatware",
+    "parentId": 1614,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1692,
+    "name": "Linens",
+    "parentId": 1583,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1693,
+    "name": "Decorative garden accessories",
+    "parentId": 1662,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1697,
+    "name": "Bicycle tools",
+    "parentId": 3389,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1698,
+    "name": "Display, Presentation Systems and Planners",
+    "parentId": 96,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1701,
+    "name": "Bicycle fenders",
+    "parentId": 3389,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1702,
+    "name": "Bicycle wheel hub",
+    "parentId": 4322,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1703,
+    "name": "Bike accessories storage",
+    "parentId": 3389,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1704,
+    "name": "Bicycle vulcanizing kits",
+    "parentId": 4322,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1706,
+    "name": "Bike computers",
+    "parentId": 3389,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1707,
+    "name": "Bike kickstands",
+    "parentId": 3389,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1718,
+    "name": "Backpacks",
+    "parentId": 1510,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1721,
+    "name": "Bicycle lighting",
+    "parentId": 3389,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1722,
+    "name": "Power tillers and cultivators",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1723,
+    "name": "Bicycle tire pumps",
+    "parentId": 3389,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1724,
+    "name": "Bicycle luggage carrier",
+    "parentId": 3389,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1728,
+    "name": "Bike training wheels",
+    "parentId": 3389,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1729,
+    "name": "Child bike seats",
+    "parentId": 3389,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1732,
+    "name": "Bike bells",
+    "parentId": 3389,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1734,
+    "name": "Bike storage racks",
+    "parentId": 3389,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1739,
+    "name": "Jumping ropes",
+    "parentId": 2372,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1740,
+    "name": "Crowbars",
+    "parentId": 351,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1741,
+    "name": "Camping solar products",
+    "parentId": 1840,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1747,
+    "name": "Bicycle frames",
+    "parentId": 4322,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1748,
+    "name": "Fitness exercise bands",
+    "parentId": 2372,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1750,
+    "name": "Hand tools accessories",
+    "parentId": 351,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1753,
+    "name": "Sports goggles and lenses",
+    "parentId": 3811,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1754,
+    "name": "Sportive body protection",
+    "parentId": 3811,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1756,
+    "name": "Men sport shoes",
+    "parentId": 2324,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1759,
+    "name": "Men sports slippers",
+    "parentId": 2324,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1760,
+    "name": "Men sport boots",
+    "parentId": 2324,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1763,
+    "name": "Sports footwear accessories",
+    "parentId": 2324,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1764,
+    "name": "Men sports clothing equipment",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1766,
+    "name": "Women sport bras",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1785,
+    "name": "Tennis racquet strings",
+    "parentId": 2460,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1786,
+    "name": "Men sport socks",
+    "parentId": 1865,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1787,
+    "name": "Swim fins",
+    "parentId": 2423,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1788,
+    "name": "Ski poles",
+    "parentId": 2455,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1789,
+    "name": "Ski boots",
+    "parentId": 2455,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1790,
+    "name": "Men sport hats",
+    "parentId": 1865,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1791,
+    "name": "Men sports caps and bandanas",
+    "parentId": 1865,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1792,
+    "name": "Snowboards",
+    "parentId": 2455,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1793,
+    "name": "Snowboard bindings",
+    "parentId": 2455,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1794,
+    "name": "Racquet grips",
+    "parentId": 2460,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1795,
+    "name": "Precision sports guns",
+    "parentId": 2377,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1796,
+    "name": "Camping tents",
+    "parentId": 1840,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1797,
+    "name": "Sleeping bags",
+    "parentId": 1840,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1798,
+    "name": "Camping mattresses and pads",
+    "parentId": 1840,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1801,
+    "name": "Fitness weights",
+    "parentId": 2372,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1808,
+    "name": "Cutting tools",
+    "parentId": 351,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1809,
+    "name": "Bikes",
+    "parentId": 1695,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1810,
+    "name": "Bike cable locks",
+    "parentId": 3389,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1811,
+    "name": "Bicycle tires",
+    "parentId": 4322,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1813,
+    "name": "Bicycle cups and bearings",
+    "parentId": 4322,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1814,
+    "name": "Children Bicycles",
+    "parentId": 1695,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1815,
+    "name": "Bicycle handlebars",
+    "parentId": 4322,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1817,
+    "name": "Bicycle levers",
+    "parentId": 4322,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1818,
+    "name": "Bicycle cassettes",
+    "parentId": 4322,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1819,
+    "name": "Men Underwear",
+    "parentId": 2269,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1820,
+    "name": "Bicycle saddles",
+    "parentId": 4322,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1821,
+    "name": "Bicycle saddle covers",
+    "parentId": 3389,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1822,
+    "name": "Tennis accessories",
+    "parentId": 2460,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1824,
+    "name": "Speed punching bags",
+    "parentId": 1751,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1825,
+    "name": "Fitness ab banches",
+    "parentId": 2372,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1826,
+    "name": "Coffee machines accessories and parts",
+    "parentId": 629,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1827,
+    "name": "Punch mitts",
+    "parentId": 1751,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1829,
+    "name": "Rowing machines",
+    "parentId": 2372,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1831,
+    "name": "Women sport scarfs",
+    "parentId": 1865,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1839,
+    "name": "Heavy punching bags",
+    "parentId": 1751,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1841,
+    "name": "Camping chairs, tables and umbrellas",
+    "parentId": 1840,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1842,
+    "name": "Knives and pocket knives",
+    "parentId": 1840,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1843,
+    "name": "Stovetop espresso makers",
+    "parentId": 1603,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1845,
+    "name": "Barbells and dumbbells",
+    "parentId": 2372,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1846,
+    "name": "Plane tickets",
+    "parentId": 1518,
+    "isEanMandatory": false
+  },
+  {
+    "id": 1847,
+    "name": "Waste paper baskets",
+    "parentId": 2611,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1849,
+    "name": "Trip backpacks",
+    "parentId": 1694,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1851,
+    "name": "Protective sports helmets",
+    "parentId": 3811,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1852,
+    "name": "Bicycle cranksets and chainnings",
+    "parentId": 4322,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1853,
+    "name": "Step machines",
+    "parentId": 2372,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1861,
+    "name": "Activities and personal development courses",
+    "parentId": 1518,
+    "isEanMandatory": false
+  },
+  {
+    "id": 1866,
+    "name": "Men sport jackets",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1868,
+    "name": "Treadmills",
+    "parentId": 2372,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1870,
+    "name": "Maintenance Packages",
+    "parentId": 1410,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1871,
+    "name": "Sports gloves",
+    "parentId": 3811,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1879,
+    "name": "Men sport waistcoats",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 1887,
+    "name": "Multifunctional fitness machines",
+    "parentId": 2372,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2048,
+    "name": "Sports water bottles",
+    "parentId": 1840,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2051,
+    "name": "Sports fan items",
+    "parentId": 2447,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2054,
+    "name": "UV medical lamps",
+    "parentId": 930,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2058,
+    "name": "Self Adhesive Labels",
+    "parentId": 2603,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2064,
+    "name": "Exercise bikes",
+    "parentId": 2372,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2080,
+    "name": "Packaging articles",
+    "parentId": 2373,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2085,
+    "name": "Label printers and accessories",
+    "parentId": 2373,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2086,
+    "name": "Bathroom holders and accessories",
+    "parentId": 2764,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2090,
+    "name": "Women Bras",
+    "parentId": 1391,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2094,
+    "name": "Bicycle inner tube",
+    "parentId": 4322,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2096,
+    "name": "Women Pijamas",
+    "parentId": 1391,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2272,
+    "name": "Travel bags",
+    "parentId": 3751,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2284,
+    "name": "Sports balls",
+    "parentId": 2447,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2286,
+    "name": "Men Tops",
+    "parentId": 2718,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2301,
+    "name": "Golf clubs and sets",
+    "parentId": 2409,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2303,
+    "name": "Fitness accessories",
+    "parentId": 2372,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2305,
+    "name": "Swimming",
+    "parentId": 2423,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2307,
+    "name": "Bike baskets and trailers",
+    "parentId": 3389,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2316,
+    "name": "Men sport blouses",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2318,
+    "name": "Chimneys",
+    "parentId": 3754,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2320,
+    "name": "Aeromodels",
+    "parentId": 3303,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2321,
+    "name": "Airplane Model Building Kits",
+    "parentId": 3308,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2322,
+    "name": "Automodels",
+    "parentId": 3303,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2323,
+    "name": "Boat Models",
+    "parentId": 3303,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2325,
+    "name": "Golf umbrellas",
+    "parentId": 2409,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2326,
+    "name": "Trekking poles",
+    "parentId": 1840,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2332,
+    "name": "Camping burner stoves",
+    "parentId": 1840,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2333,
+    "name": "Straps, Boxes & Accessories for Watches",
+    "parentId": 2739,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2336,
+    "name": "Slimming belts",
+    "parentId": 2372,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2339,
+    "name": "Women Jewellery Boxes",
+    "parentId": 2697,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2346,
+    "name": "Fishing Hooks",
+    "parentId": 2337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2347,
+    "name": "Fishing lines",
+    "parentId": 2337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2348,
+    "name": "Power Cage and Stands",
+    "parentId": 2372,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2349,
+    "name": "Men sport sweatshirts",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2350,
+    "name": "Women sport undershirts",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2351,
+    "name": "Keepnets",
+    "parentId": 2337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2352,
+    "name": "Atomizer machines",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2353,
+    "name": "Landing nets",
+    "parentId": 2337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2354,
+    "name": "Mounts accessories",
+    "parentId": 2337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2356,
+    "name": "Reels",
+    "parentId": 2337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2361,
+    "name": "Fishing bait accessories",
+    "parentId": 2337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2362,
+    "name": "Articles Fan Gaming",
+    "parentId": 761,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2363,
+    "name": "Lead fishing",
+    "parentId": 2337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2364,
+    "name": "Fishing Fuses",
+    "parentId": 2337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2365,
+    "name": "Lures and jigs",
+    "parentId": 2337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2366,
+    "name": "Fishing luggage",
+    "parentId": 2337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2367,
+    "name": "Fishing Signalling Systems",
+    "parentId": 2337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2368,
+    "name": "Fishing GPS sonars",
+    "parentId": 2337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2369,
+    "name": "Supports and rod pods",
+    "parentId": 2337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2370,
+    "name": "Predator fishing accessories",
+    "parentId": 2337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2371,
+    "name": "Bicycle brakes",
+    "parentId": 4322,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2374,
+    "name": "Women Tops",
+    "parentId": 2668,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2375,
+    "name": "Objects of art",
+    "parentId": 1547,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2376,
+    "name": "Bicycle cables",
+    "parentId": 4322,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2392,
+    "name": "Bicycle forks and shock absorbers",
+    "parentId": 4322,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2393,
+    "name": "Post box",
+    "parentId": 3804,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2396,
+    "name": "Bicycle rims",
+    "parentId": 4322,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2397,
+    "name": "Bicycle chains",
+    "parentId": 4322,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2398,
+    "name": "Motorcycle and boats consumables",
+    "parentId": 2931,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2399,
+    "name": "Bicycle grips",
+    "parentId": 4322,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2400,
+    "name": "Bicycle pedals",
+    "parentId": 3389,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2401,
+    "name": "Party hats and blowers",
+    "parentId": 1576,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2402,
+    "name": "Workspace cleaning products",
+    "parentId": 2620,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2403,
+    "name": "Handlebar stem",
+    "parentId": 4322,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2404,
+    "name": "Bicycle wheels",
+    "parentId": 4322,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2405,
+    "name": "Bicycle derailluers",
+    "parentId": 4322,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2406,
+    "name": "Post-it notes",
+    "parentId": 2603,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2407,
+    "name": "Bicycle spokes",
+    "parentId": 4322,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2408,
+    "name": "Bicycle seat posts",
+    "parentId": 4322,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2410,
+    "name": "Smart Home Stations & Modules",
+    "parentId": 2805,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2412,
+    "name": "Fitness exercise balls",
+    "parentId": 2372,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2413,
+    "name": "Roller skates",
+    "parentId": 2409,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2414,
+    "name": "Skateboard",
+    "parentId": 2409,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2424,
+    "name": "Acvatics sports accessories",
+    "parentId": 2423,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2425,
+    "name": "Snorkeling masks and tubes",
+    "parentId": 2423,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2426,
+    "name": "Swimming floats",
+    "parentId": 2423,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2430,
+    "name": "Camping dishes and utensils",
+    "parentId": 1840,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2437,
+    "name": "Darts accessories",
+    "parentId": 2377,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2438,
+    "name": "Precision sports munition",
+    "parentId": 2377,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2439,
+    "name": "Biliard tables",
+    "parentId": 2435,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2440,
+    "name": "Dartboards",
+    "parentId": 2377,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2441,
+    "name": "Ball pumps",
+    "parentId": 2447,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2443,
+    "name": "Bowling pins",
+    "parentId": 2435,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2444,
+    "name": "Poker sets",
+    "parentId": 2435,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2445,
+    "name": "Billiard accessories",
+    "parentId": 2435,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2446,
+    "name": "Billiard cues",
+    "parentId": 2435,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2448,
+    "name": "Basketball hoops and goals",
+    "parentId": 2447,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2449,
+    "name": "Soccer goals",
+    "parentId": 2447,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2450,
+    "name": "Tactic boards",
+    "parentId": 2447,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2451,
+    "name": "Cups, trophies and medals",
+    "parentId": 2447,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2452,
+    "name": "Sports equipment cleaning and maintenance solutions",
+    "parentId": 2472,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2453,
+    "name": "Trampolines fitness",
+    "parentId": 2409,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2454,
+    "name": "Training accessories",
+    "parentId": 2447,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2456,
+    "name": "Ice skates",
+    "parentId": 2409,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2457,
+    "name": "Sledges & Boards",
+    "parentId": 2455,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2458,
+    "name": "Skis",
+    "parentId": 2455,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2459,
+    "name": "Snowboard boots",
+    "parentId": 2455,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2461,
+    "name": "Tennis racquets",
+    "parentId": 2460,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2465,
+    "name": "Vibration platform machines",
+    "parentId": 2372,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2467,
+    "name": "Women Bathrobes",
+    "parentId": 1391,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2468,
+    "name": "Cooler bags",
+    "parentId": 1840,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2469,
+    "name": "Women sport skirts",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2470,
+    "name": "Men sport trousers",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2471,
+    "name": "Women sport dresses",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2483,
+    "name": "Compasses",
+    "parentId": 1840,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2484,
+    "name": "Hand files and rasps",
+    "parentId": 351,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2493,
+    "name": "Key Boxes",
+    "parentId": 2373,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2494,
+    "name": "Mechanical Books",
+    "parentId": 95,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2495,
+    "name": "Bike reflective gear",
+    "parentId": 3389,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2499,
+    "name": "Women Tights",
+    "parentId": 1391,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2502,
+    "name": "Ski and snowboard accessories",
+    "parentId": 2455,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2503,
+    "name": "Trolley bags",
+    "parentId": 3751,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2504,
+    "name": "Cautery pens",
+    "parentId": 4337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2506,
+    "name": "Tennis table",
+    "parentId": 2460,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2518,
+    "name": "Fitness bags",
+    "parentId": 2372,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2519,
+    "name": "Barcode scanners",
+    "parentId": 2373,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2521,
+    "name": "Plastic file",
+    "parentId": 95,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2522,
+    "name": "Table tennis paddles",
+    "parentId": 2460,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2525,
+    "name": "Table tennis training robots",
+    "parentId": 2460,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2527,
+    "name": "Floral Arrangements",
+    "parentId": 1547,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2529,
+    "name": "Men Swimsuits",
+    "parentId": 2269,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2531,
+    "name": "Exercise mats",
+    "parentId": 2372,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2532,
+    "name": "Bicycle mirrors",
+    "parentId": 3389,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2545,
+    "name": "Medical services",
+    "parentId": 1518,
+    "isEanMandatory": false
+  },
+  {
+    "id": 2549,
+    "name": "Pet treats",
+    "parentId": 3535,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2550,
+    "name": "Nutritive supplements for pets",
+    "parentId": 3535,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2555,
+    "name": "Storage boxes",
+    "parentId": 2554,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2556,
+    "name": "Laundry baskets and humper",
+    "parentId": 2554,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2557,
+    "name": "Clothes hangers and racks",
+    "parentId": 2554,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2559,
+    "name": "Food foils and bags",
+    "parentId": 3424,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2563,
+    "name": "Electronic Collars",
+    "parentId": 2562,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2564,
+    "name": "Surveillance and invisible fences",
+    "parentId": 2562,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2565,
+    "name": "Pet training equipment",
+    "parentId": 2562,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2566,
+    "name": "Attractants and repellents solutions",
+    "parentId": 2562,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2570,
+    "name": "Hoists and lifting equipment",
+    "parentId": 1481,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2571,
+    "name": "Wheel service equipment",
+    "parentId": 1481,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2572,
+    "name": "Car Testers and Self Diagnosis",
+    "parentId": 1481,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2573,
+    "name": "Workshop Equipment",
+    "parentId": 1481,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2574,
+    "name": "Professional Tools for Car Repair",
+    "parentId": 1481,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2580,
+    "name": "Men Pijamas",
+    "parentId": 2269,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2585,
+    "name": "Clothing and footwear organizers",
+    "parentId": 2554,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2586,
+    "name": "Disposable Dishes",
+    "parentId": 3424,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2589,
+    "name": "Sledges and winter toys",
+    "parentId": 867,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2592,
+    "name": "Women Panties",
+    "parentId": 1391,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2593,
+    "name": "Women Swimsuits",
+    "parentId": 3016,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2596,
+    "name": "Folders",
+    "parentId": 95,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2600,
+    "name": "Condoms",
+    "parentId": 3902,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2604,
+    "name": "Photo paper",
+    "parentId": 2603,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2605,
+    "name": "Notepapers & Calendars",
+    "parentId": 2603,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2606,
+    "name": "Copybooks",
+    "parentId": 2653,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2607,
+    "name": "Envelopes",
+    "parentId": 2603,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2608,
+    "name": "Unpersonalised typings",
+    "parentId": 2603,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2610,
+    "name": "Paper blocks and post it notes",
+    "parentId": 2603,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2613,
+    "name": "Needle, office clips & thumbtacks",
+    "parentId": 2611,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2614,
+    "name": "Stamps, Hand stamp pads & Seals",
+    "parentId": 2611,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2615,
+    "name": "Scissors & Cutters",
+    "parentId": 2611,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2616,
+    "name": "Office holder articles",
+    "parentId": 2611,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2617,
+    "name": "Documents holder",
+    "parentId": 2611,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2618,
+    "name": "Adhesive tapes & Scotch tapes",
+    "parentId": 2611,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2621,
+    "name": "Premium Writting tools",
+    "parentId": 144,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2622,
+    "name": "Fountain pens",
+    "parentId": 144,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2623,
+    "name": "Ergonomic Products",
+    "parentId": 2620,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2624,
+    "name": "Ball point pens",
+    "parentId": 144,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2625,
+    "name": "Rollers",
+    "parentId": 144,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2626,
+    "name": "Pencils & Sharpeners",
+    "parentId": 144,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2627,
+    "name": "Liners",
+    "parentId": 144,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2628,
+    "name": "Corrector and eraser",
+    "parentId": 144,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2629,
+    "name": "Reserves and ink",
+    "parentId": 144,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2630,
+    "name": "Markers",
+    "parentId": 144,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2631,
+    "name": "Desk Sets",
+    "parentId": 144,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2638,
+    "name": "Binders",
+    "parentId": 95,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2639,
+    "name": "Supports for business cards",
+    "parentId": 95,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2640,
+    "name": "Portfolios, briefcases and clipboards",
+    "parentId": 95,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2641,
+    "name": "Archive Boxes & accessories",
+    "parentId": 95,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2642,
+    "name": "Flipcharts",
+    "parentId": 96,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2643,
+    "name": "Whiteboard",
+    "parentId": 96,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2645,
+    "name": "Presentation Accessories",
+    "parentId": 96,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2654,
+    "name": "Writing and drawing",
+    "parentId": 2653,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2655,
+    "name": "Backpacks",
+    "parentId": 2653,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2657,
+    "name": "Wall maps and earth globes",
+    "parentId": 2653,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2660,
+    "name": "Complete Systems",
+    "parentId": 401,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2662,
+    "name": "Dispensers",
+    "parentId": 2764,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2663,
+    "name": "Classical toothbrushes",
+    "parentId": 928,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2664,
+    "name": "Multicookers",
+    "parentId": 850,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2665,
+    "name": "Tea",
+    "parentId": 3705,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2669,
+    "name": "Dresses",
+    "parentId": 2668,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2671,
+    "name": "Women Blouses",
+    "parentId": 2668,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2672,
+    "name": "Women Shirts",
+    "parentId": 2668,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2673,
+    "name": "Women Pants",
+    "parentId": 2668,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2674,
+    "name": "Women Jeans",
+    "parentId": 2668,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2675,
+    "name": "Women Leggings",
+    "parentId": 2668,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2676,
+    "name": "Skirts",
+    "parentId": 2668,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2677,
+    "name": "Women Blazers",
+    "parentId": 2668,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2678,
+    "name": "Women T-Shirt",
+    "parentId": 2668,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2679,
+    "name": "Women Sweaters",
+    "parentId": 2668,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2680,
+    "name": "Women Hoodies",
+    "parentId": 2668,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2681,
+    "name": "Women Jackets",
+    "parentId": 2668,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2683,
+    "name": "Women Coats",
+    "parentId": 2668,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2687,
+    "name": "Women's Booties",
+    "parentId": 2686,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2688,
+    "name": "Women Boots",
+    "parentId": 2686,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2689,
+    "name": "Women Long Boots",
+    "parentId": 2686,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2690,
+    "name": "Women Trainers",
+    "parentId": 2686,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2693,
+    "name": "Women Shoes",
+    "parentId": 2686,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2694,
+    "name": "Women Loafers",
+    "parentId": 2686,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2695,
+    "name": "Women Ballet flat",
+    "parentId": 2686,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2696,
+    "name": "Women Sandals",
+    "parentId": 2686,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2698,
+    "name": "Women Handbags",
+    "parentId": 2697,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2699,
+    "name": "Women Scarfs & Foulards",
+    "parentId": 2697,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2700,
+    "name": "Women Belts",
+    "parentId": 2697,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2701,
+    "name": "Women Jewellery",
+    "parentId": 2697,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2710,
+    "name": "Women Sunglasses",
+    "parentId": 2697,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2711,
+    "name": "Women Wallets",
+    "parentId": 2697,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2712,
+    "name": "Fashion Backpacks for Women",
+    "parentId": 2697,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2713,
+    "name": "Women Caps and Hats",
+    "parentId": 2697,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2714,
+    "name": "Women Gloves",
+    "parentId": 2697,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2717,
+    "name": "Women Socks",
+    "parentId": 1391,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2719,
+    "name": "Men T-shirts",
+    "parentId": 2718,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2720,
+    "name": "Men Sweaters",
+    "parentId": 2718,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2721,
+    "name": "Men Hoodies",
+    "parentId": 2718,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2722,
+    "name": "Men Shirts",
+    "parentId": 2718,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2723,
+    "name": "Men Blazers",
+    "parentId": 2718,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2727,
+    "name": "Men Pants",
+    "parentId": 2718,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2728,
+    "name": "Men Jeans",
+    "parentId": 2718,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2729,
+    "name": "Men Jackets",
+    "parentId": 2718,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2731,
+    "name": "Men Overcoats",
+    "parentId": 2718,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2733,
+    "name": "Men Boots",
+    "parentId": 2732,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2735,
+    "name": "Men Trainers",
+    "parentId": 2732,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2736,
+    "name": "Men Loafers",
+    "parentId": 2732,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2737,
+    "name": "Men Shoes",
+    "parentId": 2732,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2743,
+    "name": "Men Wallets",
+    "parentId": 2739,
+    "isEanMandatory": false
+  },
+  {
+    "id": 2744,
+    "name": "Men Belts",
+    "parentId": 2739,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2745,
+    "name": "Men Neckties",
+    "parentId": 2739,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2746,
+    "name": "Men Bow Ties",
+    "parentId": 2739,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2749,
+    "name": "Men Cufflinks",
+    "parentId": 2739,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2750,
+    "name": "Men Sunglasses",
+    "parentId": 2739,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2751,
+    "name": "Men Handbags",
+    "parentId": 2739,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2753,
+    "name": "Men Foulards & Scarfs",
+    "parentId": 2739,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2754,
+    "name": "Men Caps & Hats",
+    "parentId": 2739,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2755,
+    "name": "Men Gloves",
+    "parentId": 2739,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2756,
+    "name": "Men Socks",
+    "parentId": 2269,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2765,
+    "name": "Toilet seats",
+    "parentId": 2764,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2767,
+    "name": "Reader accessories",
+    "parentId": 876,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2768,
+    "name": "Manicure and pedicure machines",
+    "parentId": 811,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2769,
+    "name": "Toilet paper",
+    "parentId": 958,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2775,
+    "name": "Cell phone standing and docking stations",
+    "parentId": 17,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2776,
+    "name": "Wireless Headphones",
+    "parentId": 449,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2783,
+    "name": "Tablet Cases",
+    "parentId": 101,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2784,
+    "name": "Tablet screen protectors",
+    "parentId": 101,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2785,
+    "name": "Tablet Cables & Adapters",
+    "parentId": 101,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2786,
+    "name": "Tablet chargers",
+    "parentId": 101,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2787,
+    "name": "Car Holder & Docking",
+    "parentId": 101,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2788,
+    "name": "Tablet keyboards",
+    "parentId": 101,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2789,
+    "name": "Other Tablet accessories",
+    "parentId": 101,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2790,
+    "name": "Audio Processors",
+    "parentId": 401,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2791,
+    "name": "Microphones",
+    "parentId": 401,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2792,
+    "name": "Stands",
+    "parentId": 401,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2793,
+    "name": "Controllers",
+    "parentId": 401,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2794,
+    "name": "DJ Equipments",
+    "parentId": 401,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2797,
+    "name": "Aromatherapy essential oils",
+    "parentId": 533,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2798,
+    "name": "Body heaters",
+    "parentId": 533,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2799,
+    "name": "Aromatherapy and wellness diffusers",
+    "parentId": 533,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2800,
+    "name": "Medical monitoring devices",
+    "parentId": 4337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2804,
+    "name": "Sports watches",
+    "parentId": 3811,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2806,
+    "name": "Alarms & Accessories",
+    "parentId": 2805,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2807,
+    "name": "Acces control & Accessories",
+    "parentId": 408,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2809,
+    "name": "Make-up cleansing napkins and pads",
+    "parentId": 1302,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2810,
+    "name": "Audio Mixers",
+    "parentId": 401,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2811,
+    "name": "Adult diapers and incontinence underwear",
+    "parentId": 4332,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2812,
+    "name": "Neon Tubes",
+    "parentId": 364,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2813,
+    "name": "Sockets",
+    "parentId": 364,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2814,
+    "name": "Electric cables and conductors",
+    "parentId": 364,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2815,
+    "name": "Fuses",
+    "parentId": 364,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2816,
+    "name": "Electric panels",
+    "parentId": 364,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2818,
+    "name": "Lightning rods and accessories",
+    "parentId": 2872,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2819,
+    "name": "Pliers",
+    "parentId": 351,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2820,
+    "name": "Hammers and chisels",
+    "parentId": 351,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2821,
+    "name": "Gardening shovels",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2822,
+    "name": "Tool organizers and boxes",
+    "parentId": 351,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2828,
+    "name": "Screwdrivers",
+    "parentId": 351,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2829,
+    "name": "Transport and lifting equipment",
+    "parentId": 3804,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2830,
+    "name": "Shelves, Cabinets and Lockers",
+    "parentId": 351,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2831,
+    "name": "Ladders",
+    "parentId": 351,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2832,
+    "name": "Work safety clothing",
+    "parentId": 351,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2833,
+    "name": "Cabinet safes and security lock boxes",
+    "parentId": 3804,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2835,
+    "name": "Bathtubes",
+    "parentId": 2764,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2837,
+    "name": "Bathroom mirrors and furniture",
+    "parentId": 2764,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2838,
+    "name": "Ventilation fans",
+    "parentId": 2764,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2842,
+    "name": "Wall, floor and mosaic tile",
+    "parentId": 2839,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2843,
+    "name": "Marble, granite, travertine",
+    "parentId": 2839,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2844,
+    "name": "Decorative profiles",
+    "parentId": 2839,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2845,
+    "name": "Chit and tile adhesive",
+    "parentId": 2839,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2846,
+    "name": "Tile and ceramic cutter machines and tools",
+    "parentId": 2839,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2848,
+    "name": "Interior Doors",
+    "parentId": 2847,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2849,
+    "name": "External doors",
+    "parentId": 2847,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2857,
+    "name": "Garage doors",
+    "parentId": 2847,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2858,
+    "name": "Windows and Skylights",
+    "parentId": 2847,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2859,
+    "name": "Door accessories",
+    "parentId": 2847,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2860,
+    "name": "Silicone adhesives, foam and tehnical solutions",
+    "parentId": 2764,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2862,
+    "name": "Parquet flooring",
+    "parentId": 2839,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2864,
+    "name": "Plinth blocksflooring insulation",
+    "parentId": 2839,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2865,
+    "name": "Wall panels and accessories",
+    "parentId": 2839,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2866,
+    "name": "Sanitary supplies",
+    "parentId": 4012,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2867,
+    "name": "Paints and Pigments",
+    "parentId": 2839,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2868,
+    "name": "Decorative Plasters and Socket",
+    "parentId": 2839,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2869,
+    "name": "Surface treatment solutions",
+    "parentId": 2839,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2871,
+    "name": "Lawn care products",
+    "parentId": 1675,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2873,
+    "name": "Bath salts",
+    "parentId": 3779,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2874,
+    "name": "Cement, Mortar and Additives",
+    "parentId": 2872,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2876,
+    "name": "Reinforcement Elements",
+    "parentId": 3804,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2877,
+    "name": "Decorative plates",
+    "parentId": 2872,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2878,
+    "name": "Pavements and Curbs",
+    "parentId": 2872,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2880,
+    "name": "Drywall and Accessories",
+    "parentId": 2872,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2888,
+    "name": "Pipes and Profiles",
+    "parentId": 2872,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2890,
+    "name": "Waterproofing and Accessories",
+    "parentId": 2872,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2891,
+    "name": "Thermal Insulation and Accessories",
+    "parentId": 2872,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2892,
+    "name": "Adhesives for waterproofing and thermal insulation",
+    "parentId": 2872,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2893,
+    "name": "Medical accessories for recovery and treatment",
+    "parentId": 4337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2894,
+    "name": "Wood Panels",
+    "parentId": 2872,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2901,
+    "name": "Hair gel and styling clay",
+    "parentId": 810,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2902,
+    "name": "Bolts, screws and clamping accessories",
+    "parentId": 3804,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2903,
+    "name": "Padlocks",
+    "parentId": 3804,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2905,
+    "name": "Roof elements",
+    "parentId": 2872,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2907,
+    "name": "Drainage systems",
+    "parentId": 2872,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2908,
+    "name": "Concrete mixers and wheelbarrows",
+    "parentId": 2872,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2909,
+    "name": "Panels and Fence elements",
+    "parentId": 2872,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2916,
+    "name": "Interior stairs accessories",
+    "parentId": 2872,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2928,
+    "name": "Christmas trees",
+    "parentId": 1576,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2929,
+    "name": "Fireworks and confetti",
+    "parentId": 1576,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2930,
+    "name": "Decorative banners and garlands",
+    "parentId": 1576,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2932,
+    "name": "Motorcycles and Scooters",
+    "parentId": 2931,
+    "isEanMandatory": false
+  },
+  {
+    "id": 2933,
+    "name": "ATV and UTV",
+    "parentId": 2931,
+    "isEanMandatory": false
+  },
+  {
+    "id": 2934,
+    "name": "Snowmobile",
+    "parentId": 2931,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2935,
+    "name": "Motorcycle Protection Gear",
+    "parentId": 2931,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2936,
+    "name": "Motorcycle Accessories",
+    "parentId": 2931,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2943,
+    "name": "Fuel vouchers",
+    "parentId": 1518,
+    "isEanMandatory": false
+  },
+  {
+    "id": 2944,
+    "name": "Nail scissors",
+    "parentId": 3051,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2945,
+    "name": "Tweezers",
+    "parentId": 3051,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2946,
+    "name": "Nail art products",
+    "parentId": 3051,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2947,
+    "name": "Solvents and nail treatments",
+    "parentId": 3051,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2952,
+    "name": "Manicure and pedicure sets",
+    "parentId": 3051,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2953,
+    "name": "Headphone Amplifiers",
+    "parentId": 449,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2954,
+    "name": "Cooler boxes",
+    "parentId": 1840,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2957,
+    "name": "Men Robes",
+    "parentId": 2269,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2958,
+    "name": "Bedsteads",
+    "parentId": 1529,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2960,
+    "name": "Eyeglasses",
+    "parentId": 2959,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2961,
+    "name": "Frame glasses",
+    "parentId": 2959,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2963,
+    "name": "Contact lenses",
+    "parentId": 2959,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2964,
+    "name": "Accessories for eyeglasses and contact lenses",
+    "parentId": 2959,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2965,
+    "name": "Products after the beach",
+    "parentId": 3907,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2966,
+    "name": "Door handles",
+    "parentId": 3804,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2967,
+    "name": "Composters",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2968,
+    "name": "Wedding Dresses",
+    "parentId": 2668,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2975,
+    "name": "Keychains",
+    "parentId": 2739,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2977,
+    "name": "Pre-paid sets",
+    "parentId": 2065,
+    "isEanMandatory": false
+  },
+  {
+    "id": 2978,
+    "name": "Swimming Pools",
+    "parentId": 3971,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2981,
+    "name": "Alcoholic Testers",
+    "parentId": 4189,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2991,
+    "name": "Garden sofas and armchairs",
+    "parentId": 1541,
+    "isEanMandatory": true
+  },
+  {
+    "id": 2997,
+    "name": "Chairs",
+    "parentId": 1535,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3009,
+    "name": "Deep freezers",
+    "parentId": 3966,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3010,
+    "name": "Scooters",
+    "parentId": 2409,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3011,
+    "name": "Men Flip Flops & Slippers",
+    "parentId": 2732,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3012,
+    "name": "Men Sandals",
+    "parentId": 2732,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3013,
+    "name": "Women’s Flip Flops, Slippers & Clogs",
+    "parentId": 2686,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3014,
+    "name": "External Solid-State Drives (SSD)",
+    "parentId": 662,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3019,
+    "name": "Beach Clothing",
+    "parentId": 3016,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3020,
+    "name": "Beach Accessories",
+    "parentId": 3016,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3021,
+    "name": "Kids furniture",
+    "parentId": 1529,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3023,
+    "name": "Nightstands",
+    "parentId": 1529,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3024,
+    "name": "Radiators",
+    "parentId": 3754,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3025,
+    "name": "Shopping trolleys",
+    "parentId": 2554,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3035,
+    "name": "Auto-moto personalized textiles",
+    "parentId": 3034,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3036,
+    "name": "Auto-moto gifts",
+    "parentId": 3034,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3038,
+    "name": "Orthopedic supports and orthoses",
+    "parentId": 4338,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3052,
+    "name": "Eyebrow styling products",
+    "parentId": 1294,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3053,
+    "name": "Eye concealer and corrector",
+    "parentId": 1294,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3054,
+    "name": "Eyeliner and eyelash",
+    "parentId": 1294,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3055,
+    "name": "Illuminator and contouring",
+    "parentId": 1294,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3056,
+    "name": "Lawn scarifier, aerator and cultivator machines",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3057,
+    "name": "Gardening scissors and knives",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3058,
+    "name": "Gardening machine supplies",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3059,
+    "name": "Solid fuel boilers, stoves and fireplaces",
+    "parentId": 3754,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3060,
+    "name": "Fittings and accessories",
+    "parentId": 3754,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3061,
+    "name": "Tubes and pipes",
+    "parentId": 3754,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3062,
+    "name": "Solar panels and systems",
+    "parentId": 3754,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3063,
+    "name": "Septic tanks",
+    "parentId": 3754,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3064,
+    "name": "Radiator accessories",
+    "parentId": 3754,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3065,
+    "name": "Faucet accessories",
+    "parentId": 2764,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3066,
+    "name": "Bathroom wash basins and pedestal sinks",
+    "parentId": 2764,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3067,
+    "name": "Underfloor heating",
+    "parentId": 3754,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3068,
+    "name": "Photo albums",
+    "parentId": 1547,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3072,
+    "name": "Auto window deflectors",
+    "parentId": 1461,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3073,
+    "name": "Sports nets",
+    "parentId": 2460,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3074,
+    "name": "Winemaking products",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3075,
+    "name": "Rim and Tire packages",
+    "parentId": 1411,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3077,
+    "name": "Gaming chairs",
+    "parentId": 761,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3078,
+    "name": "Media storage and cases",
+    "parentId": 2620,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3080,
+    "name": "Flower bouquets",
+    "parentId": 1547,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3082,
+    "name": "Kids watches",
+    "parentId": 4292,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3084,
+    "name": "Women Umbrellas",
+    "parentId": 2697,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3085,
+    "name": "Men Umbrellas",
+    "parentId": 2739,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3086,
+    "name": "Men's braces",
+    "parentId": 2739,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3088,
+    "name": "Concrete polishers",
+    "parentId": 2887,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3089,
+    "name": "Concrete vibrators",
+    "parentId": 2887,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3090,
+    "name": "Concrete cutters",
+    "parentId": 2887,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3091,
+    "name": "Plate compactors",
+    "parentId": 2887,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3092,
+    "name": "Rammers",
+    "parentId": 2887,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3093,
+    "name": "Vibrating screeds",
+    "parentId": 2887,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3098,
+    "name": "Patio heaters",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3099,
+    "name": "Coins and precious metals bars",
+    "parentId": 2373,
+    "isEanMandatory": false
+  },
+  {
+    "id": 3102,
+    "name": "Wood pellets and briquettes",
+    "parentId": 3754,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3104,
+    "name": "Sports equipment protective covers",
+    "parentId": 3811,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3105,
+    "name": "Fishing rods",
+    "parentId": 2337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3106,
+    "name": "Fishing sticks",
+    "parentId": 2337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3114,
+    "name": "Fishing baits and lures",
+    "parentId": 2337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3115,
+    "name": "Wheelchairs",
+    "parentId": 4338,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3121,
+    "name": "Pouches",
+    "parentId": 1840,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3122,
+    "name": "Fishing bags and mattresses",
+    "parentId": 2337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3125,
+    "name": "Hair accessories",
+    "parentId": 2697,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3126,
+    "name": "Competition seats accessories",
+    "parentId": 2337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3128,
+    "name": "String instruments",
+    "parentId": 3127,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3129,
+    "name": "Men sport t-shirts",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3131,
+    "name": "Sexy lingerie",
+    "parentId": 1391,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3132,
+    "name": "Traditional trinkets",
+    "parentId": 1510,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3133,
+    "name": "Men blouses",
+    "parentId": 2718,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3135,
+    "name": "Robotic processors and microcontrollers",
+    "parentId": 3134,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3136,
+    "name": "Robot kits",
+    "parentId": 3134,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3137,
+    "name": "Robot sensors",
+    "parentId": 3134,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3138,
+    "name": "Robot mechanical parts",
+    "parentId": 3134,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3139,
+    "name": "LCD for robotics and automatics",
+    "parentId": 3134,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3140,
+    "name": "Robot wireless components",
+    "parentId": 3134,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3141,
+    "name": "Robot power supply",
+    "parentId": 3134,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3143,
+    "name": "Robot modules and components",
+    "parentId": 3134,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3144,
+    "name": "Robot accessories",
+    "parentId": 3134,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3145,
+    "name": "Tobacco products and accessories",
+    "parentId": 4074,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3147,
+    "name": "Egg incubators and accessories",
+    "parentId": 3146,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3148,
+    "name": "Milking machines",
+    "parentId": 3146,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3149,
+    "name": "Animal watering systems",
+    "parentId": 3146,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3151,
+    "name": "Hydraulic Tools",
+    "parentId": 3150,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3152,
+    "name": "1000v Insulated tools",
+    "parentId": 3150,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3153,
+    "name": "Hardened tools",
+    "parentId": 3150,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3155,
+    "name": "Valves",
+    "parentId": 3154,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3156,
+    "name": "Filtration systems installations",
+    "parentId": 3154,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3157,
+    "name": "Animal Electric Fences",
+    "parentId": 3146,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3160,
+    "name": "Children's folk costumes",
+    "parentId": 3217,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3161,
+    "name": "Souvenirs",
+    "parentId": 1547,
+    "isEanMandatory": false
+  },
+  {
+    "id": 3162,
+    "name": "Handicraft Products",
+    "parentId": 1547,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3163,
+    "name": "Sporting boats",
+    "parentId": 2337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3164,
+    "name": "Drones accessories",
+    "parentId": 668,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3165,
+    "name": "Window accessories",
+    "parentId": 2847,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3174,
+    "name": "Greeting cards",
+    "parentId": 2603,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3176,
+    "name": "Cash registers",
+    "parentId": 2620,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3177,
+    "name": "Cash drawers",
+    "parentId": 2620,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3178,
+    "name": "Money counting machines",
+    "parentId": 2620,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3179,
+    "name": "Women braces",
+    "parentId": 2697,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3180,
+    "name": "Footwear care products and accessories",
+    "parentId": 958,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3181,
+    "name": "Ploughs",
+    "parentId": 3100,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3182,
+    "name": "Disc harrows",
+    "parentId": 3100,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3183,
+    "name": "Farm mills",
+    "parentId": 3100,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3184,
+    "name": "Farm combines",
+    "parentId": 3100,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3185,
+    "name": "Seeders",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3186,
+    "name": "Hoes",
+    "parentId": 3100,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3187,
+    "name": "Fertilizer machines",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3188,
+    "name": "Machines for desintegrating crop debris",
+    "parentId": 3100,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3189,
+    "name": "Scarifiers",
+    "parentId": 3100,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3191,
+    "name": "Milking machine accessories",
+    "parentId": 3146,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3192,
+    "name": "Crayons and markers",
+    "parentId": 2653,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3195,
+    "name": "School labels",
+    "parentId": 2653,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3196,
+    "name": "Chalk and blackboards",
+    "parentId": 2653,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3197,
+    "name": "Watercolours, brushes and drawing paper",
+    "parentId": 2653,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3198,
+    "name": "Plasticine",
+    "parentId": 2653,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3199,
+    "name": "Alphabet learning sets and abacus",
+    "parentId": 2653,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3200,
+    "name": "Geometry tools",
+    "parentId": 2653,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3201,
+    "name": "Educational programs and softwares",
+    "parentId": 2653,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3202,
+    "name": "Baby wipes",
+    "parentId": 1370,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3204,
+    "name": "Pacifiers and accessories",
+    "parentId": 3942,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3205,
+    "name": "Baby Cups, glasses and accessories",
+    "parentId": 3942,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3206,
+    "name": "Baby feeding articles",
+    "parentId": 3942,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3207,
+    "name": "Baby bottle warmers and thermoses",
+    "parentId": 3942,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3208,
+    "name": "Bottle sterilizers",
+    "parentId": 3942,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3209,
+    "name": "Baby table seats",
+    "parentId": 3942,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3210,
+    "name": "Newborn clothing",
+    "parentId": 3802,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3216,
+    "name": "Children t-shirts",
+    "parentId": 3217,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3218,
+    "name": "Children blouses",
+    "parentId": 3217,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3219,
+    "name": "Children shirts",
+    "parentId": 3217,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3220,
+    "name": "Children Hoodies",
+    "parentId": 3217,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3221,
+    "name": "Children Knitwear and cardigans",
+    "parentId": 3217,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3222,
+    "name": "Children jackets and waistcoats",
+    "parentId": 3217,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3223,
+    "name": "Girl dresses",
+    "parentId": 3217,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3224,
+    "name": "Children shorts",
+    "parentId": 3217,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3225,
+    "name": "Girl skirts",
+    "parentId": 3217,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3226,
+    "name": "Children underwear",
+    "parentId": 3217,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3227,
+    "name": "Children pyjamas",
+    "parentId": 3217,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3228,
+    "name": "Children swimwear",
+    "parentId": 3217,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3229,
+    "name": "Children clothing accessories",
+    "parentId": 4292,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3232,
+    "name": "Children booties and boots",
+    "parentId": 3230,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3235,
+    "name": "Children sandals",
+    "parentId": 3230,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3236,
+    "name": "Baby Booties",
+    "parentId": 3217,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3237,
+    "name": "Children slides and flip flops",
+    "parentId": 3230,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3239,
+    "name": "Baby Swings, bouncers and hammocks",
+    "parentId": 3238,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3240,
+    "name": "Baby changing tables",
+    "parentId": 3238,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3241,
+    "name": "Children room furniture",
+    "parentId": 3238,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3242,
+    "name": "Children safety systems",
+    "parentId": 3238,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3250,
+    "name": "Children mattresses",
+    "parentId": 3249,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3251,
+    "name": "Baby pillows, quilts and sleep positioners",
+    "parentId": 3249,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3252,
+    "name": "Children sleeping bags",
+    "parentId": 3249,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3253,
+    "name": "Baby blankets",
+    "parentId": 3249,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3254,
+    "name": "Children car seats",
+    "parentId": 1358,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3255,
+    "name": "Baby carriers and harnesses",
+    "parentId": 1358,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3256,
+    "name": "Baby walkers",
+    "parentId": 1358,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3257,
+    "name": "Baby carriage accessories",
+    "parentId": 1358,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3258,
+    "name": "Baby carrycots",
+    "parentId": 1358,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3260,
+    "name": "Children soap and shower gel",
+    "parentId": 3259,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3261,
+    "name": "Children creams and body lotions",
+    "parentId": 3259,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3262,
+    "name": "Children body oil",
+    "parentId": 3259,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3263,
+    "name": "Children dental hygiene articles",
+    "parentId": 3259,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3264,
+    "name": "Saline solution and sterile compresses",
+    "parentId": 575,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3265,
+    "name": "Baby pots and WC reducers",
+    "parentId": 1363,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3267,
+    "name": "Baby and children scales",
+    "parentId": 3266,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3268,
+    "name": "Humidifiers",
+    "parentId": 94,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3270,
+    "name": "Children bodys",
+    "parentId": 3217,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3276,
+    "name": "Children make-up",
+    "parentId": 3259,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3277,
+    "name": "Baby teether toys",
+    "parentId": 3190,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3278,
+    "name": "Baby activity play centers",
+    "parentId": 3190,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3279,
+    "name": "Bath toys",
+    "parentId": 3190,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3280,
+    "name": "Baby rattles",
+    "parentId": 3190,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3281,
+    "name": "Crib toys",
+    "parentId": 3190,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3282,
+    "name": "Push and pull toys",
+    "parentId": 3190,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3283,
+    "name": "Strollers and crib toys",
+    "parentId": 3190,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3284,
+    "name": "Toy weapons",
+    "parentId": 868,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3285,
+    "name": "Beauty, jewelry and girl accessories",
+    "parentId": 868,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3286,
+    "name": "Children masks and costumes",
+    "parentId": 868,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3287,
+    "name": "Supermarket play set",
+    "parentId": 868,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3288,
+    "name": "Gardener play set",
+    "parentId": 868,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3289,
+    "name": "Children laptops, tablets and gadgets",
+    "parentId": 861,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3290,
+    "name": "Baby interactive toys",
+    "parentId": 3190,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3293,
+    "name": "Trampolines",
+    "parentId": 867,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3294,
+    "name": "Children slides",
+    "parentId": 867,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3295,
+    "name": "Children swings",
+    "parentId": 867,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3296,
+    "name": "Children seesaws",
+    "parentId": 867,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3304,
+    "name": "Engines and ESC",
+    "parentId": 3303,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3305,
+    "name": "Radio control",
+    "parentId": 3303,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3306,
+    "name": "Modeling batteries and chargers",
+    "parentId": 2661,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3309,
+    "name": "Car Model Building Kits",
+    "parentId": 3308,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3310,
+    "name": "Boat Model Building Kits",
+    "parentId": 3308,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3311,
+    "name": "Military Vehicle Model Building Kits",
+    "parentId": 3308,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3312,
+    "name": "FALLER Car System",
+    "parentId": 3308,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3313,
+    "name": "Model Building Paints and adhesives",
+    "parentId": 3308,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3314,
+    "name": "Model Building Tools and accessories",
+    "parentId": 3308,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3316,
+    "name": "Model airplanes",
+    "parentId": 3315,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3317,
+    "name": "Model boats",
+    "parentId": 3315,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3318,
+    "name": "Military vehicle models",
+    "parentId": 3315,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3319,
+    "name": "Construction vehicle models",
+    "parentId": 3315,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3321,
+    "name": "Collectible dolls",
+    "parentId": 3320,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3322,
+    "name": "Collectible trains",
+    "parentId": 3320,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3323,
+    "name": "Collectible cars",
+    "parentId": 3320,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3324,
+    "name": "Collectible plush toys",
+    "parentId": 3320,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3325,
+    "name": "Other collectible toys",
+    "parentId": 3320,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3327,
+    "name": "Preformed dioramas",
+    "parentId": 3326,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3335,
+    "name": "Diorama buildings",
+    "parentId": 3326,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3337,
+    "name": "Accessories for dioramas",
+    "parentId": 3326,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3338,
+    "name": "Wind instruments",
+    "parentId": 3127,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3347,
+    "name": "Strings and Musical instruments accessories",
+    "parentId": 3127,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3361,
+    "name": "Loudspeakers",
+    "parentId": 3360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3362,
+    "name": "Clarion",
+    "parentId": 3360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3364,
+    "name": "Smoke equipment",
+    "parentId": 3363,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3366,
+    "name": "Light equipments",
+    "parentId": 3363,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3367,
+    "name": "Keyboard instruments",
+    "parentId": 3127,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3372,
+    "name": "Percussion instruments",
+    "parentId": 3127,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3376,
+    "name": "Memory and intelligence games",
+    "parentId": 861,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3377,
+    "name": "Children pools",
+    "parentId": 867,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3378,
+    "name": "Children coils, swimming glasses and accessories",
+    "parentId": 867,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3379,
+    "name": "Beach mattresses and balls",
+    "parentId": 867,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3382,
+    "name": "Diaper storage baskets and boxes",
+    "parentId": 1370,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3383,
+    "name": "Children tracksuits",
+    "parentId": 3217,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3384,
+    "name": "Children suits",
+    "parentId": 3217,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3386,
+    "name": "Children parfumes and deodorants",
+    "parentId": 3753,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3387,
+    "name": "Children thermometers",
+    "parentId": 3266,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3388,
+    "name": "Toys for sorting",
+    "parentId": 3190,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3392,
+    "name": "Breastfeeding accessories",
+    "parentId": 1351,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3399,
+    "name": "Smartwatch accessories",
+    "parentId": 3394,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3400,
+    "name": "Fitness bracelet accessories",
+    "parentId": 3394,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3401,
+    "name": "VR Glasses",
+    "parentId": 3395,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3402,
+    "name": "VR Glasses Accessories",
+    "parentId": 3395,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3403,
+    "name": "Smart Body Scales",
+    "parentId": 3396,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3404,
+    "name": "Smart Glucometers and blood pressure",
+    "parentId": 3396,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3405,
+    "name": "Sleep monitoring device",
+    "parentId": 3396,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3407,
+    "name": "Smart Home kits and sensors",
+    "parentId": 3397,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3410,
+    "name": "Smart Alarms",
+    "parentId": 3397,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3411,
+    "name": "Smart clothing items",
+    "parentId": 3398,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3412,
+    "name": "Anti-loss devices",
+    "parentId": 3398,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3413,
+    "name": "Spying devices",
+    "parentId": 3398,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3415,
+    "name": "Fitness bracelets",
+    "parentId": 3394,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3416,
+    "name": "Children nebulizers",
+    "parentId": 3266,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3417,
+    "name": "Children night lights",
+    "parentId": 3238,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3418,
+    "name": "Children rugs",
+    "parentId": 3238,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3420,
+    "name": "VR Gaming accessories",
+    "parentId": 762,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3426,
+    "name": "Storage and organization",
+    "parentId": 3421,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3439,
+    "name": "Toilet desinfectant",
+    "parentId": 3423,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3440,
+    "name": "Toilet descaler solution",
+    "parentId": 3423,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3441,
+    "name": "Bathroom cleaning solutions",
+    "parentId": 3423,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3442,
+    "name": "Toilet freshener",
+    "parentId": 3423,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3445,
+    "name": "Furniture cleaning solution",
+    "parentId": 3425,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3446,
+    "name": "Floor cleaning solution",
+    "parentId": 3425,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3447,
+    "name": "Window cleaning solutions",
+    "parentId": 3425,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3449,
+    "name": "Carpet cleaning solutions",
+    "parentId": 3425,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3450,
+    "name": "Insecticides and repellents",
+    "parentId": 3425,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3464,
+    "name": "Scale removal",
+    "parentId": 3422,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3465,
+    "name": "Stain removal",
+    "parentId": 3422,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3466,
+    "name": "Fabric care solutions",
+    "parentId": 3422,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3467,
+    "name": "Laundry bleach and starch",
+    "parentId": 3422,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3469,
+    "name": "Ironing table covers",
+    "parentId": 1646,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3471,
+    "name": "Drying racks accessories",
+    "parentId": 1646,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3478,
+    "name": "Tree stands",
+    "parentId": 1576,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3479,
+    "name": "Christmas lights",
+    "parentId": 1576,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3480,
+    "name": "Christmas Balls",
+    "parentId": 1576,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3481,
+    "name": "Christmas tinsel and garlands",
+    "parentId": 1576,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3482,
+    "name": "Christmas wreaths",
+    "parentId": 1576,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3483,
+    "name": "Christmas figurines and decorations",
+    "parentId": 1576,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3484,
+    "name": "Artificial snow",
+    "parentId": 1576,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3485,
+    "name": "Christmas costumes and accessories",
+    "parentId": 1576,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3488,
+    "name": "Decorative stickers",
+    "parentId": 1547,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3493,
+    "name": "Mirrors",
+    "parentId": 1547,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3495,
+    "name": "Candle holders",
+    "parentId": 1547,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3497,
+    "name": "Ashtrays",
+    "parentId": 1547,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3499,
+    "name": "Artificial plants",
+    "parentId": 1547,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3500,
+    "name": "Balloons",
+    "parentId": 3430,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3504,
+    "name": "Carnival masks and costumes",
+    "parentId": 1573,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3506,
+    "name": "Lampions",
+    "parentId": 3430,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3507,
+    "name": "Temporary tattoos",
+    "parentId": 3430,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3510,
+    "name": "Chandeliers",
+    "parentId": 3508,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3512,
+    "name": "Spots",
+    "parentId": 3508,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3513,
+    "name": "Floor lamps",
+    "parentId": 3508,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3514,
+    "name": "Bedside and office lamps",
+    "parentId": 3508,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3515,
+    "name": "Lamps and poles",
+    "parentId": 3509,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3516,
+    "name": "Floodlight and work lights",
+    "parentId": 3509,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3517,
+    "name": "Solar lamps",
+    "parentId": 3509,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3518,
+    "name": "Lighting accessories",
+    "parentId": 3509,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3519,
+    "name": "Commercial Lighting",
+    "parentId": 3509,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3523,
+    "name": "LED strips",
+    "parentId": 3431,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3525,
+    "name": "Power strip accessories",
+    "parentId": 3432,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3528,
+    "name": "Electrical light switches",
+    "parentId": 3432,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3529,
+    "name": "Socket and switch accessories",
+    "parentId": 3432,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3531,
+    "name": "Electric doorbells",
+    "parentId": 3432,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3533,
+    "name": "Electric panel accessories",
+    "parentId": 3432,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3544,
+    "name": "Aquariums and terrariums furniture and accessories",
+    "parentId": 3542,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3545,
+    "name": "Aquarium decorations and artificial plants",
+    "parentId": 3542,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3547,
+    "name": "Aquarium air pumps and accessories",
+    "parentId": 3542,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3548,
+    "name": "Aquarium lighting products",
+    "parentId": 3542,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3549,
+    "name": "Aquarium heaters and coolers",
+    "parentId": 3542,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3550,
+    "name": "Aquarium sterilizers",
+    "parentId": 3542,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3551,
+    "name": "Aquariums and terrariums cleaning products",
+    "parentId": 3542,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3552,
+    "name": "Aquarium testers water",
+    "parentId": 3542,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3553,
+    "name": "Aquarium skimmers",
+    "parentId": 3542,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3554,
+    "name": "Aquarium nutritious",
+    "parentId": 3542,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3555,
+    "name": "Aquarium solutions and treatments",
+    "parentId": 3542,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3556,
+    "name": "Aquarium fertilizer plants",
+    "parentId": 3542,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3560,
+    "name": "External hygiene products for animals",
+    "parentId": 3537,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3561,
+    "name": "Pet dental hygiene products",
+    "parentId": 3537,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3564,
+    "name": "Pet cosmetics",
+    "parentId": 3537,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3566,
+    "name": "Pet shoes",
+    "parentId": 3539,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3567,
+    "name": "Pet parfumes",
+    "parentId": 3539,
+    "isEanMandatory": false
+  },
+  {
+    "id": 3568,
+    "name": "Pet collar charms",
+    "parentId": 3539,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3569,
+    "name": "Pet clothing accessories",
+    "parentId": 3539,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3571,
+    "name": "Cat food",
+    "parentId": 3535,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3572,
+    "name": "Fishes and reptile food",
+    "parentId": 3535,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3573,
+    "name": "Bird and rodent food",
+    "parentId": 3535,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3578,
+    "name": "Cages, coops and pens",
+    "parentId": 1333,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3581,
+    "name": "Litter",
+    "parentId": 3538,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3582,
+    "name": "Litter accessories",
+    "parentId": 3538,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3583,
+    "name": "Pet stain removers",
+    "parentId": 3538,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3588,
+    "name": "Carafes and decanters",
+    "parentId": 3435,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3589,
+    "name": "Ice buckets and tongs",
+    "parentId": 3435,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3590,
+    "name": "Ice cube trays",
+    "parentId": 3435,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3595,
+    "name": "Beverage holders",
+    "parentId": 3435,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3596,
+    "name": "Jars and lids",
+    "parentId": 3437,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3598,
+    "name": "Napkin holders",
+    "parentId": 3437,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3601,
+    "name": "Serving sets",
+    "parentId": 3436,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3606,
+    "name": "Toothpicks",
+    "parentId": 3436,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3613,
+    "name": "Dishes drying stand",
+    "parentId": 3434,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3615,
+    "name": "Flatware holder",
+    "parentId": 3434,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3619,
+    "name": "Cooking pots",
+    "parentId": 1603,
+    "isEanMandatory": false
+  },
+  {
+    "id": 3621,
+    "name": "Chest freezers",
+    "parentId": 3966,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3622,
+    "name": "Pressure cookers",
+    "parentId": 1603,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3623,
+    "name": "Baking trays",
+    "parentId": 1603,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3627,
+    "name": "Tea pots and infusers",
+    "parentId": 1603,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3629,
+    "name": "Tea accessories",
+    "parentId": 1603,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3632,
+    "name": "Knife sharpeners",
+    "parentId": 1607,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3633,
+    "name": "Cutting boards",
+    "parentId": 1607,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3635,
+    "name": "Kitchen brushes, spatulas and wisks",
+    "parentId": 1607,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3637,
+    "name": "Colanders",
+    "parentId": 1607,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3638,
+    "name": "Graters and accessories",
+    "parentId": 1607,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3640,
+    "name": "Manual kitchen slicers",
+    "parentId": 1607,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3643,
+    "name": "Cookie decorating tools",
+    "parentId": 1607,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3644,
+    "name": "Kitchen measuring tools",
+    "parentId": 1607,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3646,
+    "name": "Kitchen scissors",
+    "parentId": 1607,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3647,
+    "name": "Kitchen termometers",
+    "parentId": 1607,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3648,
+    "name": "Trailers",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3649,
+    "name": "Precious stone jewelry",
+    "parentId": 2697,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3650,
+    "name": "Event tickets",
+    "parentId": 1518,
+    "isEanMandatory": false
+  },
+  {
+    "id": 3651,
+    "name": "Travel packages",
+    "parentId": 1518,
+    "isEanMandatory": false
+  },
+  {
+    "id": 3652,
+    "name": "Animal playing ensembles",
+    "parentId": 1333,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3653,
+    "name": "Nursery decorations",
+    "parentId": 3238,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3655,
+    "name": "Prefabricated houses",
+    "parentId": 1518,
+    "isEanMandatory": false
+  },
+  {
+    "id": 3656,
+    "name": "Funny gifts",
+    "parentId": 1573,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3657,
+    "name": "Farm animals feed",
+    "parentId": 3535,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3658,
+    "name": "Aquariums and terrariums thermometers",
+    "parentId": 3542,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3659,
+    "name": "Aquariums and terrariums sands and substrates",
+    "parentId": 3542,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3660,
+    "name": "Moisture absorber",
+    "parentId": 3423,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3661,
+    "name": "Drain cleaners",
+    "parentId": 3423,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3662,
+    "name": "Icons",
+    "parentId": 3427,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3663,
+    "name": "Decorative magnets",
+    "parentId": 1547,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3664,
+    "name": "Easels",
+    "parentId": 1547,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3665,
+    "name": "Umbrella racks",
+    "parentId": 1547,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3666,
+    "name": "Dishes for party",
+    "parentId": 1573,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3667,
+    "name": "Face and body paint",
+    "parentId": 1573,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3668,
+    "name": "Personalized gifts",
+    "parentId": 3427,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3669,
+    "name": "Kids stationery sets",
+    "parentId": 2653,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3671,
+    "name": "Seed germinators",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3673,
+    "name": "Yachts and boats",
+    "parentId": 1518,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3674,
+    "name": "Filtering cups accessories",
+    "parentId": 3008,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3675,
+    "name": "Manual choppers",
+    "parentId": 1607,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3678,
+    "name": "Can openers",
+    "parentId": 1628,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3679,
+    "name": "Kitchen utensil sets",
+    "parentId": 1628,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3680,
+    "name": "Rolling pins",
+    "parentId": 1628,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3681,
+    "name": "Bottles",
+    "parentId": 1628,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3683,
+    "name": "Shoes closets",
+    "parentId": 1520,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3685,
+    "name": "Electronic commercial scales",
+    "parentId": 1607,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3686,
+    "name": "Moto tyres",
+    "parentId": 1411,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3687,
+    "name": "Baby vitamins and nutritional supplements",
+    "parentId": 3259,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3688,
+    "name": "Armchairs",
+    "parentId": 1520,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3689,
+    "name": "Makeup tables",
+    "parentId": 1529,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3690,
+    "name": "Quilts",
+    "parentId": 1583,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3691,
+    "name": "Draperies",
+    "parentId": 1590,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3692,
+    "name": "Kitchen gloves",
+    "parentId": 1594,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3693,
+    "name": "Picnic baskets",
+    "parentId": 1659,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3696,
+    "name": "Coolers",
+    "parentId": 3966,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3697,
+    "name": "Side by side",
+    "parentId": 3966,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3698,
+    "name": "Mattress Topper",
+    "parentId": 4291,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3699,
+    "name": "Makeup and cosmetic bags",
+    "parentId": 1294,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3700,
+    "name": "Furniture hardware supplies",
+    "parentId": 3804,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3722,
+    "name": "Thermos flask and Mug accessories",
+    "parentId": 1621,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3723,
+    "name": "Manual food grinders",
+    "parentId": 1607,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3724,
+    "name": "Manual chopper accessories",
+    "parentId": 1607,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3725,
+    "name": "Electric snow throwers",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3726,
+    "name": "Shower panels and Shower sets",
+    "parentId": 2764,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3727,
+    "name": "Truck tires",
+    "parentId": 1411,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3730,
+    "name": "Work safety gloves",
+    "parentId": 3729,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3731,
+    "name": "Work safety glasses and Protection visors",
+    "parentId": 4012,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3732,
+    "name": "Work safety helmets",
+    "parentId": 3729,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3733,
+    "name": "Greenhouses",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3734,
+    "name": "Gardening tool accessories",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3735,
+    "name": "Spray kits",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3736,
+    "name": "Irrigation accessories",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3737,
+    "name": "Domestic flour mills",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3738,
+    "name": "Pool safety covers",
+    "parentId": 3971,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3739,
+    "name": "Pool maintenance solutions",
+    "parentId": 3971,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3740,
+    "name": "Vacuum the pool",
+    "parentId": 3971,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3741,
+    "name": "Pool accessories",
+    "parentId": 3971,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3742,
+    "name": "Sink accessories",
+    "parentId": 2764,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3743,
+    "name": "Toilet seats accessories",
+    "parentId": 2764,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3745,
+    "name": "Hand Dryers",
+    "parentId": 2764,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3746,
+    "name": "Ventilation fan accessories",
+    "parentId": 2764,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3747,
+    "name": "Diluents and primers",
+    "parentId": 2839,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3748,
+    "name": "Painting and plastering accessories",
+    "parentId": 2839,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3749,
+    "name": "Septic tank accessories",
+    "parentId": 3154,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3750,
+    "name": "Garden tool handels",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3755,
+    "name": "Stove lighters",
+    "parentId": 2653,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3756,
+    "name": "Saunas",
+    "parentId": 2764,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3757,
+    "name": "Glue gun",
+    "parentId": 360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3758,
+    "name": "Solar systems and panels accessories and components",
+    "parentId": 3754,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3759,
+    "name": "Building wire",
+    "parentId": 3804,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3760,
+    "name": "Table and chairs accessories",
+    "parentId": 1529,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3761,
+    "name": "Panel screens",
+    "parentId": 1529,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3762,
+    "name": "Professional furniture",
+    "parentId": 1520,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3763,
+    "name": "Garden houses",
+    "parentId": 1541,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3764,
+    "name": "Irrigation plugs and connectors",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3765,
+    "name": "Pots and window boxes accessories",
+    "parentId": 1675,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3766,
+    "name": "Window curtain rails and rods",
+    "parentId": 1590,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3767,
+    "name": "Roller shutters and blinds",
+    "parentId": 1590,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3768,
+    "name": "Glasses and lenses maintenance accessories",
+    "parentId": 2959,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3769,
+    "name": "Kart and ATV tires",
+    "parentId": 1411,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3770,
+    "name": "Industrial vehicle tires",
+    "parentId": 1411,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3771,
+    "name": "Electric generator accessories",
+    "parentId": 348,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3772,
+    "name": "Vices and fixing clips",
+    "parentId": 360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3773,
+    "name": "Power tool chargers",
+    "parentId": 360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3774,
+    "name": "Expansion vessels",
+    "parentId": 3154,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3775,
+    "name": "Expansion vessel accessories",
+    "parentId": 3154,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3776,
+    "name": "Wedding veils",
+    "parentId": 2668,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3777,
+    "name": "Wheelchair ramps",
+    "parentId": 4338,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3784,
+    "name": "Men Suits",
+    "parentId": 2718,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3785,
+    "name": "Women Suits",
+    "parentId": 2668,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3786,
+    "name": "Roller shutter and blind accessories",
+    "parentId": 1583,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3787,
+    "name": "Power tiller and cultivator accessories",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3788,
+    "name": "Sauna accessories",
+    "parentId": 2764,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3789,
+    "name": "Workbenches and work tables",
+    "parentId": 360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3790,
+    "name": "POS systems",
+    "parentId": 2653,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3791,
+    "name": "GPL installations",
+    "parentId": 1458,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3792,
+    "name": "Car trailer accessories",
+    "parentId": 1458,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3793,
+    "name": "Car trailers",
+    "parentId": 1458,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3794,
+    "name": "Glue gun accessories",
+    "parentId": 360,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3796,
+    "name": "Mobile phone parts and components",
+    "parentId": 17,
+    "isEanMandatory": false
+  },
+  {
+    "id": 3797,
+    "name": "Mobile phone displays and touchscreens",
+    "parentId": 17,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3798,
+    "name": "Mobile phone motherboards",
+    "parentId": 17,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3799,
+    "name": "Mobile phone flex cable",
+    "parentId": 17,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3803,
+    "name": "Gates and garage door automation kits",
+    "parentId": 2839,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3805,
+    "name": "Barrels",
+    "parentId": 3437,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3806,
+    "name": "Baby care accessories",
+    "parentId": 1363,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3807,
+    "name": "Water pump accessories",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3808,
+    "name": "Garden fountains",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3809,
+    "name": "Accessories for exterior construction",
+    "parentId": 3654,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3810,
+    "name": "Media accessories",
+    "parentId": 2661,
+    "isEanMandatory": false
+  },
+  {
+    "id": 3812,
+    "name": "Bicycle home trainers",
+    "parentId": 3389,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3813,
+    "name": "Foosball tables",
+    "parentId": 2435,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3814,
+    "name": "Chess and board games",
+    "parentId": 2435,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3815,
+    "name": "Outdoor sports products accessories",
+    "parentId": 2409,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3816,
+    "name": "Clubs",
+    "parentId": 2409,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3817,
+    "name": "Air hockey and Foosball accessories",
+    "parentId": 2409,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3818,
+    "name": "Baseball bats",
+    "parentId": 2409,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3819,
+    "name": "Self defense accessories",
+    "parentId": 2409,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3820,
+    "name": "Camping and hiking accessories",
+    "parentId": 1840,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3821,
+    "name": "Knives accessories",
+    "parentId": 1840,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3822,
+    "name": "Windsurf boards",
+    "parentId": 2423,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3823,
+    "name": "Windsurf board accessories",
+    "parentId": 2423,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3824,
+    "name": "Precision sports gun accessories",
+    "parentId": 2377,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3825,
+    "name": "Luggage accessories",
+    "parentId": 3751,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3826,
+    "name": "Sporting boat accessories",
+    "parentId": 2337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3827,
+    "name": "Ceramic and faience accessories",
+    "parentId": 3654,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3828,
+    "name": "Electronic games licenses",
+    "parentId": 762,
+    "isEanMandatory": false
+  },
+  {
+    "id": 3830,
+    "name": "Laptop displays",
+    "parentId": 450,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3831,
+    "name": "Tent accessories",
+    "parentId": 1840,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3832,
+    "name": "Fabrics",
+    "parentId": 1583,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3833,
+    "name": "Veterinary diets",
+    "parentId": 1329,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3834,
+    "name": "Derailleur hangers",
+    "parentId": 4322,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3835,
+    "name": "Bike part accessories",
+    "parentId": 4322,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3836,
+    "name": "Gymnastics performance machines",
+    "parentId": 2372,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3837,
+    "name": "Men sport underwear",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3838,
+    "name": "Water skis",
+    "parentId": 2423,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3839,
+    "name": "Sports recovery products",
+    "parentId": 3811,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3840,
+    "name": "Depilatory accessories",
+    "parentId": 3779,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3843,
+    "name": "Intimate hygiene napkins",
+    "parentId": 628,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3844,
+    "name": "Beard and mustache care products",
+    "parentId": 810,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3845,
+    "name": "Strips and teeth whitening products",
+    "parentId": 928,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3846,
+    "name": "Braces and dental protheses care products",
+    "parentId": 928,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3848,
+    "name": "Textile yarns",
+    "parentId": 1583,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3850,
+    "name": "Scaffoldings",
+    "parentId": 2872,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3851,
+    "name": "Hearing aid accessories",
+    "parentId": 4337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3852,
+    "name": "Urban transport services",
+    "parentId": 1518,
+    "isEanMandatory": false
+  },
+  {
+    "id": 3855,
+    "name": "Women Overalls",
+    "parentId": 2668,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3858,
+    "name": "Household Medical Devices and Accessories",
+    "parentId": 4337,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3860,
+    "name": "Ecological toilet cabin",
+    "parentId": 2887,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3863,
+    "name": "Curtain accessories",
+    "parentId": 3427,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3864,
+    "name": "Collection stamps",
+    "parentId": 3427,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3865,
+    "name": "Mannequins",
+    "parentId": 3427,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3866,
+    "name": "Floor cleaning machines",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3867,
+    "name": "Ozone generators",
+    "parentId": 2338,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3868,
+    "name": "Tractor spare parts",
+    "parentId": 1410,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3869,
+    "name": "Parachutes",
+    "parentId": 2409,
+    "isEanMandatory": false
+  },
+  {
+    "id": 3870,
+    "name": "Paragliding",
+    "parentId": 2409,
+    "isEanMandatory": false
+  },
+  {
+    "id": 3871,
+    "name": "Extreme sports and survival accessories",
+    "parentId": 2409,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3872,
+    "name": "Multi-functional training machine accessories",
+    "parentId": 2372,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3873,
+    "name": "Recreation vehicle accessories",
+    "parentId": 1840,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3874,
+    "name": "Hunting accessories",
+    "parentId": 1840,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3875,
+    "name": "Tattoo equipment",
+    "parentId": 3779,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3876,
+    "name": "Tattoo equipment accessories",
+    "parentId": 3779,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3882,
+    "name": "Car shield",
+    "parentId": 1411,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3883,
+    "name": "Riding horses accessories",
+    "parentId": 2409,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3884,
+    "name": "Haberdashery products",
+    "parentId": 3427,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3885,
+    "name": "Hospital medical devices and accessories",
+    "parentId": 4012,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3887,
+    "name": "Hives",
+    "parentId": 3886,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3888,
+    "name": "Hive accessories",
+    "parentId": 3886,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3889,
+    "name": "Bee centrifuges",
+    "parentId": 3886,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3890,
+    "name": "Honey extracts",
+    "parentId": 3886,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3892,
+    "name": "Wax burners",
+    "parentId": 3886,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3893,
+    "name": "Pollen collection products",
+    "parentId": 3886,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3894,
+    "name": "Beekeeping tools",
+    "parentId": 3886,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3895,
+    "name": "Honeycombs",
+    "parentId": 3886,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3896,
+    "name": "Bee treatments and feeding",
+    "parentId": 3886,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3897,
+    "name": "Products Growing the Mothers",
+    "parentId": 3886,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3898,
+    "name": "Stove and fireplace accessories",
+    "parentId": 2764,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3901,
+    "name": "Accessories for pressure washers",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3903,
+    "name": "Decorative wall patterns",
+    "parentId": 3427,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3904,
+    "name": "Key door accessories",
+    "parentId": 2661,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3905,
+    "name": "Kids jewelery",
+    "parentId": 4292,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3908,
+    "name": "Electric radiators",
+    "parentId": 3916,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3909,
+    "name": "Electric convectors",
+    "parentId": 3916,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3910,
+    "name": "Radiant panels",
+    "parentId": 3916,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3911,
+    "name": "Halogen and quartz heaters",
+    "parentId": 3916,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3912,
+    "name": "Electric fireplaces",
+    "parentId": 3916,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3913,
+    "name": "Dehumidifiers",
+    "parentId": 94,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3914,
+    "name": "Air purifiers",
+    "parentId": 94,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3915,
+    "name": "Instant heaters",
+    "parentId": 3754,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3919,
+    "name": "Interior stairs",
+    "parentId": 3715,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3920,
+    "name": "Engine boats",
+    "parentId": 2423,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3925,
+    "name": "Electrical vehicle accessories",
+    "parentId": 3924,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3926,
+    "name": "Electric vehicle charge stations",
+    "parentId": 3924,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3927,
+    "name": "Wedding invitations",
+    "parentId": 2603,
+    "isEanMandatory": false
+  },
+  {
+    "id": 3928,
+    "name": "Funeral monuments",
+    "parentId": 349,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3929,
+    "name": "Fuel tanks",
+    "parentId": 1410,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3930,
+    "name": "Fuel tanks accessories",
+    "parentId": 1410,
+    "isEanMandatory": false
+  },
+  {
+    "id": 3931,
+    "name": "Fuel distribution pumps",
+    "parentId": 1410,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3932,
+    "name": "Fuel pump accessories",
+    "parentId": 1410,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3944,
+    "name": "Church objects",
+    "parentId": 3427,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3946,
+    "name": "Parts of personal care appliances",
+    "parentId": 1514,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3947,
+    "name": "Streaming accessories",
+    "parentId": 761,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3949,
+    "name": "Car refrigerators",
+    "parentId": 3703,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3950,
+    "name": "Auto parts",
+    "parentId": 1410,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3951,
+    "name": "Pneumatic tools",
+    "parentId": 351,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3952,
+    "name": "Brick, AAC and concret blocks",
+    "parentId": 2872,
+    "isEanMandatory": false
+  },
+  {
+    "id": 3953,
+    "name": "Hydraulic oil",
+    "parentId": 1410,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3954,
+    "name": "Cold rooms",
+    "parentId": 413,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3955,
+    "name": "Vending machine",
+    "parentId": 846,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3959,
+    "name": "Stamples and paperclips",
+    "parentId": 2611,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3960,
+    "name": "Perforators",
+    "parentId": 2611,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3961,
+    "name": "Cork and textile panels",
+    "parentId": 96,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3962,
+    "name": "Crafting paper",
+    "parentId": 2603,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3963,
+    "name": "Special paper",
+    "parentId": 2603,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3964,
+    "name": "Pencil cases",
+    "parentId": 2653,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3970,
+    "name": "Water dispensers",
+    "parentId": 3754,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3973,
+    "name": "Medical surgical masks",
+    "parentId": 4012,
+    "isEanMandatory": false
+  },
+  {
+    "id": 3974,
+    "name": "Disposable medical uniforms",
+    "parentId": 4012,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3975,
+    "name": "Sanitary alcohol",
+    "parentId": 4012,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3976,
+    "name": "Disinfectant soap",
+    "parentId": 4012,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3977,
+    "name": "Disinfectant solutions",
+    "parentId": 4012,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3978,
+    "name": "Antibacterial hand wet wipes",
+    "parentId": 4012,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3979,
+    "name": "Antibacterial wet wipes for surfaces",
+    "parentId": 3425,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3981,
+    "name": "Pulse Oximeters",
+    "parentId": 930,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3982,
+    "name": "Disinfectant Mats",
+    "parentId": 4012,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3985,
+    "name": "Beers",
+    "parentId": 3983,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3986,
+    "name": "Champagne",
+    "parentId": 3983,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3987,
+    "name": "Champagne and Sparkling wine",
+    "parentId": 3983,
+    "isEanMandatory": true
+  },
+  {
+    "id": 3999,
+    "name": "Whiskey",
+    "parentId": 3984,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4000,
+    "name": "Vodka",
+    "parentId": 3984,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4001,
+    "name": "Rum",
+    "parentId": 3984,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4002,
+    "name": "Traditional",
+    "parentId": 3984,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4003,
+    "name": "Cognac and Armagnac",
+    "parentId": 3984,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4004,
+    "name": "Gin",
+    "parentId": 3984,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4005,
+    "name": "Tequila",
+    "parentId": 3984,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4006,
+    "name": "Liqueur",
+    "parentId": 3984,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4008,
+    "name": "Other beverages",
+    "parentId": 3984,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4009,
+    "name": "Aperitif",
+    "parentId": 3984,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4011,
+    "name": "Wines",
+    "parentId": 3983,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4013,
+    "name": "Electronic cigarettes supplies",
+    "parentId": 4074,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4032,
+    "name": "Computer Microphones",
+    "parentId": 662,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4034,
+    "name": "Women sport blouses",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4036,
+    "name": "Women sport sweatshirts",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4037,
+    "name": "Chlidren sport sweatshirts",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4038,
+    "name": "Men sport undershirts",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4040,
+    "name": "Women sport t-shirts",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4041,
+    "name": "Children sport t-shirts",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4042,
+    "name": "Women sport trousers",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4043,
+    "name": "Children sport trousers",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4044,
+    "name": "Girls sport skirts",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4046,
+    "name": "Women sport waistcoats",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4048,
+    "name": "Women sport jackets",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4049,
+    "name": "Children sport jackets",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4051,
+    "name": "Women sports clothing equipment",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4052,
+    "name": "Children sports clothing equipment",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4053,
+    "name": "Women sport underwear",
+    "parentId": 1799,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4057,
+    "name": "Women sport shoes",
+    "parentId": 2324,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4058,
+    "name": "Children sport shoes",
+    "parentId": 2324,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4059,
+    "name": "Women sports slippers",
+    "parentId": 2324,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4060,
+    "name": "Children sports slippers",
+    "parentId": 2324,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4061,
+    "name": "Women sport boots",
+    "parentId": 2324,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4062,
+    "name": "Children sport boots",
+    "parentId": 2324,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4063,
+    "name": "Women sport socks",
+    "parentId": 1865,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4064,
+    "name": "Children sport socks",
+    "parentId": 1865,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4065,
+    "name": "Women sport hats",
+    "parentId": 1865,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4067,
+    "name": "Women sports caps and bandanas",
+    "parentId": 1865,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4068,
+    "name": "Children sports caps and bandanas",
+    "parentId": 1865,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4069,
+    "name": "Men sports scarfs",
+    "parentId": 1865,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4071,
+    "name": "Smart Audio",
+    "parentId": 938,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4072,
+    "name": "Covid-19 tests",
+    "parentId": 4189,
+    "isEanMandatory": false
+  },
+  {
+    "id": 4073,
+    "name": "Cooling accessories",
+    "parentId": 775,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4079,
+    "name": "Car interior cleaning products",
+    "parentId": 1414,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4080,
+    "name": "Car exterior cleaning products",
+    "parentId": 1414,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4081,
+    "name": "Polishing machines and accessories",
+    "parentId": 1414,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4293,
+    "name": "Children caps & hats",
+    "parentId": 4292,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4294,
+    "name": "Children headbands & bandanas",
+    "parentId": 4292,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4295,
+    "name": "Children scarfs & foulards",
+    "parentId": 4292,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4296,
+    "name": "Children gloves",
+    "parentId": 4292,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4297,
+    "name": "Children socks & tights",
+    "parentId": 4292,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4298,
+    "name": "Children sunglasses",
+    "parentId": 4292,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4299,
+    "name": "Children backpacks & bags",
+    "parentId": 4292,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4300,
+    "name": "Children overall",
+    "parentId": 3217,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4301,
+    "name": "Shower cabins",
+    "parentId": 2764,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4302,
+    "name": "Bathtub accessories",
+    "parentId": 2764,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4303,
+    "name": "Bathtubs, doors and shower screens",
+    "parentId": 2764,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4304,
+    "name": "Baptism clothing",
+    "parentId": 3802,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4306,
+    "name": "Baptism shoes & baby booties",
+    "parentId": 3802,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4307,
+    "name": "Baptism trousseau & accessories",
+    "parentId": 3802,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4309,
+    "name": "Bed sheets",
+    "parentId": 1583,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4310,
+    "name": "Quilt covers",
+    "parentId": 1583,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4311,
+    "name": "Pillow covers",
+    "parentId": 1583,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4313,
+    "name": "Garden storage boxes and cabinets",
+    "parentId": 1541,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4314,
+    "name": "Men's tracksuits",
+    "parentId": 2718,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4315,
+    "name": "Women's tracksuits",
+    "parentId": 2668,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4316,
+    "name": "Folk Costumes Men",
+    "parentId": 2718,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4317,
+    "name": "Folk Costumes Women",
+    "parentId": 2668,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4318,
+    "name": "Electrical Bikes",
+    "parentId": 1695,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4319,
+    "name": "Electric scooters",
+    "parentId": 3924,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4320,
+    "name": "Electric motor scooters",
+    "parentId": 3924,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4321,
+    "name": "Hoverboard",
+    "parentId": 3924,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4323,
+    "name": "Gaming desks",
+    "parentId": 761,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4324,
+    "name": "Footstools",
+    "parentId": 1520,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4325,
+    "name": "Chair covers and sofas",
+    "parentId": 1583,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4327,
+    "name": "Hairstyle devices accessories",
+    "parentId": 1516,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4330,
+    "name": "Heating accessories",
+    "parentId": 3754,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4333,
+    "name": "Incontinence products",
+    "parentId": 4332,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4370,
+    "name": "Vibrators and dildos",
+    "parentId": 4369,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4372,
+    "name": "Anal toys and vaginal balls",
+    "parentId": 4369,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4373,
+    "name": "Penis rings and masturbators",
+    "parentId": 4369,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4377,
+    "name": "Sex dolls",
+    "parentId": 4369,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4378,
+    "name": "Sex machines",
+    "parentId": 4369,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4379,
+    "name": "Sex pumps",
+    "parentId": 4369,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4381,
+    "name": "Chastity belts and strap-on",
+    "parentId": 4380,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4383,
+    "name": "Bondage accesories and sets",
+    "parentId": 4380,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4384,
+    "name": "Erotic decor and accessories",
+    "parentId": 4368,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4385,
+    "name": "Erotic oil massage",
+    "parentId": 4368,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4387,
+    "name": "Edible undergarments and erotic sweets",
+    "parentId": 4368,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4388,
+    "name": "Erotic games",
+    "parentId": 4368,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4390,
+    "name": "Sexy role play clothes",
+    "parentId": 4389,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4391,
+    "name": "Fetish shoes",
+    "parentId": 4368,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4392,
+    "name": "Sextoys cleaners and care",
+    "parentId": 4368,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4393,
+    "name": "Heating pumps",
+    "parentId": 3754,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4395,
+    "name": "Electric brushes",
+    "parentId": 3424,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4396,
+    "name": "Personalized T-shirts",
+    "parentId": 3801,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4397,
+    "name": "Smart rings",
+    "parentId": 3394,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4403,
+    "name": "Мъжки елеци и грейки",
+    "parentId": 2718,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4404,
+    "name": "Дамски елеци и грейки",
+    "parentId": 2668,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4405,
+    "name": "Women espadrilles",
+    "parentId": 2686,
+    "isEanMandatory": true
+  },
+  {
+    "id": 4406,
+    "name": "Мъжки еспадрили",
+    "parentId": 2732,
+    "isEanMandatory": true
+  }
+]

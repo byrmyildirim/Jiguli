@@ -1978,6 +1978,64 @@ Output format JSON:
   });
 });
 
+function matchCategoryFromTaxonomy(title: string, defaultFallback: number = 3523): { id: number; name: string } {
+  try {
+    const taxonomyPath = fs.existsSync(TAXONOMY_FILE) ? TAXONOMY_FILE : path.join(DATA_DIR, 'emag_bg_allowed_categories.json');
+    if (fs.existsSync(taxonomyPath)) {
+      const taxonomy: any[] = JSON.parse(fs.readFileSync(taxonomyPath, 'utf-8'));
+      const textLower = title.toLowerCase();
+
+      // 1. High priority domain rules for prominent catalog sectors
+      if (textLower.includes('led') || textLower.includes('strip') || textLower.includes('şerit') || textLower.includes('rgb') || textLower.includes('cob')) {
+        return { id: 3523, name: 'LED strips' };
+      }
+      if (textLower.includes('pościel') || textLower.includes('poszewk') || textLower.includes('nevresim') || textLower.includes('kołdr') || textLower.includes('quilt') || textLower.includes('bedding')) {
+        return { id: 3690, name: 'Quilts' };
+      }
+      if (textLower.includes('psa') || textLower.includes('pies') || textLower.includes('kot') || textLower.includes('köpek') || textLower.includes('kedi') || textLower.includes('legowisk') || textLower.includes('pet bed')) {
+        return { id: 1344, name: 'Pet beds, pillows and mattresses' };
+      }
+      if (textLower.includes('carplay') || textLower.includes('adapter samochod') || textLower.includes('car adapter') || textLower.includes('kablo') || textLower.includes('cable') || textLower.includes('ładowark')) {
+        return { id: 306, name: 'Cables & Adapters' };
+      }
+      if (textLower.includes('słuchawk') || textLower.includes('earphone') || textLower.includes('kulaklık') || textLower.includes('headphone') || textLower.includes('tws')) {
+        return { id: 1001, name: 'Headphones' };
+      }
+      if (textLower.includes('smartwatch') || textLower.includes('zegarek') || textLower.includes('akıllı saat')) {
+        return { id: 101, name: 'Smartwatches' };
+      }
+      if (textLower.includes('curtain') || textLower.includes('shutter') || textLower.includes('motor') || textLower.includes('roleta') || textLower.includes('zigbee') || textLower.includes('tuya') || textLower.includes('switch')) {
+        return { id: 202, name: 'Smart Home & Switches' };
+      }
+
+      // 2. Keyword token search across all 1,735 allowed categories
+      const words = textLower.split(/[\s,._\-\/]+/).filter(w => w.length >= 3 && !['dla', 'the', 'and', 'ile', 'nie', 'est', 'set'].includes(w));
+      let bestCat = null;
+      let maxScore = 0;
+
+      for (const cat of taxonomy) {
+        if (!cat.isAllowed && cat.is_allowed === 0) continue;
+        const catNameLower = (cat.name || '').toLowerCase();
+        let score = 0;
+        for (const w of words) {
+          if (catNameLower.includes(w)) score += 3;
+        }
+        if (score > maxScore) {
+          maxScore = score;
+          bestCat = cat;
+        }
+      }
+
+      if (bestCat && maxScore >= 3) {
+        return { id: Number(bestCat.id), name: bestCat.name };
+      }
+    }
+  } catch (err) {
+    console.warn('Category matching error:', err);
+  }
+  return { id: defaultFallback, name: 'LED strips' };
+}
+
 // Real eMAG Live Product & Offer Publishing Pipeline with Comprehensive Step-by-Step Audit Trail
 app.post('/api/emag/publish-product', async (req, res) => {
   const username = req.body.username || req.body.emagUser;
@@ -2059,29 +2117,28 @@ app.post('/api/emag/publish-product', async (req, res) => {
   // Clean category ID: must be valid positive integer
   const rawCatId = product.category_id || product.categoryId;
   const parsedCatId = parseInt(String(rawCatId || '').replace(/\D/g, ''), 10);
-  const prodLower = prodName.toLowerCase();
-  const isCurtainOrMotor = prodLower.includes('curtain') || prodLower.includes('shutter') || prodLower.includes('motor') || prodLower.includes('roleta') || prodLower.includes('perde');
-  const isLed = (prodLower.includes('led') || prodLower.includes('strip') || prodLower.includes('şerit') || prodLower.includes('rgb') || prodLower.includes('cob')) && !isCurtainOrMotor;
-  const isPet = prodLower.includes('psa') || prodLower.includes('pies') || prodLower.includes('kot') || prodLower.includes('köpek') || prodLower.includes('kedi') || prodLower.includes('dom dla psa') || prodLower.includes('mata') || prodLower.includes('łóżko') || prodLower.includes('legowisk') || prodLower.includes('pet') || prodLower.includes('dog') || prodLower.includes('cat');
-  const isTextile = prodLower.includes('pościel') || prodLower.includes('poszewk') || prodLower.includes('nevresim') || prodLower.includes('bedding');
-  const isSmart = isCurtainOrMotor || (!isLed && (prodLower.includes('zigbee') || prodLower.includes('tuya') || prodLower.includes('switch') || prodLower.includes('anahtar') || prodLower.includes('sensör') || prodLower.includes('smart')));
-  const isWatch = !isLed && (prodLower.includes('watch') || prodLower.includes('saat') || prodLower.includes('smartwatch') || prodLower.includes('bileklik'));
-  const isAudio = prodLower.includes('kulaklık') || prodLower.includes('earphone') || prodLower.includes('tws');
-  const isCable = prodLower.includes('kablo') || prodLower.includes('cable') || prodLower.includes('ładowark') || prodLower.includes('şarj');
 
   let categoryId = parsedCatId;
-  // Map to permitted eMAG Bulgaria categories
-  if (categoryId === 6001 || categoryId === 257548 || isLed) {
-    categoryId = 3523; // Official eMAG BG LED strips category
-  } else if (isNaN(categoryId) || categoryId <= 0) {
-    if (isCurtainOrMotor || isSmart) categoryId = 202;
-    else if (isPet) categoryId = 1344; // Official eMAG BG Pet beds category
-    else if (isTextile) categoryId = 3690; // Official eMAG BG Quilts & Bedding category
-    else if (isWatch) categoryId = 101;
-    else if (isAudio) categoryId = 1001;
-    else if (isCable) categoryId = 4001;
-    else if (isLed) categoryId = 3523;
-    else categoryId = 3523;
+  let categoryName = '';
+
+  // Check if existing categoryId is valid and allowed in eMAG Bulgaria
+  let isAlreadyAllowed = false;
+  try {
+    const taxonomyPath = fs.existsSync(TAXONOMY_FILE) ? TAXONOMY_FILE : path.join(DATA_DIR, 'emag_bg_allowed_categories.json');
+    if (fs.existsSync(taxonomyPath) && categoryId > 0 && categoryId !== 6001 && categoryId !== 257548) {
+      const taxonomy: any[] = JSON.parse(fs.readFileSync(taxonomyPath, 'utf-8'));
+      const found = taxonomy.find((c: any) => Number(c.id) === categoryId);
+      if (found) {
+        isAlreadyAllowed = true;
+        categoryName = found.name;
+      }
+    }
+  } catch {}
+
+  if (!isAlreadyAllowed) {
+    const matched = matchCategoryFromTaxonomy(prodName);
+    categoryId = matched.id;
+    categoryName = matched.name;
   }
 
   steps.push({
