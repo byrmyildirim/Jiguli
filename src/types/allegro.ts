@@ -160,6 +160,8 @@ export interface AllegroOffer {
     visitsCount: number;
     salesVolume30d: number;
   };
+  brand?: string;
+  description?: any;
   createdAt: string;
   updatedAt: string;
   channelSync: Partial<Record<MarketplaceId, 'synced' | 'pending' | 'unlinked' | 'error'>>;
@@ -169,15 +171,16 @@ export interface AllegroOffer {
       price?: { amount: string; currency: string };
       categoryId?: string;
       smartEligible?: boolean;
-      parameters?: Record<string, string>;
+      parameters?: any;
     };
     emag?: {
       title?: string;
       price?: { amount: string; currency: string };
       categoryId?: string;
+      categoryName?: string;
       vatRate?: number;
       geniusEligible?: boolean;
-      characteristics?: Record<string, string>;
+      characteristics?: any;
     };
     baselinker?: {
       warehouseId?: string;

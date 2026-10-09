@@ -83,16 +83,30 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
     offer.channelData?.emag?.price?.amount ||
     (offer.excelMetadata?.discountedEurPrice ? (offer.excelMetadata.discountedEurPrice * 1.95).toFixed(2) : '61.74')
   );
+  const initialCategoryMatch = useMemo(() => {
+    return matchProductToEmagCategory({
+      title: offer.name,
+      name: offer.name,
+      sku: offer.sku,
+      url: offer.excelMetadata?.websiteLinks,
+      productType: offer.category?.name,
+      categoryCode: offer.channelData?.emag?.categoryId || offer.excelMetadata?.emagCategoryCode,
+      categoryName: offer.excelMetadata?.emagCategoryName || offer.category?.name
+    });
+  }, [offer]);
+
   const [emagCategoryId, setEmagCategoryId] = useState<number>(() => {
     const raw = offer.channelData?.emag?.categoryId || offer.excelMetadata?.emagCategoryCode || offer.category?.id;
     const num = parseInt(String(raw || '').replace(/\D/g, ''), 10);
-    return !isNaN(num) && num > 0 && num !== 6001 && num !== 257548 && num !== 3122 ? num : 3523;
+    if (!isNaN(num) && num > 0 && num !== 6001 && num !== 257548 && num !== 3122) return num;
+    return initialCategoryMatch.categoryId || 3426;
   });
   const [emagCategoryName, setEmagCategoryName] = useState<string>(
     offer.channelData?.emag?.categoryName ||
     offer.excelMetadata?.emagCategoryName ||
+    initialCategoryMatch.categoryName ||
     offer.category?.name ||
-    'Lighting & Electrical/Light sources/LED strips'
+    'House Cleaning/Cleaning and maintenance/Organisation and storage'
   );
   const [emagDescription, setEmagDescription] = useState<string>(
     offer.description?.sections?.[0]?.items?.[0]?.content ||
@@ -100,10 +114,26 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
   );
   const [emagCharacteristics, setEmagCharacteristics] = useState<{ id: string | number; value: string }[]>(() => {
     const existing = offer.channelData?.emag?.characteristics;
-    if (Array.isArray(existing) && existing.length > 0) return existing;
-    const initialCatId = parseInt(String(offer.channelData?.emag?.categoryId || offer.excelMetadata?.emagCategoryCode || offer.category?.id || 3523), 10);
-    return KNOWN_CATEGORY_CHARACTERISTICS[initialCatId] || [
-      { id: 'emag-brand', value: 'Generic' }
+    const targetCatId = offer.channelData?.emag?.categoryId || offer.excelMetadata?.emagCategoryCode || initialCategoryMatch.categoryId || 3426;
+    const numCatId = parseInt(String(targetCatId), 10);
+    const isLed = numCatId === 3523 || numCatId === 6001 || numCatId === 257548;
+
+    if (Array.isArray(existing) && existing.length > 0) {
+      const sanitized = existing.filter(c => {
+        if (!isLed) {
+          const val = String(c.value).toLowerCase();
+          const cid = String(c.id).toLowerCase();
+          if (c.id === 5464 || c.id === 6862) return false;
+          if (c.id === 5704 && (val.includes('led') || val.includes('strip'))) return false;
+          if (val.includes('led strip') || val.includes('banda led') || val === 'indoor') return false;
+          if (cid.includes('led') || cid.includes('light')) return false;
+        }
+        return true;
+      });
+      if (sanitized.length > 0) return sanitized;
+    }
+    return KNOWN_CATEGORY_CHARACTERISTICS[numCatId] || [
+      { id: 'emag-brand', value: offer.brand || 'Generic' }
     ];
   });
   const [matchBadge, setMatchBadge] = useState<string>('Otomatik');
@@ -148,8 +178,10 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
       setEmagCategoryName(match.categoryName);
       setMatchBadge(match.matchDetail || match.source);
 
-      if (match.characteristics && (!offer.channelData?.emag?.characteristics || offer.channelData.emag.characteristics.length === 0)) {
+      if (match.characteristics && match.characteristics.length > 0) {
         setEmagCharacteristics(match.characteristics);
+      } else {
+        setEmagCharacteristics([{ id: 'emag-brand', value: offer.brand || 'Generic' }]);
       }
     }
   }, [offer]);
@@ -178,6 +210,8 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
     setMatchBadge(match.matchDetail || match.source);
     if (match.characteristics && match.characteristics.length > 0) {
       setEmagCharacteristics(match.characteristics);
+    } else {
+      setEmagCharacteristics([{ id: 'emag-brand', value: offer.brand || 'Generic' }]);
     }
   };
 
@@ -200,17 +234,17 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
       if (isAllegroEnabled) targetChannels.push('allegro');
       if (isBaseLinkerEnabled) targetChannels.push('baselinker');
 
-      const updatedOfferData: Partial<AllegroOffer> = {
+      const updatedOfferData = {
         name: name.trim(),
         sku: sku.trim(),
         ean: ean.trim(),
         primaryImage: primaryImage.trim(),
         stock: {
           available: stock,
-          unit: 'UNIT'
+          unit: 'UNIT' as const
         },
         sellingMode: {
-          format: 'BUY_NOW',
+          format: 'BUY_NOW' as const,
           price: {
             amount: allegroPricePln,
             currency: 'PLN'
@@ -220,6 +254,7 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
           id: String(emagCategoryId),
           name: emagCategoryName
         },
+        targetChannels,
         channelData: {
           ...(offer.channelData || {}),
           emag: {
@@ -255,10 +290,7 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
         },
         smartEligible: allegroSmart,
         isDraft: !publishToLiveEmag,
-        publication: {
-          ...offer.publication,
-          status: publishToLiveEmag ? 'ACTIVE' : (offer.publication?.status || 'DRAFT')
-        }
+        publicationStatus: (publishToLiveEmag ? 'ACTIVE' : (offer.publication?.status === 'ACTIVE' ? 'ACTIVE' : 'DRAFT')) as 'ACTIVE' | 'DRAFT'
       };
 
       store.updateFullOffer(offer.id, updatedOfferData);
@@ -790,6 +822,8 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
                               setMatchBadge('Manuel Seçim');
                               if (KNOWN_CATEGORY_CHARACTERISTICS[Number(cat.id)]) {
                                 setEmagCharacteristics(KNOWN_CATEGORY_CHARACTERISTICS[Number(cat.id)]);
+                              } else {
+                                setEmagCharacteristics([{ id: 'emag-brand', value: offer.brand || 'Generic' }]);
                               }
                               setIsCategorySearchOpen(false);
                             }}

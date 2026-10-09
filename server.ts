@@ -1740,7 +1740,7 @@ app.get('/api/emag/taxonomy/category/:id/characteristics', async (req, res) => {
     }
   } catch {}
 
-  const result = characteristicsMap[categoryId] || characteristicsMap['3122'] || characteristicsMap['257548'] || [];
+  const result = characteristicsMap[categoryId] || [];
 
   return res.json({
     success: true,
@@ -1984,7 +1984,7 @@ function matchCategoryFromTaxonomy(
   url?: string,
   productType?: string,
   candidateCode?: number,
-  defaultFallback: number = 3523
+  defaultFallback: number = 3426
 ): { id: number; name: string; source: string } {
   try {
     const allowedPath = fs.existsSync(TAXONOMY_FILE) ? TAXONOMY_FILE : path.join(DATA_DIR, 'emag_bg_allowed_categories.json');
@@ -2105,7 +2105,7 @@ function matchCategoryFromTaxonomy(
   } catch (err) {
     console.warn('Category matching error:', err);
   }
-  return { id: defaultFallback, name: 'Lighting & Electrical/Light sources/LED strips', source: 'DEFAULT_FALLBACK' };
+  return { id: defaultFallback, name: defaultFallback === 3426 ? 'House Cleaning/Cleaning and maintenance/Organisation and storage' : 'General Product', source: 'DEFAULT_FALLBACK' };
 }
 
 // API endpoint to auto-match category for any product
@@ -2297,7 +2297,17 @@ app.post('/api/emag/publish-product', async (req, res) => {
 
   let formattedCharacteristics = rawCharsList.filter(c => {
     const cIdStr = String(c.id).toLowerCase();
-    if (isLedCat && (cIdStr === 'emag-type' || cIdStr === 'emag-compat') && (c.value.includes('Smartwatch') || c.value.includes('Android & iOS'))) {
+    const cValStr = String(c.value).toLowerCase();
+
+    // If NOT an LED category: NEVER allow LED strip characteristics
+    if (!isLedCat) {
+      if (c.id === 5464 || c.id === 6862) return false;
+      if (c.id === 5704 && (cValStr.includes('led') || cValStr.includes('strip'))) return false;
+      if (cValStr.includes('led strip') || cValStr.includes('banda led') || cValStr === 'indoor') return false;
+      if (cIdStr.includes('light') || cIdStr.includes('led') || cIdStr.includes('voltage')) return false;
+    }
+
+    if (isLedCat && (cIdStr === 'emag-type' || cIdStr === 'emag-compat') && (cValStr.includes('smartwatch') || cValStr.includes('android & ios'))) {
       return false;
     }
     if ((isPetCat || isTextileCat) && (cIdStr.includes('light') || cIdStr.includes('voltage') || cIdStr.includes('protocol') || cIdStr.includes('led'))) {
@@ -2309,57 +2319,55 @@ app.post('/api/emag/publish-product', async (req, res) => {
     return Boolean(c.value);
   });
 
-  // If characteristics are empty or deficient, auto-populate category-appropriate defaults
+  // If characteristics are empty or deficient, auto-populate category-appropriate defaults ONLY for that category
   if (isTextileCat) {
-    // Category 3690 (Yorgan & Nevresim) requires specific characteristics IDs
-    formattedCharacteristics = [
-      { id: 6160, value: 'Double' },
-      { id: 5661, value: 'Microfiber' },
-      { id: 8025, value: '160 x 200' }
-    ];
+    if (formattedCharacteristics.length === 0) {
+      formattedCharacteristics = [
+        { id: 6160, value: 'Double' },
+        { id: 5661, value: 'Microfiber' },
+        { id: 8025, value: '160 x 200' }
+      ];
+    }
   } else if (isLedCat) {
-    // Category 3523 (LED strips) requires specific characteristics IDs
-    formattedCharacteristics = [
-      { id: 5464, value: 'Indoor' },
-      { id: 5704, value: 'LED strip' },
-      { id: 6862, value: '5 m' }
-    ];
+    if (formattedCharacteristics.length === 0) {
+      formattedCharacteristics = [
+        { id: 5464, value: 'Indoor' },
+        { id: 5704, value: 'LED strip' },
+        { id: 6862, value: '5 m' }
+      ];
+    }
   } else if (isPetCat) {
-    // Category 1344 (Pet beds) requires specific characteristics IDs
-    formattedCharacteristics = [
-      { id: 5704, value: 'Bed' },
-      { id: 7266, value: 'Dogs' }
-    ];
+    if (formattedCharacteristics.length === 0) {
+      formattedCharacteristics = [
+        { id: 5704, value: 'Bed' },
+        { id: 7266, value: 'Dogs' }
+      ];
+    }
   } else if (isSmartCat) {
+    const prodTitleLower = prodName.toLowerCase();
     if (!formattedCharacteristics.some(c => String(c.id) === 'emag-brand')) {
       formattedCharacteristics.push({ id: 'emag-brand', value: product.brand || 'Generic' });
     }
     if (!formattedCharacteristics.some(c => String(c.id) === 'emag-protocol')) {
-      formattedCharacteristics.push({ id: 'emag-protocol', value: prodLower.includes('zigbee') ? 'Zigbee 3.0' : 'Tuya WiFi 2.4GHz' });
+      formattedCharacteristics.push({ id: 'emag-protocol', value: prodTitleLower.includes('zigbee') ? 'Zigbee 3.0' : 'Tuya WiFi 2.4GHz' });
     }
     if (!formattedCharacteristics.some(c => String(c.id) === 'emag-app')) {
       formattedCharacteristics.push({ id: 'emag-app', value: 'Tuya Smart & Smart Life' });
     }
     if (!formattedCharacteristics.some(c => String(c.id) === 'emag-power')) {
-      formattedCharacteristics.push({ id: 'emag-power', value: prodLower.includes('usb') ? 'USB 5V' : '220V AC Motor Besleme' });
+      formattedCharacteristics.push({ id: 'emag-power', value: prodTitleLower.includes('usb') ? 'USB 5V' : '220V AC Motor Besleme' });
     }
   } else if (formattedCharacteristics.length === 0) {
-    if (isPetCat) {
-      formattedCharacteristics = [
-        { id: 'emag-brand', value: product.brand || 'Generic' },
-        { id: 'emag-pet-type', value: 'Caini si Pisici (Köpek & Kedi)' },
-        { id: 'emag-product-type', value: prodLower.includes('dom dla') ? 'Culcus tip Casuta (Ev / Kulübe)' : prodLower.includes('mata') ? 'Saltea Impermeabila (Su Geçirmez Mat)' : 'Culcus & Saltea (Yatak & Minder)' },
-        { id: 'emag-material', value: prodLower.includes('wodoodporn') ? 'Oxford Impermeabil & Plus Calduros' : 'Plus Moale (Yumuşak Peluş)' },
-        { id: 'emag-color', value: 'Multicolor' },
-        { id: 'emag-size', value: 'Toate Taliile (Universal)' },
-        { id: 'emag-benefit', value: 'Impermeabil & Calduros de Iarna (Su Geçirmez & Kışlık Sıcak)' }
-      ];
-    } else if (DEFAULT_CHARACTERISTICS_MAP[String(categoryId)]) {
+    if (DEFAULT_CHARACTERISTICS_MAP[String(categoryId)]) {
       DEFAULT_CHARACTERISTICS_MAP[String(categoryId)].forEach((def: any) => {
         if (def.isMandatory) {
           formattedCharacteristics.push({ id: def.id, value: def.options?.[0] || def.defaultValue || 'Generic' });
         }
       });
+    } else {
+      formattedCharacteristics = [
+        { id: 'emag-brand', value: product.brand || 'Generic' }
+      ];
     }
   }
 
@@ -2422,7 +2430,7 @@ app.post('/api/emag/publish-product', async (req, res) => {
 
   const brandName = product.brand || 'Generic';
   const rawProductDesc = String(product.description || '');
-  const descriptionHtml = (rawProductDesc && (!rawProductDesc.includes('RGB LED Smart Life') || isLed))
+  const descriptionHtml = (rawProductDesc && (!rawProductDesc.includes('RGB LED Smart Life') || isLedCat))
     ? rawProductDesc
     : `<h2>${prodName}</h2><p>Kaliteli ve garantili orijinal ürün. Hızlı kargo & Sameday EasyBox teslimatı.</p>`;
   

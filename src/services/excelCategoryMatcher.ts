@@ -247,16 +247,16 @@ export function matchProductToEmagCategory(product: ProductInput): CategoryMatch
       categoryName: bestMatch.name,
       source: 'EMAG_TAXONOMY',
       matchDetail: `eMAG Taksonomi Eşleşmesi (Puan: ${highestScore})`,
-      characteristics: KNOWN_CATEGORY_CHARACTERISTICS[catId]
+      characteristics: KNOWN_CATEGORY_CHARACTERISTICS[catId] || [{ id: 'emag-brand', value: 'Generic' }]
     };
   }
 
-  // PRIORITY 5: Fallback safe category (LED strips - category 3523)
+  // PRIORITY 5: Safe fallback category (Organisation and storage - category 3426)
   return {
-    categoryId: 3523,
-    categoryName: 'Lighting & Electrical/Light sources/LED strips',
+    categoryId: 3426,
+    categoryName: 'House Cleaning/Cleaning and maintenance/Organisation and storage',
     source: 'FALLBACK',
-    matchDetail: 'Varsayılan kategori',
-    characteristics: KNOWN_CATEGORY_CHARACTERISTICS[3523]
+    matchDetail: 'Genel ürün kategorisi',
+    characteristics: [{ id: 'emag-brand', value: 'Generic' }]
   };
 }
