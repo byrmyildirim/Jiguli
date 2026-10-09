@@ -42,6 +42,7 @@ import {
 } from '../../services/excelProductParser';
 import { ProductImage } from '../common/ProductImage';
 import { CreateOfferModal } from '../modals/CreateOfferModal';
+import { ProductRevisionModal } from '../modals/ProductRevisionModal';
 import { ResetPanelModal } from '../modals/ResetPanelModal';
 import { EmagImageDiagnosticModal } from '../modals/EmagImageDiagnosticModal';
 import { EmagExecutionLogsModal, EmagExecutionReport } from '../modals/EmagExecutionLogsModal';
@@ -2291,12 +2292,12 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
         </div>
       </div>
 
-      {/* FULL PRODUCT EDIT / REVISION MODAL */}
+      {/* DEDICATED PRODUCT REVISION & MARKETPLACE MANAGEMENT MODAL */}
       {editingOffer && (
-        <CreateOfferModal
+        <ProductRevisionModal
           isOpen={Boolean(editingOffer)}
           onClose={() => setEditingOffer(null)}
-          offerToEdit={editingOffer}
+          offer={editingOffer}
           theme={theme}
         />
       )}
