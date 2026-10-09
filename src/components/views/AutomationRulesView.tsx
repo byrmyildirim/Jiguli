@@ -56,6 +56,48 @@ export const AutomationRulesView: React.FC<AutomationRulesViewProps> = ({ theme 
   const [action, setAction] = useState<AutomationAction>('AUTO_INPOST_LABEL');
   const [enabled, setEnabled] = useState(true);
 
+  // Background Cron Worker State
+  const [cronData, setCronData] = useState<{
+    isEnabled: boolean;
+    intervalMinutes: number;
+    lastRunAt: string | null;
+    nextRunAt: string;
+    runCount: number;
+  } | null>(null);
+  const [isTriggeringCron, setIsTriggeringCron] = useState(false);
+
+  const fetchCronStatus = async () => {
+    try {
+      const res = await fetch('/api/system/cron-status');
+      const data = await res.json();
+      if (data && data.success) {
+        setCronData(data.cronState);
+      }
+    } catch {}
+  };
+
+  const handleManualCronTrigger = async () => {
+    setIsTriggeringCron(true);
+    try {
+      const res = await fetch('/api/system/cron-trigger', { method: 'POST' });
+      const data = await res.json();
+      if (data && data.success) {
+        setCronData(data.cronState);
+        showNotice('⚡ Otonom arka plan senkronizasyonu başarıyla tetiklendi!');
+      }
+    } catch (err: any) {
+      showNotice(`Hata: ${err?.message || err}`);
+    } finally {
+      setIsTriggeringCron(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCronStatus();
+    const timer = setInterval(fetchCronStatus, 20000);
+    return () => clearInterval(timer);
+  }, []);
+
   useEffect(() => {
     return store.subscribe(() => {
       setRules(store.getAutomationRules());
@@ -335,6 +377,46 @@ export const AutomationRulesView: React.FC<AutomationRulesViewProps> = ({ theme 
         >
           <Plus className="w-4 h-4 text-[#9FE870]" />
           <span>Yeni Kural Ekle</span>
+        </button>
+      </div>
+
+      {/* 7/24 OTONOM ARKA PLAN CRON WORKER BANNER */}
+      <div className={`p-4 sm:p-5 rounded-3xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all shadow-xs ${
+        isDark ? 'bg-zinc-900/80 border-zinc-800' : 'bg-slate-50 border-slate-200'
+      }`}>
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-600 shrink-0">
+            <RotateCw className="w-5 h-5 text-emerald-600 animate-[spin_6s_linear_infinite]" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                7/24 Otonom Arka Plan Nöbetçisi (Background Cron)
+              </h3>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                🟢 Aktif ({cronData?.intervalMinutes || 15} Dakikada Bir)
+              </span>
+              {cronData?.runCount && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-200 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">
+                  Döngü #{cronData.runCount}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Panel kapalı olsa dahi sunucu arka planında eMAG ve Allegro siparişlerini, stok düşüşlerini ve BuyBox fiyatlarını otonom senkronize eder.
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          disabled={isTriggeringCron}
+          onClick={handleManualCronTrigger}
+          className="px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-sm transition-all disabled:opacity-50 shrink-0 self-start sm:self-auto"
+          title="Otonom arka plan senkronizasyon döngüsünü hemen tetikleyin"
+        >
+          <Zap className={`w-3.5 h-3.5 ${isTriggeringCron ? 'animate-bounce' : ''}`} />
+          <span>{isTriggeringCron ? 'Çalıştırılıyor...' : '⚡ Şimdi Tetikle (Otonom Senkronizasyon)'}</span>
         </button>
       </div>
 

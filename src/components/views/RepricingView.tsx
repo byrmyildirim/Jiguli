@@ -7,6 +7,7 @@ import {
   RefreshCw,
   Sliders,
   Check,
+  CheckCircle2,
   X,
   AlertTriangle,
   ArrowDownRight,
@@ -42,18 +43,38 @@ export const RepricingView: React.FC<RepricingViewProps> = ({ theme = 'light' })
   const losingCount = items.filter(i => i.buyBoxStatus === 'LOSING').length;
   const autoActiveCount = items.filter(i => i.autoEnabled).length;
 
-  const handleScanCompetitors = () => {
+  const [scanNotice, setScanNotice] = useState<string | null>(null);
+  const [scanLogs, setScanLogs] = useState<any[]>([]);
+
+  const handleScanCompetitors = async () => {
     setIsScanning(true);
-    setTimeout(() => {
-      // Simulate real-time competitor price update
-      items.forEach(item => {
-        if (item.autoEnabled && item.buyBoxStatus === 'LOSING') {
-          const newWinningPrice = Math.max(item.minPrice, parseFloat((item.targetCompetitorPrice - 0.10).toFixed(2)));
-          store.applyRepriceRule(item.id, newWinningPrice);
-        }
+    setScanNotice(null);
+    try {
+      const emagCreds = store.getPlatformCredentials().emag;
+      const res = await fetch('/api/repricer/scan-and-apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items,
+          emagCredentials: emagCreds
+        })
       });
+      const data = await res.json().catch(() => null);
+      if (data && data.success && Array.isArray(data.updatedItems)) {
+        data.updatedItems.forEach((updated: any) => {
+          store.applyRepriceRule(updated.id, updated.currentPrice);
+        });
+        setScanLogs(data.logs || []);
+        setScanNotice(`🟢 ${data.message}`);
+      } else {
+        setScanNotice(`⚠️ ${data?.message || 'Tarama tamamlanamadı'}`);
+      }
+    } catch (err: any) {
+      setScanNotice(`⚠️ Tarama hatası: ${err?.message || err}`);
+    } finally {
       setIsScanning(false);
-    }, 800);
+      setTimeout(() => setScanNotice(null), 6000);
+    }
   };
 
   const handleStartEditBounds = (item: RepricingItem) => {
@@ -138,6 +159,21 @@ export const RepricingView: React.FC<RepricingViewProps> = ({ theme = 'light' })
           <div className="text-[11px] text-[#163300] font-semibold">Strateji: 0.10 PLN Alta Çek (Floor Korumalı)</div>
         </div>
       </div>
+
+      {/* Live Scan Notification */}
+      {scanNotice && (
+        <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs font-bold flex items-center justify-between gap-3 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{scanNotice}</span>
+          </div>
+          {scanLogs.length > 0 && (
+            <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400">
+              {scanLogs.length} Fiyat Güncellendi
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Repricing Items List */}
       <div className="space-y-3">

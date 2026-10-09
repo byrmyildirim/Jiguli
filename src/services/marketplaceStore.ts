@@ -2610,6 +2610,90 @@ export class MarketplaceStore {
     }
   }
 
+  public async publishOfferToAllegro(offerId: string, customPayload?: any): Promise<{
+    success: boolean;
+    offerId?: string;
+    message: string;
+    durationMs?: number;
+  }> {
+    const offer = this.offers.find(o => o.id === offerId);
+    if (!offer) {
+      return { success: false, message: 'Ürün bulunamadı.' };
+    }
+
+    const creds = this.platformCredentials?.allegro;
+    const accessToken = creds?.accessToken || '';
+    const environment = creds?.environment || 'production';
+
+    const cleanTitle = (customPayload?.name || customPayload?.title || offer.name).slice(0, 75);
+    const catId = customPayload?.categoryId || offer.channelData?.allegro?.categoryId || offer.category?.id || '124921';
+    const price = customPayload?.price || offer.channelData?.allegro?.price?.amount || offer.sellingMode?.price?.amount || '49.99';
+    const stock = customPayload?.stock !== undefined ? customPayload.stock : (offer.stock?.available || 10);
+    const ean = customPayload?.ean || offer.ean || '';
+    const img = offer.primaryImage || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80';
+
+    try {
+      const res = await fetch('/api/allegro/publish-offer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accessToken,
+          environment,
+          offer: {
+            title: cleanTitle,
+            categoryId: String(catId),
+            price,
+            currency: 'PLN',
+            stock,
+            ean,
+            primaryImage: img
+          }
+        })
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (data && data.success) {
+        this.offers = this.offers.map(o => {
+          if (o.id === offerId) {
+            return {
+              ...o,
+              channelSync: {
+                ...o.channelSync,
+                allegro: 'synced'
+              },
+              publication: {
+                ...o.publication,
+                status: 'ACTIVE'
+              },
+              isDraft: false
+            };
+          }
+          return o;
+        });
+        this.saveToStorage(STORAGE_KEYS.OFFERS, this.offers);
+        this.notify();
+
+        return {
+          success: true,
+          offerId: data.offerId,
+          message: data.message || 'Ürün Allegro üzerinde başarıyla yayına alındı.',
+          durationMs: data.durationMs
+        };
+      }
+
+      return {
+        success: false,
+        message: data?.message || 'Allegro API ürünü yayına alamadı.'
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        message: `Bağlantı hatası: ${err?.message || err}`
+      };
+    }
+  }
+
   public clearAllData(): void {
     this.offers = [];
     this.orders = [];

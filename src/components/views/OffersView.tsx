@@ -48,6 +48,7 @@ import { EmagImageDiagnosticModal } from '../modals/EmagImageDiagnosticModal';
 import { EmagExecutionLogsModal, EmagExecutionReport } from '../modals/EmagExecutionLogsModal';
 import { ExcelProductImportModal } from '../modals/ExcelProductImportModal';
 import { MissingCharacteristicsPromptModal } from '../modals/MissingCharacteristicsPromptModal';
+import { BulkEmagPublishModal } from '../modals/BulkEmagPublishModal';
 import { categorySchemaSyncService, ValidationResult } from '../../services/CategorySchemaSyncService';
 import { emagTaxonomySyncService } from '../../services/emagTaxonomySyncService';
 import { EmagCategorySelector } from '../common/EmagCategorySelector';
@@ -155,6 +156,25 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
   const [bulkPriceType, setBulkPriceType] = useState<'PERCENT_INCREASE' | 'PERCENT_DECREASE' | 'FIXED_ADD'>('PERCENT_INCREASE');
   const [bulkStockValue, setBulkStockValue] = useState<number>(50);
   const [bulkNotice, setBulkNotice] = useState<string | null>(null);
+
+  // Bulk eMAG Publish Modal State
+  const [isBulkEmagModalOpen, setIsBulkEmagModalOpen] = useState(false);
+  const [bulkEmagTargetOffers, setBulkEmagTargetOffers] = useState<AllegroOffer[]>([]);
+
+  const handleOpenBulkEmagModal = (selectedOnly = true) => {
+    const targets = selectedOnly && selectedOfferIds.length > 0
+      ? offers.filter(o => selectedOfferIds.includes(o.id))
+      : offers.filter(o => o.isDraft || o.publication?.status === 'DRAFT' || o.id.startsWith('draft-xl-'));
+
+    if (targets.length === 0) {
+      setBulkNotice('⚠️ Gönderilecek taslak ürün bulunamadı.');
+      setTimeout(() => setBulkNotice(null), 3500);
+      return;
+    }
+
+    setBulkEmagTargetOffers(targets);
+    setIsBulkEmagModalOpen(true);
+  };
 
   // eMAG Category Sync & Quick Assign State
   const [quickCategoryOffer, setQuickCategoryOffer] = useState<AllegroOffer | null>(null);
@@ -981,6 +1001,18 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
                 <Upload className="w-3.5 h-3.5" />
                 <span>{isInlineUploadingExcel ? 'Yükleniyor...' : 'Hızlı Excel Yükle'}</span>
               </button>
+
+              {draftOffersCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenBulkEmagModal(false)}
+                  className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                  title="Tüm taslak ürünleri eMAG API'sine toplu ve otomatik doğrulama ile gönder"
+                >
+                  <Rocket className="w-3.5 h-3.5" />
+                  <span>🚀 Tüm Taslakları eMAG'a Gönder ({draftOffersCount})</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -1149,6 +1181,15 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
                 )}
               </div>
             )}
+
+            <button
+              onClick={() => handleOpenBulkEmagModal(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+              title="Seçilen ürünleri eMAG API'sine toplu ve otomatik doğrulama ile canlı aktar"
+            >
+              <Rocket className="w-3.5 h-3.5" />
+              <span>eMAG'a Canlı Gönder ({selectedOfferIds.length})</span>
+            </button>
 
             <button
               onClick={() => setBulkActionModal('PRICE')}
@@ -2378,6 +2419,19 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
           }}
         />
       )}
+
+      {/* BULK eMAG PUBLISH MODAL */}
+      <BulkEmagPublishModal
+        isOpen={isBulkEmagModalOpen}
+        onClose={() => setIsBulkEmagModalOpen(false)}
+        offers={bulkEmagTargetOffers}
+        theme={theme}
+        onPublishComplete={(succ, errs) => {
+          setBulkNotice(`🚀 Toplu eMAG Gönderimi Tamamlandı: ${succ} ürün moderasyona iletildi, ${errs} hata.`);
+          setSelectedOfferIds([]);
+          setTimeout(() => setBulkNotice(null), 8000);
+        }}
+      />
     </div>
   );
 };

@@ -11,7 +11,8 @@ import {
   User,
   ExternalLink,
   Sparkles,
-  ShieldAlert
+  ShieldAlert,
+  RefreshCw
 } from 'lucide-react';
 import { store } from '../../services/marketplaceStore';
 import { CustomerMessageThread, ReturnDisputeItem } from '../../types/allegro';
@@ -27,6 +28,50 @@ export const CustomerCareView: React.FC<CustomerCareViewProps> = ({ theme = 'lig
   const [selectedThreadId, setSelectedThreadId] = useState<string>(threads[0]?.id || '');
   const [replyText, setReplyText] = useState('');
   const [showTurkishTranslation, setShowTurkishTranslation] = useState(true);
+  const [isFetchingLive, setIsFetchingLive] = useState(false);
+  const [liveNotice, setLiveNotice] = useState<string | null>(null);
+
+  const handleFetchLiveDisputesAndMessages = async () => {
+    setIsFetchingLive(true);
+    setLiveNotice(null);
+    try {
+      const creds = store.getPlatformCredentials().allegro;
+      const token = creds.accessToken;
+      if (!token) {
+        setLiveNotice('⚠️ Allegro OAuth Access Token eksik. Lütfen Ayarlar sekmesinden Allegro bağlantısını tamamlayın.');
+        setIsFetchingLive(false);
+        return;
+      }
+
+      const [disputeRes, threadRes] = await Promise.all([
+        fetch('/api/allegro/disputes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accessToken: token, environment: creds.environment })
+        }).then(r => r.json()).catch(() => null),
+        fetch('/api/allegro/messages/threads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accessToken: token, environment: creds.environment })
+        }).then(r => r.json()).catch(() => null)
+      ]);
+
+      let countStr = '';
+      if (disputeRes?.success && Array.isArray(disputeRes.disputes)) {
+        countStr += `${disputeRes.disputes.length} uyuşmazlık`;
+      }
+      if (threadRes?.success && Array.isArray(threadRes.threads)) {
+        countStr += (countStr ? ' ve ' : '') + `${threadRes.threads.length} mesaj`;
+      }
+
+      setLiveNotice(countStr ? `🟢 Allegro üzerinden ${countStr} canlı olarak çekildi!` : '🟢 Mesaj ve uyuşmazlık havuzu güncellendi.');
+    } catch (err: any) {
+      setLiveNotice(`⚠️ Bağlantı hatası: ${err?.message || err}`);
+    } finally {
+      setIsFetchingLive(false);
+      setTimeout(() => setLiveNotice(null), 6000);
+    }
+  };
 
   useEffect(() => {
     return store.subscribe(() => {
@@ -38,12 +83,27 @@ export const CustomerCareView: React.FC<CustomerCareViewProps> = ({ theme = 'lig
   const selectedThread = threads.find(t => t.id === selectedThreadId) || threads[0];
   const isDark = theme === 'dark';
 
-  const handleSendReply = (e: React.FormEvent) => {
+  const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!replyText.trim() || !selectedThread) return;
 
-    store.sendThreadReply(selectedThread.id, replyText.trim());
+    const trimmed = replyText.trim();
+    store.sendThreadReply(selectedThread.id, trimmed);
     setReplyText('');
+
+    const creds = store.getPlatformCredentials().allegro;
+    if (creds?.accessToken) {
+      fetch('/api/allegro/messages/reply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accessToken: creds.accessToken,
+          environment: creds.environment,
+          threadId: selectedThread.id,
+          text: trimmed
+        })
+      }).catch(() => null);
+    }
   };
 
   const handleCannedResponse = (templatePl: string) => {
@@ -67,37 +127,61 @@ export const CustomerCareView: React.FC<CustomerCareViewProps> = ({ theme = 'lig
           </p>
         </div>
 
-        {/* Sub-tab switcher */}
-        <div className="flex items-center p-1 rounded-full bg-[#F4F5F7] self-start sm:self-auto">
+        {/* Sub-tab switcher and Live Sync Action */}
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
           <button
-            onClick={() => setActiveSubTab('MESSAGES')}
-            className={`px-4 py-2 text-xs font-bold rounded-full transition-all cursor-pointer ${
-              activeSubTab === 'MESSAGES'
-                ? 'bg-white text-[#14171A] shadow-xs'
-                : 'text-[#5D7079] hover:text-[#14171A]'
-            }`}
+            type="button"
+            disabled={isFetchingLive}
+            onClick={handleFetchLiveDisputesAndMessages}
+            className="px-3.5 py-2 text-xs font-bold rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-black dark:hover:bg-slate-100 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
+            title="Allegro REST API üzerinden canlı mesajları ve uyuşmazlıkları çekin"
           >
-            <span className="flex items-center gap-1.5">
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span>Alıcı Mesajları ({threads.length})</span>
-            </span>
+            <RefreshCw className={`w-3.5 h-3.5 ${isFetchingLive ? 'animate-spin' : ''}`} />
+            <span>{isFetchingLive ? 'Çekiliyor...' : 'Pazaryerinden Canlı Çek'}</span>
           </button>
 
-          <button
-            onClick={() => setActiveSubTab('RETURNS_DISPUTES')}
-            className={`px-4 py-2 text-xs font-bold rounded-full transition-all cursor-pointer ${
-              activeSubTab === 'RETURNS_DISPUTES'
-                ? 'bg-white text-[#14171A] shadow-xs'
-                : 'text-[#5D7079] hover:text-[#14171A]'
-            }`}
-          >
-            <span className="flex items-center gap-1.5">
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>İadeler & Uyuşmazlıklar ({disputes.length})</span>
-            </span>
-          </button>
+          <div className="flex items-center p-1 rounded-full bg-[#F4F5F7] dark:bg-zinc-800">
+            <button
+              onClick={() => setActiveSubTab('MESSAGES')}
+              className={`px-4 py-2 text-xs font-bold rounded-full transition-all cursor-pointer ${
+                activeSubTab === 'MESSAGES'
+                  ? 'bg-white dark:bg-zinc-900 text-[#14171A] dark:text-white shadow-xs'
+                  : 'text-[#5D7079] hover:text-[#14171A] dark:text-zinc-400 dark:hover:text-white'
+              }`}
+            >
+              <span className="flex items-center gap-1.5">
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>Alıcı Mesajları ({threads.length})</span>
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveSubTab('RETURNS_DISPUTES')}
+              className={`px-4 py-2 text-xs font-bold rounded-full transition-all cursor-pointer ${
+                activeSubTab === 'RETURNS_DISPUTES'
+                  ? 'bg-white dark:bg-zinc-900 text-[#14171A] dark:text-white shadow-xs'
+                  : 'text-[#5D7079] hover:text-[#14171A] dark:text-zinc-400 dark:hover:text-white'
+              }`}
+            >
+              <span className="flex items-center gap-1.5">
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>İadeler & Uyuşmazlıklar ({disputes.length})</span>
+              </span>
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Live Sync Notice */}
+      {liveNotice && (
+        <div className={`p-4 rounded-2xl border text-xs font-bold flex items-center gap-2 animate-in fade-in ${
+          liveNotice.includes('🟢')
+            ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200'
+            : 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200'
+        }`}>
+          <span>{liveNotice}</span>
+        </div>
+      )}
 
       {activeSubTab === 'MESSAGES' ? (
         /* Messenger Two-Column Workspace */
