@@ -101,7 +101,8 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
   const [emagCharacteristics, setEmagCharacteristics] = useState<{ id: string | number; value: string }[]>(() => {
     const existing = offer.channelData?.emag?.characteristics;
     if (Array.isArray(existing) && existing.length > 0) return existing;
-    return KNOWN_CATEGORY_CHARACTERISTICS[3523] || [
+    const initialCatId = parseInt(String(offer.channelData?.emag?.categoryId || offer.excelMetadata?.emagCategoryCode || offer.category?.id || 3523), 10);
+    return KNOWN_CATEGORY_CHARACTERISTICS[initialCatId] || [
       { id: 'emag-brand', value: 'Generic' }
     ];
   });
