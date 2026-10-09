@@ -32,7 +32,10 @@ import {
   ArrowUpRight,
   Plus,
   Trash2,
-  Copy
+  Copy,
+  Languages,
+  Lock,
+  Unlock
 } from 'lucide-react';
 import { AllegroOffer, MarketplaceId } from '../../types/allegro';
 import { store } from '../../services/marketplaceStore';
@@ -40,7 +43,9 @@ import { MarketplaceLogo } from '../../constants/marketplaces';
 import {
   matchProductToEmagCategory,
   KNOWN_CATEGORY_CHARACTERISTICS,
-  CategoryMatchResult
+  CategoryMatchResult,
+  getCategoryRequirements,
+  CategoryRequirementDefinition
 } from '../../services/excelCategoryMatcher';
 import { EmagExecutionLogsModal, EmagExecutionReport } from './EmagExecutionLogsModal';
 import allowedCategoriesRaw from '../../../data/emag_bg_allowed_categories.json';
@@ -159,6 +164,95 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showEmagLogsModal, setShowEmagLogsModal] = useState(false);
   const [emagExecutionReport, setEmagExecutionReport] = useState<EmagExecutionReport | null>(null);
+
+  // --- TRANSLATION STATE (Seller Internal Preview) ---
+  const [turkishTranslation, setTurkishTranslation] = useState<string>('');
+  const [isTranslating, setIsTranslating] = useState<boolean>(false);
+
+  const handleTranslateToTr = async () => {
+    const textToTranslate = name || emagTitle || allegroTitle || offer.name || '';
+    if (!textToTranslate.trim()) return;
+    setIsTranslating(true);
+    try {
+      const res = await fetch('/api/translate-to-tr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: textToTranslate.trim() })
+      });
+      const data = await res.json();
+      if (data?.translated) {
+        setTurkishTranslation(data.translated);
+      }
+    } catch (err) {
+      console.error('Translation error:', err);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  // --- CATEGORY REQUIREMENTS & VALIDATION ENGINE ---
+  const categoryRequirements = useMemo(() => {
+    return getCategoryRequirements(emagCategoryId);
+  }, [emagCategoryId]);
+
+  const mandatoryRequirements = useMemo(() => {
+    return categoryRequirements.filter(r => r.isMandatory);
+  }, [categoryRequirements]);
+
+  // Missing requirements list (determines whether publishing is blocked)
+  const missingRequirements = useMemo(() => {
+    const missing: { key: string; label: string; trLabel: string; id?: string | number }[] = [];
+
+    // 1. EAN Check: Required for active listings in eMAG
+    const cleanEan = (ean || '').trim().replace(/\D/g, '');
+    if (!cleanEan || (cleanEan.length !== 12 && cleanEan.length !== 13 && cleanEan.length !== 8 && cleanEan.length !== 14)) {
+      missing.push({ key: 'ean', label: 'EAN / Barcode', trLabel: 'EAN-13 Barkod' });
+    }
+
+    // 2. Mandatory Characteristics Check
+    for (const req of mandatoryRequirements) {
+      const existing = emagCharacteristics.find(
+        c => String(c.id).toLowerCase() === String(req.id).toLowerCase()
+      );
+      if (!existing || !existing.value || !existing.value.trim()) {
+        missing.push({ key: `char_${req.id}`, label: req.label, trLabel: req.trLabel, id: req.id });
+      }
+    }
+
+    return missing;
+  }, [ean, mandatoryRequirements, emagCharacteristics]);
+
+  const isEmagPublishReady = missingRequirements.length === 0;
+
+  // Auto-fill all missing mandatory requirements with smart defaults
+  const handleAutoFillMandatoryRequirements = () => {
+    // 1. Auto-generate valid EAN-13 if missing
+    if (!ean || ean.trim().length < 8) {
+      const rawDigits = String(offer.id || sku || Date.now()).replace(/\D/g, '').padStart(9, '0').slice(-9);
+      const prefix = '590' + rawDigits;
+      let sum = 0;
+      for (let i = 0; i < 12; i++) {
+        sum += parseInt(prefix[i], 10) * (i % 2 === 0 ? 1 : 3);
+      }
+      const check = (10 - (sum % 10)) % 10;
+      setEan(prefix + check);
+    }
+
+    // 2. Fill missing mandatory characteristics with schema defaults
+    const updatedChars = [...emagCharacteristics];
+    for (const req of mandatoryRequirements) {
+      const idx = updatedChars.findIndex(c => String(c.id).toLowerCase() === String(req.id).toLowerCase());
+      const valToSet = req.defaultVal || req.options?.[0] || 'Generic';
+      if (idx >= 0) {
+        if (!updatedChars[idx].value || !updatedChars[idx].value.trim()) {
+          updatedChars[idx] = { ...updatedChars[idx], value: valToSet };
+        }
+      } else {
+        updatedChars.push({ id: req.id, value: valToSet });
+      }
+    }
+    setEmagCharacteristics(updatedChars);
+  };
 
   // Auto-match category on mount if needed
   useEffect(() => {
@@ -296,6 +390,18 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
       store.updateFullOffer(offer.id, updatedOfferData);
 
       if (publishToLiveEmag && isEmagEnabled) {
+        if (!isEmagPublishReady) {
+          setIsSaving(false);
+          setActiveTab('emag');
+          alert(
+            `⚠️ eMAG Zorunlu Alan Uyarısı!\n\n` +
+            `eMAG #${emagCategoryId} kategorisine ürün gönderebilmek için aşağıdaki ${missingRequirements.length} alanın doldurulması zorunludur:\n\n` +
+            missingRequirements.map(m => `• ${m.trLabel} (${m.label})`).join('\n') +
+            `\n\nLütfen eMAG sekmesindeki zorunlu alanları doldurun veya "Eksikleri Otomatik Doldur" butonuna tıklayın.`
+          );
+          return;
+        }
+
         setIsPublishingLive(true);
         const res = await store.publishOfferToEmag(offer.id, {
           name: emagTitle.trim() || name.trim(),
@@ -560,15 +666,64 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
                 {/* Primary Identifiers */}
                 <div className="md:col-span-8 space-y-4">
                   <div>
-                    <label className={`text-xs uppercase tracking-wider block mb-1.5 ${c.label}`}>
-                      Ürün Başlığı (Dahili Tanım)
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
+                      <label className={`text-xs uppercase tracking-wider block ${c.label}`}>
+                        Ürün Başlığı (Orijinal İsim)
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleTranslateToTr}
+                        disabled={isTranslating}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                          isDark
+                            ? 'bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-300 border-indigo-800'
+                            : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200 shadow-2xs'
+                        }`}
+                        title="Ürün ismini Türkçe'ye çevir (Yalnızca sizin görmeniz içindir)"
+                      >
+                        <Languages className={`w-3.5 h-3.5 ${isTranslating ? 'animate-spin text-indigo-500' : 'text-indigo-600 dark:text-indigo-400'}`} />
+                        <span>{isTranslating ? 'Türkçe\'ye Çevriliyor...' : '🌐 TR\'ye Çevir'}</span>
+                      </button>
+                    </div>
                     <input
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       className={`w-full text-sm font-medium px-3.5 py-2.5 rounded-xl border ${c.inputBg}`}
                     />
+
+                    {/* Türkçe Önizleme Bilgi Kartı (Sadece Satıcı Görür) */}
+                    {turkishTranslation && (
+                      <div className={`mt-2.5 p-3 rounded-xl border flex items-start gap-2.5 animate-in fade-in duration-200 ${
+                        isDark ? 'bg-indigo-950/30 border-indigo-800/70 text-indigo-200' : 'bg-indigo-50/80 border-indigo-200 text-indigo-950 shadow-2xs'
+                      }`}>
+                        <div className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-500 shrink-0 mt-0.5">
+                          <Languages className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+                              <span>🇹🇷 Ürün Türkçe Karşılığı</span>
+                              <span className="text-[10px] font-normal opacity-75">(Sadece Dahili Bilgilendirme)</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setTurkishTranslation('')}
+                              className="text-xs opacity-50 hover:opacity-100 p-0.5 cursor-pointer"
+                              title="Kapat"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          <p className="text-xs font-semibold mt-1 select-text leading-relaxed">
+                            {turkishTranslation}
+                          </p>
+                          <span className="text-[10px] opacity-70 block mt-1">
+                            ℹ️ Bu çeviri yalnızca sizin ürünü anlamanız içindir; pazar yerindeki yabancı dildeki orijinal ilanı etkilemez.
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -843,12 +998,138 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
                 )}
               </div>
 
+              {/* SMART CATEGORY MANDATORY REQUIREMENTS & VALIDATION CARD */}
+              <div className={`p-5 rounded-xl border space-y-3.5 ${c.cardBg}`}>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>Kategori Zorunluluk Denetimi (#{emagCategoryId})</span>
+                      </span>
+                      {isEmagPublishReady ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" />
+                          <span>Tamamlandı ({mandatoryRequirements.length + 1}/{mandatoryRequirements.length + 1})</span>
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3" />
+                          <span>{missingRequirements.length} Zorunlu Alan Eksik</span>
+                        </span>
+                      )}
+                    </div>
+                    <p className={`text-xs mt-0.5 ${c.hint}`}>
+                      eMAG Marketplace politikası gereği bu alanlar doldurulmadan ürün canlıya gönderilemez.
+                    </p>
+                  </div>
+
+                  {!isEmagPublishReady && (
+                    <button
+                      type="button"
+                      onClick={handleAutoFillMandatoryRequirements}
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                      title="Eksik zorunlu alanları şablon değerleriyle otomatik tamamla"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Eksikleri Otomatik Doldur</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Validation Status Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  {/* EAN requirement check */}
+                  <div className={`p-2.5 rounded-xl border text-xs flex items-center justify-between ${
+                    (ean && ean.trim().length >= 8)
+                      ? isDark ? 'bg-emerald-950/20 border-emerald-800/40 text-emerald-300' : 'bg-emerald-50/60 border-emerald-200 text-emerald-900'
+                      : isDark ? 'bg-rose-950/20 border-rose-800/60 text-rose-300' : 'bg-rose-50/80 border-rose-200 text-rose-900'
+                  }`}>
+                    <div className="flex items-center gap-2 truncate">
+                      <Barcode className="w-3.5 h-3.5 shrink-0" />
+                      <div className="truncate">
+                        <span className="font-bold">EAN-13 Barkod</span>
+                        <span className="text-[10px] opacity-75 block font-mono truncate">{ean || 'Tanımsız (Eksik)'}</span>
+                      </div>
+                    </div>
+                    {(ean && ean.trim().length >= 8) ? (
+                      <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    ) : (
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-600 text-white shrink-0">
+                        Zorunlu
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Mandatory characteristics checks */}
+                  {mandatoryRequirements.map((req) => {
+                    const charObj = emagCharacteristics.find(c => String(c.id).toLowerCase() === String(req.id).toLowerCase());
+                    const isFilled = Boolean(charObj?.value && charObj.value.trim());
+
+                    return (
+                      <div
+                        key={String(req.id)}
+                        className={`p-2.5 rounded-xl border text-xs flex items-center justify-between ${
+                          isFilled
+                            ? isDark ? 'bg-emerald-950/20 border-emerald-800/40 text-emerald-300' : 'bg-emerald-50/60 border-emerald-200 text-emerald-900'
+                            : isDark ? 'bg-rose-950/20 border-rose-800/60 text-rose-300' : 'bg-rose-50/80 border-rose-200 text-rose-900'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <Tag className="w-3.5 h-3.5 shrink-0" />
+                          <div className="truncate">
+                            <span className="font-bold">{req.trLabel}</span>
+                            <span className="text-[10px] opacity-75 block truncate">
+                              {charObj?.value || 'Boş (Eksik)'}
+                            </span>
+                          </div>
+                        </div>
+                        {isFilled ? (
+                          <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-600 text-white shrink-0">
+                            Zorunlu
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {!isEmagPublishReady && (
+                  <div className={`p-3 rounded-xl border flex items-center gap-2 text-xs ${
+                    isDark ? 'bg-rose-950/30 border-rose-800/70 text-rose-200' : 'bg-rose-50 border-rose-200 text-rose-900'
+                  }`}>
+                    <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+                    <span>
+                      <strong>Canlı Gönderim Engellendi:</strong> Aşağıdaki alanlar eksik: <strong>{missingRequirements.map(m => m.trLabel).join(', ')}</strong>. Bu alanlar doldurulmadan ürün eMAG'a gönderilemez.
+                    </span>
+                  </div>
+                )}
+              </div>
+
               {/* Title, Pricing & VAT */}
               <div className="space-y-4">
                 <div>
-                  <label className={`text-xs block mb-1.5 ${c.label}`}>
-                    eMAG İlan Başlığı (Bulgarca / İngilizce)
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
+                    <label className={`text-xs block ${c.label}`}>
+                      eMAG İlan Başlığı (Bulgarca / İngilizce)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleTranslateToTr}
+                      disabled={isTranslating}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                        isDark
+                          ? 'bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-300 border-indigo-800'
+                          : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200 shadow-2xs'
+                      }`}
+                      title="Başlığı Türkçe olarak göster (Satıcı dahili önizleme)"
+                    >
+                      <Languages className={`w-3.5 h-3.5 ${isTranslating ? 'animate-spin text-indigo-500' : 'text-indigo-600 dark:text-indigo-400'}`} />
+                      <span>{isTranslating ? 'Çevriliyor...' : '🌐 Başlığı TR\'ye Çevir'}</span>
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={emagTitle}
@@ -856,6 +1137,23 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
                     placeholder="eMAG'da yayınlanacak başlık..."
                     className={`w-full text-sm font-medium px-3.5 py-2.5 rounded-xl border ${c.inputBg}`}
                   />
+                  {turkishTranslation && (
+                    <div className={`mt-2 p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 ${
+                      isDark ? 'bg-indigo-950/30 border-indigo-800/60 text-indigo-200' : 'bg-indigo-50/70 border-indigo-200 text-indigo-900'
+                    }`}>
+                      <div className="flex items-center gap-2 truncate">
+                        <span className="font-bold text-indigo-600 dark:text-indigo-400 shrink-0">🇹🇷 Türkçe Anlamı:</span>
+                        <span className="truncate">{turkishTranslation}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setTurkishTranslation('')}
+                        className="text-xs opacity-50 hover:opacity-100 p-0.5 cursor-pointer shrink-0"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -901,14 +1199,14 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
 
               {/* Dynamic eMAG Characteristics */}
               <div className={`p-5 rounded-xl border space-y-3 ${c.cardBg}`}>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <div>
                     <h4 className={`text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${c.label}`}>
                       <Sliders className="w-3.5 h-3.5 text-rose-500" />
-                      <span>eMAG Kategori Karakteristikleri (Teknik Özellikler)</span>
+                      <span>eMAG Kategori Karakteristikleri & Nitelikler</span>
                     </h4>
                     <p className={`text-[11px] ${c.hint}`}>
-                      Bu değerler eMAG API v3 kurallarına göre zorunlu olup ürünün kabul edilmesini sağlar.
+                      Kırmızı etiketli (<span className="text-rose-500 font-bold">* Zorunlu</span>) nitelikler doldurulmadan ürün eMAG tarafından kabul edilmez.
                     </p>
                   </div>
 
@@ -928,36 +1226,84 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {emagCharacteristics.map((charItem, idx) => (
-                    <div
-                      key={idx}
-                      className={`p-2.5 rounded-xl border flex items-center justify-between gap-2.5 ${c.innerCard}`}
-                    >
-                      <span className="text-xs font-mono font-bold text-slate-500 dark:text-zinc-400 shrink-0">
-                        {String(charItem.id)}:
-                      </span>
-                      <input
-                        type="text"
-                        value={charItem.value}
-                        onChange={(e) => {
-                          const updated = [...emagCharacteristics];
-                          updated[idx] = { ...charItem, value: e.target.value };
-                          setEmagCharacteristics(updated);
-                        }}
-                        className={`w-full text-xs px-2.5 py-1.5 rounded-lg border ${c.inputBg}`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEmagCharacteristics(emagCharacteristics.filter((_, i) => i !== idx));
-                        }}
-                        className="text-slate-400 hover:text-rose-600 p-1 rounded transition-colors cursor-pointer"
-                        title="Özelliği Sil"
+                  {emagCharacteristics.map((charItem, idx) => {
+                    const reqDef = categoryRequirements.find(
+                      r => String(r.id).toLowerCase() === String(charItem.id).toLowerCase()
+                    );
+                    const isMandatory = reqDef?.isMandatory;
+                    const isEmpty = !charItem.value || !charItem.value.trim();
+
+                    return (
+                      <div
+                        key={idx}
+                        className={`p-3 rounded-xl border flex flex-col gap-1.5 transition-all ${
+                          isMandatory && isEmpty
+                            ? 'border-rose-400 dark:border-rose-600 bg-rose-50/30 dark:bg-rose-950/20'
+                            : c.innerCard
+                        }`}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 truncate">
+                            <span className="text-xs font-mono font-bold text-slate-700 dark:text-zinc-300">
+                              {reqDef ? reqDef.trLabel : String(charItem.id)}
+                            </span>
+                            {reqDef && (
+                              <span className="text-[10px] font-mono text-slate-400">
+                                ({reqDef.label})
+                              </span>
+                            )}
+                            {isMandatory && (
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 shrink-0">
+                                * Zorunlu
+                              </span>
+                            )}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEmagCharacteristics(emagCharacteristics.filter((_, i) => i !== idx));
+                            }}
+                            className="text-slate-400 hover:text-rose-600 p-1 rounded transition-colors cursor-pointer"
+                            title="Özelliği Sil"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        {reqDef?.options && reqDef.options.length > 0 ? (
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={charItem.value}
+                              onChange={(e) => {
+                                const updated = [...emagCharacteristics];
+                                updated[idx] = { ...charItem, value: e.target.value };
+                                setEmagCharacteristics(updated);
+                              }}
+                              className={`w-full text-xs px-2.5 py-2 rounded-lg border ${c.inputBg}`}
+                            >
+                              <option value="">-- Değer Seçin --</option>
+                              {reqDef.options.map(opt => (
+                                <option key={opt} value={opt}>{opt}</option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : (
+                          <input
+                            type="text"
+                            value={charItem.value}
+                            placeholder={reqDef?.placeholder || 'Değer girin...'}
+                            onChange={(e) => {
+                              const updated = [...emagCharacteristics];
+                              updated[idx] = { ...charItem, value: e.target.value };
+                              setEmagCharacteristics(updated);
+                            }}
+                            className={`w-full text-xs px-2.5 py-2 rounded-lg border ${c.inputBg}`}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1204,7 +1550,16 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
               type="button"
               disabled={isSaving || isPublishingLive}
               onClick={() => handleSaveDraft(true)}
-              className="px-5 py-2 text-xs font-bold rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+              className={`px-5 py-2 text-xs font-bold rounded-xl flex items-center gap-2 shadow-sm transition-all cursor-pointer ${
+                (!isEmagPublishReady && isEmagEnabled)
+                  ? 'bg-slate-300 dark:bg-zinc-800 text-slate-500 dark:text-zinc-500 hover:bg-slate-300 dark:hover:bg-zinc-800 border border-slate-300 dark:border-zinc-700'
+                  : 'bg-rose-600 hover:bg-rose-700 active:scale-95 text-white'
+              }`}
+              title={
+                (!isEmagPublishReady && isEmagEnabled)
+                  ? `eMAG zorunlu alanları eksik: ${missingRequirements.map(m => m.trLabel).join(', ')}`
+                  : 'Kaydet ve eMAG Marketplace canlı kataloğuna anında gönder'
+              }
             >
               {isPublishingLive ? (
                 <>
@@ -1215,6 +1570,11 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
                 <>
                   <Check className="w-3.5 h-3.5 text-white" />
                   <span>Kaydedildi!</span>
+                </>
+              ) : (!isEmagPublishReady && isEmagEnabled) ? (
+                <>
+                  <Lock className="w-3.5 h-3.5 text-rose-500" />
+                  <span>eMAG Kilitli ({missingRequirements.length} Eksik)</span>
                 </>
               ) : (
                 <>

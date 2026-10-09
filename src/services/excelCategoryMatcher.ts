@@ -22,8 +22,104 @@ export interface ProductInput {
   categoryName?: string;
 }
 
+export interface CategoryRequirementDefinition {
+  id: string | number;
+  label: string;
+  trLabel: string;
+  isMandatory: boolean;
+  type: 'STRING' | 'DICTIONARY' | 'NUMBER';
+  options?: string[];
+  placeholder?: string;
+  description?: string;
+  defaultVal?: string;
+}
+
+// Full requirement rules per category for validation
+export const CATEGORY_REQUIREMENTS_SCHEMA: Record<number, CategoryRequirementDefinition[]> = {
+  3426: [ // House Cleaning/Organisation and storage (Banyo, Mutfak, Raf, Düzenleyici)
+    { id: 'emag-brand', label: 'Brand', trLabel: 'Marka', isMandatory: true, type: 'STRING', defaultVal: 'Generic', placeholder: 'Generic' },
+    { id: 'emag-material', label: 'Material', trLabel: 'Malzeme / Materyal', isMandatory: true, type: 'DICTIONARY', options: ['Metal & Plastik', 'Paslanmaz Çelik', 'Demir Tel', 'Plastik (ABS)', 'Bambu & Ahşap'], defaultVal: 'Metal & Plastik' },
+    { id: 'emag-mounting', label: 'Mounting Type', trLabel: 'Montaj Tipi', isMandatory: false, type: 'DICTIONARY', options: ['Asılı / Kapı Üstü (Deliksiz)', 'Duvara Monte', 'Vantuzlu', 'Masaüstü Ayaklı'] },
+    { id: 'emag-color', label: 'Color', trLabel: 'Renk', isMandatory: false, type: 'STRING', defaultVal: 'Siyah' }
+  ],
+  3523: [ // Lighting & Electrical/LED strips
+    { id: 'emag-brand', label: 'Brand', trLabel: 'Marka', isMandatory: true, type: 'STRING', defaultVal: 'Generic' },
+    { id: 5464, label: 'Location', trLabel: 'Kullanım Alanı', isMandatory: true, type: 'DICTIONARY', options: ['Indoor', 'Outdoor'], defaultVal: 'Indoor' },
+    { id: 5704, label: 'Product Type', trLabel: 'Ürün Tipi', isMandatory: true, type: 'DICTIONARY', options: ['LED strip', 'COB strip', 'Neon strip'], defaultVal: 'LED strip' },
+    { id: 6862, label: 'Length', trLabel: 'Şerit Uzunluğu', isMandatory: true, type: 'DICTIONARY', options: ['1 m', '2 m', '3 m', '5 m', '10 m'], defaultVal: '5 m' }
+  ],
+  3690: [ // Home Textiles/Duvet covers (Nevresim & Yatak)
+    { id: 'emag-brand', label: 'Brand', trLabel: 'Marka', isMandatory: true, type: 'STRING', defaultVal: 'Generic' },
+    { id: 6160, label: 'Set Type', trLabel: 'Nevresim Türü', isMandatory: true, type: 'DICTIONARY', options: ['Double', 'Single', 'King Size'], defaultVal: 'Double' },
+    { id: 5661, label: 'Material', trLabel: 'Kumaş Türü', isMandatory: true, type: 'DICTIONARY', options: ['Microfiber', '100% Cotton', 'Satin'], defaultVal: 'Microfiber' },
+    { id: 8025, label: 'Dimensions', trLabel: 'Ölçü / Ebat', isMandatory: true, type: 'DICTIONARY', options: ['160 x 200', '200 x 220', '140 x 200', '220 x 240'], defaultVal: '160 x 200' },
+    { id: 'emag-pieces', label: 'Pieces Count', trLabel: 'Parça Sayısı', isMandatory: false, type: 'DICTIONARY', options: ['3 Piese (3 Parça)', '2 Piese', '4 Piese'], defaultVal: '3 Piese (3 Parça)' }
+  ],
+  1344: [ // For pets/Pet beds, pillows and mattresses
+    { id: 'emag-brand', label: 'Brand', trLabel: 'Marka', isMandatory: true, type: 'STRING', defaultVal: 'Generic' },
+    { id: 5704, label: 'Product Type', trLabel: 'Ürün Türü', isMandatory: true, type: 'DICTIONARY', options: ['Bed', 'House', 'Mat', 'Pillow'], defaultVal: 'Bed' },
+    { id: 7266, label: 'Intended For', trLabel: 'Hayvan Türü', isMandatory: true, type: 'DICTIONARY', options: ['Dogs', 'Cats', 'Dogs & Cats'], defaultVal: 'Dogs' },
+    { id: 'emag-material', label: 'Material', trLabel: 'Kumaş / Materyal', isMandatory: false, type: 'DICTIONARY', options: ['Oxford Su Geçirmez & Peluş', 'Peluş & Pamuk', 'Visco Sünger'], defaultVal: 'Oxford Su Geçirmez & Peluş' }
+  ],
+  2677: [ // Women's jackets (Deri & Kışlık Ceketler)
+    { id: 'emag-brand', label: 'Brand', trLabel: 'Marka', isMandatory: true, type: 'STRING', defaultVal: 'Generic' },
+    { id: 'emag-color', label: 'Color', trLabel: 'Renk', isMandatory: true, type: 'STRING', defaultVal: 'Siyah' },
+    { id: 'emag-size', label: 'Size', trLabel: 'Beden', isMandatory: true, type: 'DICTIONARY', options: ['S', 'M', 'L', 'XL', 'XXL', 'Universal'], defaultVal: 'M' }
+  ],
+  2679: [ // Women's sweaters (Kadın Kazak / Hırka)
+    { id: 'emag-brand', label: 'Brand', trLabel: 'Marka', isMandatory: true, type: 'STRING', defaultVal: 'Generic' },
+    { id: 'emag-color', label: 'Color', trLabel: 'Renk', isMandatory: true, type: 'STRING', defaultVal: 'Siyah' },
+    { id: 'emag-size', label: 'Size', trLabel: 'Beden', isMandatory: true, type: 'DICTIONARY', options: ['S', 'M', 'L', 'XL', 'Universal'], defaultVal: 'M' }
+  ],
+  2673: [ // Women's trousers (Kadın Pantolon / Tayt)
+    { id: 'emag-brand', label: 'Brand', trLabel: 'Marka', isMandatory: true, type: 'STRING', defaultVal: 'Generic' },
+    { id: 'emag-color', label: 'Color', trLabel: 'Renk', isMandatory: true, type: 'STRING', defaultVal: 'Siyah' },
+    { id: 'emag-size', label: 'Size', trLabel: 'Beden', isMandatory: true, type: 'DICTIONARY', options: ['S', 'M', 'L', 'XL', 'Universal'], defaultVal: 'M' }
+  ],
+  2410: [ // Smart Home Modules (Akıllı Perde, Röle, Tuya)
+    { id: 'emag-brand', label: 'Brand', trLabel: 'Marka', isMandatory: true, type: 'STRING', defaultVal: 'Tuya' },
+    { id: 'emag-protocol', label: 'Protocol', trLabel: 'Protokol', isMandatory: true, type: 'DICTIONARY', options: ['Tuya WiFi 2.4GHz', 'Zigbee 3.0', 'RF 433MHz'], defaultVal: 'Tuya WiFi 2.4GHz' },
+    { id: 'emag-app', label: 'Compatible App', trLabel: 'Desteklenen Uygulama', isMandatory: true, type: 'STRING', defaultVal: 'Tuya Smart & Smart Life' }
+  ],
+  2920: [ // Smartwatch (Akıllı Saatler)
+    { id: 'emag-brand', label: 'Brand', trLabel: 'Marka', isMandatory: true, type: 'STRING', defaultVal: 'Generic' },
+    { id: 'emag-compat', label: 'Compatibility', trLabel: 'Sistem Uyumu', isMandatory: true, type: 'DICTIONARY', options: ['Android & iOS', 'Tylko Android', 'Tylko iOS'], defaultVal: 'Android & iOS' },
+    { id: 'emag-color', label: 'Color', trLabel: 'Renk', isMandatory: true, type: 'STRING', defaultVal: 'Siyah' }
+  ],
+  320: [ // Wireless CarPlay / Oto Elektronik
+    { id: 'emag-brand', label: 'Brand', trLabel: 'Marka', isMandatory: true, type: 'STRING', defaultVal: 'Generic' },
+    { id: 'emag-compat', label: 'Compatibility', trLabel: 'Uyumluluk', isMandatory: true, type: 'DICTIONARY', options: ['Apple CarPlay & Android Auto', 'CarPlay Kablosuz', 'Android Auto'], defaultVal: 'Apple CarPlay & Android Auto' }
+  ],
+  2799: [ // Aromatherapy Diffuser
+    { id: 'emag-brand', label: 'Brand', trLabel: 'Marka', isMandatory: true, type: 'STRING', defaultVal: 'Generic' },
+    { id: 'emag-power', label: 'Power', trLabel: 'Güç / Besleme', isMandatory: true, type: 'DICTIONARY', options: ['USB 5V', '220V Adaptör', 'Dahili Şarjlı'], defaultVal: 'USB 5V' }
+  ],
+  582: [ // Gamepads / Konsol Kolu
+    { id: 'emag-brand', label: 'Brand', trLabel: 'Marka', isMandatory: true, type: 'STRING', defaultVal: 'Generic' },
+    { id: 'emag-conn', label: 'Connectivity', trLabel: 'Bağlantı Türü', isMandatory: true, type: 'DICTIONARY', options: ['Bluetooth & 2.4G Kablosuz', 'USB Kablolu', 'Bluetooth'], defaultVal: 'Bluetooth & 2.4G Kablosuz' }
+  ],
+  407: [ // IP Kamera / Güvenlik
+    { id: 'emag-brand', label: 'Brand', trLabel: 'Marka', isMandatory: true, type: 'STRING', defaultVal: 'Generic' },
+    { id: 'emag-type', label: 'Camera Type', trLabel: 'Kamera Türü', isMandatory: true, type: 'DICTIONARY', options: ['WiFi IP Kamera', 'Dış Mekan PTZ Kamera', 'Mini Güvenlik Kamerası'], defaultVal: 'WiFi IP Kamera' }
+  ],
+  2789: [ // Tablet Stylus Pen / Aksesuar
+    { id: 'emag-brand', label: 'Brand', trLabel: 'Marka', isMandatory: true, type: 'STRING', defaultVal: 'Generic' },
+    { id: 'emag-compat', label: 'Compatibility', trLabel: 'Tablet Uyumu', isMandatory: true, type: 'DICTIONARY', options: ['iPad iOS & Android', 'iPad Pro/Air/Mini', 'Evrensel Kapasitif'], defaultVal: 'iPad iOS & Android' }
+  ]
+};
+
+export function getCategoryRequirements(categoryId: number): CategoryRequirementDefinition[] {
+  return CATEGORY_REQUIREMENTS_SCHEMA[categoryId] || [
+    { id: 'emag-brand', label: 'Brand', trLabel: 'Marka', isMandatory: true, type: 'STRING', defaultVal: 'Generic', placeholder: 'Generic' }
+  ];
+}
+
 // Characteristic templates known to be required by eMAG Bulgaria
 export const KNOWN_CATEGORY_CHARACTERISTICS: Record<number, { id: number | string; value: string }[]> = {
+  3426: [ // Storage & Organisation
+    { id: 'emag-brand', value: 'Generic' },
+    { id: 'emag-material', value: 'Metal & Plastik' }
+  ],
   3523: [ // LED strips
     { id: 5464, value: 'Indoor' },
     { id: 5704, value: 'LED strip' },
@@ -42,6 +138,21 @@ export const KNOWN_CATEGORY_CHARACTERISTICS: Record<number, { id: number | strin
     { id: 'emag-brand', value: 'Tuya' },
     { id: 'emag-protocol', value: 'Zigbee 3.0 / WiFi' },
     { id: 'emag-power', value: '220V AC / USB 5V' }
+  ],
+  2677: [ // Women's jackets
+    { id: 'emag-brand', value: 'Generic' },
+    { id: 'emag-color', value: 'Siyah' },
+    { id: 'emag-size', value: 'M' }
+  ],
+  2679: [ // Women's sweaters
+    { id: 'emag-brand', value: 'Generic' },
+    { id: 'emag-color', value: 'Siyah' },
+    { id: 'emag-size', value: 'M' }
+  ],
+  2673: [ // Women's trousers
+    { id: 'emag-brand', value: 'Generic' },
+    { id: 'emag-color', value: 'Siyah' },
+    { id: 'emag-size', value: 'M' }
   ],
   2920: [ // Smartwatch
     { id: 'emag-brand', value: 'Generic' },

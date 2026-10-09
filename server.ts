@@ -2118,6 +2118,35 @@ app.post('/api/emag/auto-match-category', (req, res) => {
   });
 });
 
+// Quick Multi-Language to Turkish Translation for internal seller preview
+app.post('/api/translate-to-tr', async (req, res) => {
+  const { text } = req.body;
+  if (!text || typeof text !== 'string') {
+    return res.status(400).json({ error: 'Text is required' });
+  }
+
+  try {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=tr&dt=t&q=${encodeURIComponent(text.trim())}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Translation API error: ${response.status}`);
+    }
+    const data = await response.json();
+    let translated = '';
+    if (Array.isArray(data) && Array.isArray(data[0])) {
+      translated = data[0].map((item: any) => item[0]).join('');
+    }
+    return res.json({
+      success: true,
+      original: text,
+      translated: translated.trim() || text
+    });
+  } catch (err: any) {
+    console.error('Translation error:', err);
+    return res.status(500).json({ error: 'Translation failed', message: err.message });
+  }
+});
+
 // Real eMAG Live Product & Offer Publishing Pipeline with Comprehensive Step-by-Step Audit Trail
 app.post('/api/emag/publish-product', async (req, res) => {
   const username = req.body.username || req.body.emagUser;
