@@ -720,49 +720,61 @@ app.post('/api/emag/products', async (req, res) => {
 
   const startTime = Date.now();
   try {
-    // Fetch product_offer/read (offers, stock, price) and multiple pages of product/read (catalog metadata, images, full titles) in parallel
-    const [offerRes, prodPage1Res, prodPage2Res, prodPage3Res] = await Promise.allSettled([
+    // Fetch product_offer/read across active (1), inactive (0), pending (2) and all catalog products in parallel
+    const [offerActiveRes, offerInactiveRes, offerPendingRes, prodPage1Res, prodPage2Res, prodPage3Res] = await Promise.allSettled([
       fetch(`https://${emagDomain}/api-3/product_offer/read`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': authHeader
-        },
-        body: JSON.stringify(reqBody)
+        headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+        body: JSON.stringify({ currentPage: 1, itemsPerPage: 100, status: 1 })
+      }).then(r => r.json().catch(() => null)),
+      fetch(`https://${emagDomain}/api-3/product_offer/read`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+        body: JSON.stringify({ currentPage: 1, itemsPerPage: 100, status: 0 })
+      }).then(r => r.json().catch(() => null)),
+      fetch(`https://${emagDomain}/api-3/product_offer/read`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+        body: JSON.stringify({ currentPage: 1, itemsPerPage: 100, status: 2 })
       }).then(r => r.json().catch(() => null)),
       fetch(`https://${emagDomain}/api-3/product/read`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': authHeader
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
         body: JSON.stringify({ currentPage: 1, itemsPerPage: 100 })
       }).then(r => r.json().catch(() => null)),
       fetch(`https://${emagDomain}/api-3/product/read`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': authHeader
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
         body: JSON.stringify({ currentPage: 2, itemsPerPage: 100 })
       }).then(r => r.json().catch(() => null)),
       fetch(`https://${emagDomain}/api-3/product/read`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': authHeader
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
         body: JSON.stringify({ currentPage: 3, itemsPerPage: 100 })
       }).then(r => r.json().catch(() => null))
     ]);
 
     const durationMs = Date.now() - startTime;
-    const offerData = offerRes.status === 'fulfilled' ? offerRes.value : null;
+    const activeData = offerActiveRes.status === 'fulfilled' ? offerActiveRes.value : null;
+    const inactiveData = offerInactiveRes.status === 'fulfilled' ? offerInactiveRes.value : null;
+    const pendingData = offerPendingRes.status === 'fulfilled' ? offerPendingRes.value : null;
     const p1Data = prodPage1Res.status === 'fulfilled' ? prodPage1Res.value : null;
     const p2Data = prodPage2Res.status === 'fulfilled' ? prodPage2Res.value : null;
     const p3Data = prodPage3Res.status === 'fulfilled' ? prodPage3Res.value : null;
 
-    const isSuccess = offerData && (offerData.isError === false || offerData.is_error === false);
+    // Combine offers from all statuses
+    const allOffersMap = new Map<string, any>();
+    const registerOffer = (o: any, defaultStatus?: number) => {
+      const key = String(o.id || o.part_number_key || o.part_number || o.sku || '').toLowerCase();
+      if (!key) return;
+      if (!allOffersMap.has(key)) {
+        allOffersMap.set(key, { ...o, status: o.status ?? defaultStatus ?? 1 });
+      }
+    };
+
+    if (Array.isArray(activeData?.results)) activeData.results.forEach((o: any) => registerOffer(o, 1));
+    if (Array.isArray(inactiveData?.results)) inactiveData.results.forEach((o: any) => registerOffer(o, 0));
+    if (Array.isArray(pendingData?.results)) pendingData.results.forEach((o: any) => registerOffer(o, 2));
 
     // Combine all catalog products across pages
     const catalogProducts: any[] = [
@@ -784,16 +796,18 @@ app.post('/api/emag/products', async (req, res) => {
       } else if (cp.ean) {
         catalogMap.set(String(cp.ean).toLowerCase(), cp);
       }
+
+      // If a catalog product does not have an offer yet, treat as draft product
+      const cpKey = String(cp.id || cp.part_number_key || cp.part_number || cp.sku || '').toLowerCase();
+      if (cpKey && !allOffersMap.has(cpKey)) {
+        allOffersMap.set(cpKey, { ...cp, status: 2, isDraft: true });
+      }
     }
 
+    const rawProducts = Array.from(allOffersMap.values());
+    const isSuccess = rawProducts.length > 0 || (activeData && activeData.isError === false);
+
     if (isSuccess || catalogProducts.length > 0) {
-      let rawProducts = Array.isArray(offerData?.results) ? offerData.results : [];
-
-      // If offers array is empty but catalog products exist, use catalog products
-      if (rawProducts.length === 0 && catalogProducts.length > 0) {
-        rawProducts = catalogProducts;
-      }
-
       const normalizedOffers = rawProducts.map((prod: any, idx: number) => {
         const pKey = String(prod.part_number_key || prod.part_number || prod.sku || '').toLowerCase();
         const pId = String(prod.product_id || prod.id || '').toLowerCase();
@@ -842,12 +856,13 @@ app.post('/api/emag/products', async (req, res) => {
             unit: 'UNIT'
           },
           publication: {
-            status: mergedProd.status === 1 ? 'ACTIVE' : 'INACTIVE',
+            status: mergedProd.status === 1 ? 'ACTIVE' : (mergedProd.status === 2 || mergedProd.isDraft ? 'DRAFT' : 'INACTIVE'),
             marketplaces: {
               base: { id: `emag-${country}` },
               additional: []
             }
           },
+          isDraft: mergedProd.status !== 1,
           delivery: {
             shippingRates: { id: 'sameday-easybox', name: 'Sameday EasyBox Locker 24/7' },
             handlingTime: 'PT24H'
@@ -875,7 +890,8 @@ app.post('/api/emag/products', async (req, res) => {
         message: `eMAG (${emagDomain}) üzerinden ${normalizedOffers.length} adet gerçek ürün ve katalog görseli başarıyla çekildi (${durationMs}ms).`
       });
     } else {
-      const rawErrMsg = (offerData?.messages && Array.isArray(offerData.messages) ? offerData.messages.join(', ') : null) || 'eMAG API yanıtı başarısız';
+      const errSource = activeData || inactiveData || pendingData;
+      const rawErrMsg = (errSource?.messages && Array.isArray(errSource.messages) ? errSource.messages.join(', ') : null) || 'eMAG API yanıtı başarısız';
       return res.json({
         success: false,
         status: 400,
@@ -883,7 +899,7 @@ app.post('/api/emag/products', async (req, res) => {
         serverIp,
         headerPreview: maskedHeaderPreview,
         message: `eMAG Ürün Çekme Hatası: ${rawErrMsg}`,
-        data: offerData
+        data: errSource
       });
     }
   } catch (err: any) {
@@ -3416,18 +3432,43 @@ app.post('/api/allegro/products', async (req, res) => {
 
   const startTime = Date.now();
   try {
-    const apiRes = await fetch(`${apiUrl}/sale/offers?limit=${limit}`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken.trim()}`,
-        'Accept': 'application/vnd.allegro.public.v1+json'
-      }
-    });
+    const allegroHeaders = {
+      'Authorization': `Bearer ${accessToken.trim()}`,
+      'Accept': 'application/vnd.allegro.public.v1+json'
+    };
+
+    // Fetch offers across ACTIVE, INACTIVE (drafts & paused), ACTIVATING and ENDED in parallel
+    const [activeRes, inactiveRes, activatingRes, endedRes, generalRes] = await Promise.allSettled([
+      fetch(`${apiUrl}/sale/offers?publication.status=ACTIVE&limit=100`, { headers: allegroHeaders }).then(r => r.json().catch(() => null)),
+      fetch(`${apiUrl}/sale/offers?publication.status=INACTIVE&limit=100`, { headers: allegroHeaders }).then(r => r.json().catch(() => null)),
+      fetch(`${apiUrl}/sale/offers?publication.status=ACTIVATING&limit=100`, { headers: allegroHeaders }).then(r => r.json().catch(() => null)),
+      fetch(`${apiUrl}/sale/offers?publication.status=ENDED&limit=100`, { headers: allegroHeaders }).then(r => r.json().catch(() => null)),
+      fetch(`${apiUrl}/sale/offers?limit=100`, { headers: allegroHeaders }).then(r => r.json().catch(() => null))
+    ]);
 
     const durationMs = Date.now() - startTime;
-    const data = await apiRes.json().catch(() => null);
+    const allOffersMap = new Map<string, any>();
 
-    if (apiRes.ok) {
-      const rawOffers = Array.isArray(data?.offers) ? data.offers : [];
+    const registerAllegroOffers = (resSettled: PromiseSettledResult<any>) => {
+      if (resSettled.status === 'fulfilled' && resSettled.value && Array.isArray(resSettled.value.offers)) {
+        for (const offer of resSettled.value.offers) {
+          const oId = String(offer.id || '');
+          if (oId && !allOffersMap.has(oId)) {
+            allOffersMap.set(oId, offer);
+          }
+        }
+      }
+    };
+
+    registerAllegroOffers(activeRes);
+    registerAllegroOffers(inactiveRes);
+    registerAllegroOffers(activatingRes);
+    registerAllegroOffers(endedRes);
+    registerAllegroOffers(generalRes);
+
+    const rawOffers = Array.from(allOffersMap.values());
+
+    if (rawOffers.length > 0 || (activeRes.status === 'fulfilled' && activeRes.value?.offers)) {
       const normalizedOffers = rawOffers.map((o: any, idx: number) => {
         const id = String(o.id || `allg_${idx + 1}`);
         const name = String(o.name || `Allegro Teklifi #${id}`);
@@ -3436,6 +3477,10 @@ app.post('/api/allegro/products', async (req, res) => {
         const stock = typeof o.stock?.available === 'number' ? o.stock.available : 10;
         const img = o.primaryImage?.url || o.images?.[0]?.url || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600&auto=format&fit=crop&q=80';
 
+        const pubStatus = o.publication?.status || 'ACTIVE';
+        const isDraft = pubStatus === 'INACTIVE';
+        const normalizedStatus = pubStatus === 'INACTIVE' ? 'DRAFT' : (pubStatus === 'ACTIVE' ? 'ACTIVE' : pubStatus);
+
         return {
           id: `allg-${id}`,
           name,
@@ -3443,12 +3488,13 @@ app.post('/api/allegro/products', async (req, res) => {
           primaryImage: img,
           sellingMode: { format: 'BUY_NOW', price: { amount: price, currency } },
           stock: { available: Number(stock), unit: 'UNIT' },
-          publication: { status: o.publication?.status || 'ACTIVE', marketplaces: { base: { id: 'allegro-pl' }, additional: [] } },
+          publication: { status: normalizedStatus, marketplaces: { base: { id: 'allegro-pl' }, additional: [] } },
+          isDraft,
           delivery: { shippingRates: { id: 'smart', name: 'Allegro Smart! DPD/InPost' }, handlingTime: 'PT24H' },
           sku: String(o.external?.id || `ALLG-SKU-${id}`),
           ean: String(o.ean || o.parameters?.find((p: any) => p.id === '225693')?.values?.[0] || '5909876543210'),
           smartEligible: true,
-          channelSync: { allegro: 'synced', emag: 'synced', baselinker: 'synced' },
+          channelSync: { allegro: 'synced', emag: 'unlinked', baselinker: 'unlinked' },
           updatedAt: new Date().toISOString()
         };
       });
@@ -3458,14 +3504,19 @@ app.post('/api/allegro/products', async (req, res) => {
         count: normalizedOffers.length,
         durationMs,
         offers: normalizedOffers,
-        message: `Allegro (${environment}) mağazanızdan ${normalizedOffers.length} ürün teklifi başarıyla çekildi (${durationMs}ms).`
+        message: `Allegro (${environment}) mağazanızdan toplam ${normalizedOffers.length} ürün teklifi başarıyla çekildi (Aktif, Pasif, Taslak ve Biten ilanlar dahil).`
       });
     } else {
+      const firstError = (activeRes.status === 'fulfilled' && activeRes.value?.error_description)
+        || (inactiveRes.status === 'fulfilled' && inactiveRes.value?.error_description)
+        || (generalRes.status === 'fulfilled' && (generalRes.value?.error_description || generalRes.value?.error))
+        || 'Teklifler çekilemedi';
+
       return res.json({
         success: false,
-        status: apiRes.status,
+        status: 400,
         durationMs,
-        message: `Allegro Ürün Çekme Hatası (${apiRes.status}): ${data?.error_description || data?.error || 'Teklifler çekilemedi'}`
+        message: `Allegro Ürün Çekme Hatası: ${firstError}`
       });
     }
   } catch (err: any) {
