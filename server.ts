@@ -3117,6 +3117,91 @@ app.post('/api/allegro/token', async (req, res) => {
   }
 });
 
+// Allegro OAuth Authorize Redirect URL (Kullanıcı Oturumu Başlatıcı)
+app.get('/api/allegro/authorize', (req, res) => {
+  const clientId = (req.query.clientId as string) || 'f2aaccb04bc146e4a6832179f10a12c3';
+  const env = (req.query.environment as string) || 'production';
+  const host = req.get('host') || 'localhost:3000';
+  const proto = req.protocol || 'http';
+  const redirectUri = `${proto}://${host}/api/allegro/callback`;
+  const authDomain = env === 'sandbox' ? 'allegro.pl.allegrosandbox.pl' : 'allegro.pl';
+  const targetUrl = `https://${authDomain}/auth/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+  return res.redirect(targetUrl);
+});
+
+// Allegro OAuth Callback (Authorization Code Değişimi & User Token Üretici)
+app.get(['/api/allegro/callback', '/oauth/allegro/callback'], async (req, res) => {
+  const code = req.query.code as string;
+  const error = req.query.error as string;
+  const errorDescription = req.query.error_description as string;
+
+  if (error || !code) {
+    return res.send(`<html><body style="font-family: sans-serif; text-align: center; padding: 50px; background: #0b0f19; color: #fff;">
+      <h2 style="color: #e11d48;">Allegro Bağlantı Hatası</h2>
+      <p style="color: #cbd5e1;">${errorDescription || error || 'Yetkilendirme kodu alınamadı.'}</p>
+      <button onclick="window.close()" style="margin-top: 15px; padding: 10px 20px; border-radius: 8px; background: #334155; color: #fff; border: none; cursor: pointer;">Pencereyi Kapat</button>
+    </body></html>`);
+  }
+
+  const host = req.get('host') || 'localhost:3000';
+  const proto = req.protocol || 'http';
+  const redirectUri = `${proto}://${host}/api/allegro/callback`;
+  const clientId = 'f2aaccb04bc146e4a6832179f10a12c3';
+  const clientSecret = 'YAaC1OJpbFLPYg7npUT8ZVuLIO0uxUiFmI7rZxQU4TwPCr1VTbSuNZ2qhmpZxTBl';
+
+  try {
+    const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+    const bodyParams = new URLSearchParams();
+    bodyParams.append('grant_type', 'authorization_code');
+    bodyParams.append('code', code);
+    bodyParams.append('redirect_uri', redirectUri);
+
+    const tokenRes = await fetch('https://allegro.pl/auth/oauth/token', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${basicAuth}`,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: bodyParams.toString()
+    });
+
+    const tokenData = await tokenRes.json().catch(() => null);
+
+    if (tokenRes.ok && tokenData?.access_token) {
+      return res.send(`<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align: center; padding: 50px; background: #0b0f19; color: #fff;">
+        <div style="max-width: 520px; margin: 0 auto; background: #161b28; padding: 35px; border-radius: 24px; border: 1px solid #334155; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);">
+          <div style="width: 56px; height: 56px; margin: 0 auto 16px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #10b981;">✓</div>
+          <h2 style="color: #10b981; margin: 0 0 8px; font-size: 20px;">Allegro Mağazanız Başarıyla Bağlandı!</h2>
+          <p style="color: #94a3b8; font-size: 13px; line-height: 1.5; margin: 0 0 20px;">Kullanıcı yetkili User Access Token başarıyla üretildi ve panele aktarılıyor.</p>
+          <div style="margin: 0 0 20px; padding: 14px; background: #0f121a; border-radius: 12px; font-family: monospace; font-size: 11px; word-break: break-all; color: #fbbf24; border: 1px solid #1e293b;">
+            ${tokenData.access_token.slice(0, 35)}...${tokenData.access_token.slice(-25)}
+          </div>
+          <p style="color: #64748b; font-size: 12px;">Bu pencere birkaç saniye içinde otomatik olarak kapanacaktır.</p>
+        </div>
+        <script>
+          if (window.opener) {
+            window.opener.postMessage({
+              type: 'ALLEGRO_OAUTH_TOKEN_SUCCESS',
+              token: ${JSON.stringify(tokenData.access_token)},
+              refreshToken: ${JSON.stringify(tokenData.refresh_token || '')},
+              expiresIn: ${tokenData.expires_in || 43199}
+            }, '*');
+            setTimeout(() => window.close(), 1500);
+          }
+        </script>
+      </body></html>`);
+    } else {
+      return res.send(`<html><body style="font-family: sans-serif; text-align: center; padding: 50px; background: #0b0f19; color: #fff;">
+        <h2 style="color: #e11d48;">Token Değişim Hatası</h2>
+        <p style="color: #cbd5e1;">${tokenData?.error_description || tokenData?.error || 'Token alınamadı'}</p>
+        <button onclick="window.close()" style="margin-top: 15px; padding: 10px 20px; border-radius: 8px; background: #334155; color: #fff; border: none; cursor: pointer;">Pencereyi Kapat</button>
+      </body></html>`);
+    }
+  } catch (err: any) {
+    return res.send(`<html><body style="font-family: sans-serif; text-align: center; padding: 50px; background: #0b0f19; color: #fff;">Hata: ${err?.message || err}</body></html>`);
+  }
+});
+
 // Real Allegro Live Connection & Verification Endpoint
 app.post('/api/allegro/test-credentials', async (req, res) => {
   const { clientId, clientSecret, environment = 'production', sellerLogin, accessToken } = req.body || {};
@@ -3254,11 +3339,19 @@ app.post('/api/allegro/orders', async (req, res) => {
         message: `Allegro (${environment}) üzerinden ${forms.length} sipariş başarıyla çekildi (${durationMs}ms).`
       });
     } else {
+      const allegroErrorMsg = data?.errors?.[0]?.userMessage || data?.errors?.[0]?.message || data?.error_description || data?.error || (data?.errors?.[0]?.code ? `Allegro Kod: ${data.errors[0].code}` : 'Siparişler çekilemedi');
+      const isUserTokenMissing = data?.errors?.some((e: any) => e?.code === 'EmptyUserIdException' || (e?.message && e.message.includes('user_name')));
+      
+      const helpfulDetail = isUserTokenMissing
+        ? ' (Allegro Satıcı Yetkisi Gerekli: Kullandığınız token genel Client Credentials tokenıdır. Siparişleri görebilmek için "OAuth ile Bağlan" ile giriş yapmalı veya Developer Portal üzerinden "Pobierz Token" butonuyla charsioutlet hesabı için User Token üretmelisiniz.)'
+        : '';
+
       return res.json({
         success: false,
         status: apiRes.status,
         durationMs,
-        message: `Allegro Sipariş Çekme Hatası (${apiRes.status}): ${data?.error_description || data?.error || 'Siparişler çekilemedi'}`
+        rawErrors: data?.errors || data,
+        message: `Allegro Sipariş Çekme Hatası (${apiRes.status}): ${allegroErrorMsg}${helpfulDetail}`
       });
     }
   } catch (err: any) {

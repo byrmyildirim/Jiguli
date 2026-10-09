@@ -171,11 +171,51 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
     const unsubTcmb = tcmbService.subscribe((data) => {
       setTcmbData(data);
     });
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'ALLEGRO_OAUTH_TOKEN_SUCCESS' && event.data?.token) {
+        const token = event.data.token;
+        const refreshToken = event.data.refreshToken || creds.allegro.refreshToken;
+        const expiresIn = event.data.expiresIn || 43199;
+        const updated = {
+          ...creds.allegro,
+          accessToken: token,
+          refreshToken: refreshToken,
+          tokenExpiresAt: Date.now() + expiresIn * 1000
+        };
+        setCreds(prev => ({ ...prev, allegro: updated }));
+        store.savePlatformCredentials({ allegro: updated });
+        store.updateAllegroConfig({
+          bearerToken: token,
+          isConnected: true,
+          tokenExpiresAt: updated.tokenExpiresAt,
+          sellerLogin: sellerLogin || 'charsioutlet'
+        });
+        showNotice('Tebrikler! Allegro Satıcı Yetkilendirmesi (User Token) başarıyla alındı ve kaydedildi.');
+        setActiveTransfer({
+          platform: 'allegro',
+          action: 'token',
+          loading: false,
+          result: {
+            success: true,
+            status: 200,
+            durationMs: 250,
+            endpoint: 'Allegro OAuth 2.0 Authorization Code Flow',
+            headerPreview: `Authorization: Bearer ${token.slice(0, 15)}...`,
+            message: 'Allegro Satıcı Hesabı (charsioutlet) için User Access Token başarıyla bağlandı!',
+            data: { access_token: token.slice(0, 25) + '...', expires_in: expiresIn }
+          }
+        });
+      }
+    };
+    window.addEventListener('message', handleMessage);
+
     return () => {
       unsubStore();
       unsubTcmb();
+      window.removeEventListener('message', handleMessage);
     };
-  }, []);
+  }, [creds.allegro, sellerLogin]);
 
   const handleRefreshTcmb = async () => {
     setIsRefreshingTcmb(true);
@@ -215,6 +255,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
   const handleSaveAllegroApi = (e: React.FormEvent) => {
     e.preventDefault();
     store.savePlatformCredentials({ allegro: creds.allegro });
+    store.updateAllegroConfig({
+      clientId: creds.allegro.clientId,
+      clientSecret: creds.allegro.clientSecret,
+      environment: creds.allegro.environment,
+      bearerToken: creds.allegro.accessToken,
+      sellerLogin: sellerLogin || 'charsioutlet',
+      isConnected: Boolean(creds.allegro.accessToken || creds.allegro.clientId)
+    });
     showNotice('Allegro REST API ayarları başarıyla kaydedildi!');
   };
 
@@ -438,6 +486,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
         }
       });
     }
+  };
+
+  // Allegro OAuth 2.0 Web Giriş Pop-up (Satıcı Hesabı ile Yetkilendirme)
+  const handleOpenAllegroOAuthPopup = () => {
+    const width = 640;
+    const height = 750;
+    const left = Math.max(0, Math.round(window.screen.width / 2 - width / 2));
+    const top = Math.max(0, Math.round(window.screen.height / 2 - height / 2));
+    const url = `/api/allegro/authorize?clientId=${encodeURIComponent(clientId || 'f2aaccb04bc146e4a6832179f10a12c3')}&environment=${environment}`;
+    
+    showNotice('Allegro giriş penceresi açıldı. Lütfen charsioutlet hesabınızla onay verin.');
+    window.open(url, 'allegro_oauth_popup', `width=${width},height=${height},left=${left},top=${top},status=yes,scrollbars=yes`);
   };
 
   // İki Yönlü Veri Transferi: Siparişleri Çek (Inbound)
@@ -1645,13 +1705,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
-                onClick={handleFetchAllegroOAuthToken}
-                disabled={activeTransfer?.loading && activeTransfer.platform === 'allegro' && activeTransfer.action === 'token'}
-                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-[#FF5A00] hover:bg-[#e04f00] text-white shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                onClick={handleOpenAllegroOAuthPopup}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#FF5A00] hover:bg-[#e04f00] text-white shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer"
+                title="Allegro hesabınızla tek tıkla giriş yaparak yetkili satıcı tokenı alın"
               >
-                <KeyRound className={`w-3.5 h-3.5 ${activeTransfer?.loading && activeTransfer.platform === 'allegro' && activeTransfer.action === 'token' ? 'animate-spin' : ''}`} />
-                <span>OAuth Token Al / Bağlan</span>
+                <KeyRound className="w-3.5 h-3.5" />
+                <span>OAuth ile Bağlan (charsioutlet Girişi)</span>
               </button>
+
+              <a
+                href="https://apps.developer.allegro.pl"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-orange-50 border border-orange-200 text-orange-800 shadow-2xs flex items-center gap-1.5 transition-all"
+                title="Allegro Developer Portal üzerinden 'Pobierz token' butonuna tıklayarak direkt User Token alabilirsiniz"
+              >
+                <ExternalLink className="w-3.5 h-3.5 text-orange-600" />
+                <span>Developer Portal'dan Token Al</span>
+              </a>
 
               <button
                 type="button"

@@ -63,8 +63,8 @@ const DEFAULT_PLATFORM_CREDENTIALS: PlatformCredentials = {
   },
   allegro: {
     environment: 'production',
-    clientId: '',
-    clientSecret: '',
+    clientId: 'f2aaccb04bc146e4a6832179f10a12c3',
+    clientSecret: 'YAaC1OJpbFLPYg7npUT8ZVuLIO0uxUiFmI7rZxQU4TwPCr1VTbSuNZ2qhmpZxTBl',
     accessToken: '',
     refreshToken: '',
     tokenExpiresAt: 0
@@ -72,13 +72,13 @@ const DEFAULT_PLATFORM_CREDENTIALS: PlatformCredentials = {
 };
 
 const DEFAULT_ALLEGRO_CONFIG: AllegroConfig = {
-  clientId: '',
-  clientSecret: '',
+  clientId: 'f2aaccb04bc146e4a6832179f10a12c3',
+  clientSecret: 'YAaC1OJpbFLPYg7npUT8ZVuLIO0uxUiFmI7rZxQU4TwPCr1VTbSuNZ2qhmpZxTBl',
   bearerToken: '',
   environment: 'production',
   isConnected: false,
   tokenExpiresAt: 0,
-  sellerLogin: ''
+  sellerLogin: 'charsioutlet'
 };
 
 // Helper function to recursively extract any image URL from any marketplace/eMAG data structure
