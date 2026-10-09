@@ -3122,8 +3122,8 @@ app.get('/api/allegro/authorize', (req, res) => {
   const clientId = (req.query.clientId as string) || 'f2aaccb04bc146e4a6832179f10a12c3';
   const env = (req.query.environment as string) || 'production';
   const host = req.get('host') || 'localhost:3000';
-  const proto = req.protocol || 'http';
-  const redirectUri = `${proto}://${host}/api/allegro/callback`;
+  const proto = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'http';
+  const redirectUri = (req.query.redirectUri as string) || `${proto}://${host}/api/allegro/callback`;
   const authDomain = env === 'sandbox' ? 'allegro.pl.allegrosandbox.pl' : 'allegro.pl';
   const targetUrl = `https://${authDomain}/auth/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}`;
   return res.redirect(targetUrl);
@@ -3144,7 +3144,7 @@ app.get(['/api/allegro/callback', '/oauth/allegro/callback'], async (req, res) =
   }
 
   const host = req.get('host') || 'localhost:3000';
-  const proto = req.protocol || 'http';
+  const proto = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'http';
   const redirectUri = `${proto}://${host}/api/allegro/callback`;
   const clientId = 'f2aaccb04bc146e4a6832179f10a12c3';
   const clientSecret = 'YAaC1OJpbFLPYg7npUT8ZVuLIO0uxUiFmI7rZxQU4TwPCr1VTbSuNZ2qhmpZxTBl';
