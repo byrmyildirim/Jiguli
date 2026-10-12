@@ -369,11 +369,31 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
   const [showEmagLogsModal, setShowEmagLogsModal] = useState(false);
   const [emagLogReport, setEmagLogReport] = useState<EmagExecutionReport | null>(null);
   const [publishingEmagOfferId, setPublishingEmagOfferId] = useState<string | null>(null);
+  const [publishingAllegroOfferId, setPublishingAllegroOfferId] = useState<string | null>(null);
 
   // Missing Mandatory Characteristics Modal State
   const [showMissingCharsModal, setShowMissingCharsModal] = useState(false);
   const [missingCharsValidation, setMissingCharsValidation] = useState<ValidationResult | null>(null);
   const [pendingPublishOffer, setPendingPublishOffer] = useState<AllegroOffer | null>(null);
+
+  const handlePublishSingleOfferToAllegro = async (offer: AllegroOffer) => {
+    setPublishingAllegroOfferId(offer.id);
+    setBulkNotice(`⏳ "${offer.name.slice(0, 30)}..." ürünü Allegro'ya yükleniyor...`);
+    try {
+      const res = await store.publishOfferToAllegro(offer.id);
+      setOffers(store.getOffers());
+      if (res.success) {
+        setBulkNotice(`🟢 "${offer.name.slice(0, 30)}..." ürünü Allegro üzerinde başarıyla yayına alındı! İlan No: ${res.offerId || ''}`);
+      } else {
+        setBulkNotice(`⚠️ Allegro Yayına Alma Hatası: ${res.message}`);
+      }
+    } catch (e: any) {
+      setBulkNotice(`⚠️ Allegro Bağlantı Hatası: ${e?.message || e}`);
+    } finally {
+      setPublishingAllegroOfferId(null);
+      setTimeout(() => setBulkNotice(null), 7000);
+    }
+  };
 
   const handlePublishSingleOfferToEmag = async (offer: AllegroOffer, overrideCharacteristics?: Array<{ id: string | number; value: any }>) => {
     // If override characteristics are passed, bypass check and publish directly
@@ -557,20 +577,39 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
   };
 
   const handleTransferOfferToMarketplace = async (offer: AllegroOffer, targetChannel: MarketplaceId | 'ALL') => {
-    const success = store.publishDraftOffer(offer.id, targetChannel);
     setActiveTransferMenuOfferId(null);
+    const channelNames: Record<string, string> = {
+      allegro: 'Allegro',
+      emag: 'eMAG',
+      baselinker: 'BaseLinker',
+      ALL: 'Tüm Pazaryerleri'
+    };
+    const channelLabel = channelNames[targetChannel] || targetChannel;
+
+    if (targetChannel === 'allegro') {
+      await handlePublishSingleOfferToAllegro(offer);
+      return;
+    }
+
+    if (targetChannel === 'ALL') {
+      await handlePublishSingleOfferToAllegro(offer);
+      store.publishDraftOffer(offer.id, 'ALL');
+      setOffers(store.getOffers());
+      const res = await store.publishOfferToEmag(offer.id);
+      if (res.report) {
+        setEmagLogReport(res.report);
+        setShowEmagLogsModal(true);
+      }
+      return;
+    }
+
+    const success = store.publishDraftOffer(offer.id, targetChannel);
     if (success) {
-      const channelNames: Record<string, string> = {
-        allegro: 'Allegro',
-        emag: 'eMAG',
-        baselinker: 'BaseLinker',
-        ALL: 'Tüm Pazaryerleri'
-      };
-      const channelLabel = channelNames[targetChannel] || targetChannel;
+      setOffers(store.getOffers());
       setBulkNotice(`🟢 "${offer.name.slice(0, 30)}..." ürünü ${channelLabel} pazaryerine aktarıldı ve yayına alındı!`);
 
       // If sending to eMAG, execute real eMAG pipeline and fetch execution report
-      if (targetChannel === 'emag' || targetChannel === 'ALL') {
+      if (targetChannel === 'emag') {
         const res = await store.publishOfferToEmag(offer.id);
         if (res.report) {
           setEmagLogReport(res.report);
@@ -582,10 +621,35 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
     }
   };
 
-  const handleBulkTransferToMarketplace = (targetChannel: MarketplaceId | 'ALL') => {
+  const handleBulkTransferToMarketplace = async (targetChannel: MarketplaceId | 'ALL') => {
     if (selectedOfferIds.length === 0) return;
-    const count = store.publishBulkDraftOffers(selectedOfferIds, targetChannel);
     setShowBulkTransferDropdown(false);
+
+    if (targetChannel === 'allegro') {
+      setBulkNotice(`⏳ Seçilen ${selectedOfferIds.length} ürün Allegro'ya yükleniyor...`);
+      const bulkRes = await store.publishBulkOffersToAllegro(selectedOfferIds);
+      setOffers(store.getOffers());
+      if (bulkRes.successCount > 0) {
+        setBulkNotice(`🟢 ${bulkRes.successCount} ürün Allegro (${bulkRes.successCount}/${bulkRes.total}) üzerinde başarıyla yayına alındı!${bulkRes.failCount > 0 ? ` (${bulkRes.failCount} ürün hata verdi)` : ''}`);
+      } else {
+        const firstErrMsg = bulkRes.results.find(r => !r.success)?.message || 'İşlem başarısız.';
+        setBulkNotice(`⚠️ Allegro Toplu Yükleme Hatası: ${firstErrMsg}`);
+      }
+      setTimeout(() => setBulkNotice(null), 7000);
+      return;
+    }
+
+    if (targetChannel === 'ALL') {
+      setBulkNotice(`⏳ Seçilen ${selectedOfferIds.length} ürün tüm pazaryerlerine (Allegro & eMAG) aktarılıyor...`);
+      await store.publishBulkOffersToAllegro(selectedOfferIds);
+      store.publishBulkDraftOffers(selectedOfferIds, targetChannel);
+      setOffers(store.getOffers());
+      setBulkNotice(`🟢 Seçilen ürünler tüm pazaryerlerine (Allegro & eMAG) aktarıldı!`);
+      setTimeout(() => setBulkNotice(null), 6000);
+      return;
+    }
+
+    const count = store.publishBulkDraftOffers(selectedOfferIds, targetChannel);
     const channelNames: Record<string, string> = {
       allegro: 'Allegro',
       emag: 'eMAG',
@@ -1854,6 +1918,18 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
                             </div>
                           )}
 
+                          {offer.channelSync?.allegro !== 'synced' && (
+                            <button
+                              onClick={() => handlePublishSingleOfferToAllegro(offer)}
+                              disabled={publishingAllegroOfferId === offer.id}
+                              className="text-xs font-bold text-amber-900 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:text-amber-200 border border-amber-200 dark:border-amber-800 px-2.5 py-1 rounded-xl flex items-center gap-1 cursor-pointer transition-colors shadow-2xs disabled:opacity-50"
+                              title="Allegro'ya Yükle"
+                            >
+                              <MarketplaceLogo platform="allegro" size="xs" rounded="full" />
+                              <span>{publishingAllegroOfferId === offer.id ? 'Yükleniyor...' : "Allegro'ya Yükle"}</span>
+                            </button>
+                          )}
+
                           <button
                             onClick={() => setEditingOffer(offer)}
                             className="text-xs font-semibold text-slate-700 dark:text-zinc-200 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-slate-200 dark:border-zinc-700 px-2.5 py-1 rounded-xl flex items-center gap-1 cursor-pointer transition-colors"
@@ -2299,6 +2375,18 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
                                   </div>
                                 )}
                               </div>
+                            )}
+
+                            {offer.channelSync?.allegro !== 'synced' && (
+                              <button
+                                onClick={() => handlePublishSingleOfferToAllegro(offer)}
+                                disabled={publishingAllegroOfferId === offer.id}
+                                className="px-2.5 py-1 rounded-lg border text-amber-900 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:text-amber-200 border-amber-200 dark:border-amber-800 font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
+                                title="Bu ürünü doğrudan Allegro mağazanıza yükleyin"
+                              >
+                                <MarketplaceLogo platform="allegro" size="xs" rounded="full" />
+                                <span>{publishingAllegroOfferId === offer.id ? 'Yükleniyor...' : "Allegro'ya Yükle"}</span>
+                              </button>
                             )}
 
                             <button

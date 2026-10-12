@@ -2613,6 +2613,7 @@ export class MarketplaceStore {
   public async publishOfferToAllegro(offerId: string, customPayload?: any): Promise<{
     success: boolean;
     offerId?: string;
+    url?: string;
     message: string;
     durationMs?: number;
   }> {
@@ -2621,16 +2622,61 @@ export class MarketplaceStore {
       return { success: false, message: 'Ürün bulunamadı.' };
     }
 
-    const creds = this.platformCredentials?.allegro;
-    const accessToken = creds?.accessToken || '';
+    const creds = this.platformCredentials?.allegro || {};
+    let accessToken = creds?.accessToken || this.allegroConfig?.bearerToken || '';
     const environment = creds?.environment || 'production';
+
+    // Auto-fetch OAuth token if token is missing but client credentials exist
+    if (!accessToken && creds?.clientId && creds?.clientSecret) {
+      try {
+        const tokenRes = await fetch('/api/allegro/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clientId: creds.clientId,
+            clientSecret: creds.clientSecret,
+            environment
+          })
+        });
+        const tokenData = await tokenRes.json().catch(() => null);
+        if (tokenData?.access_token) {
+          accessToken = tokenData.access_token;
+          this.savePlatformCredentials({ allegro: { ...creds, accessToken } });
+        }
+      } catch (tokenErr) {
+        console.warn('[Allegro Token Auto-Fetch Notice]:', tokenErr);
+      }
+    }
 
     const cleanTitle = (customPayload?.name || customPayload?.title || offer.name).slice(0, 75);
     const catId = customPayload?.categoryId || offer.channelData?.allegro?.categoryId || offer.category?.id || '124921';
     const price = customPayload?.price || offer.channelData?.allegro?.price?.amount || offer.sellingMode?.price?.amount || '49.99';
     const stock = customPayload?.stock !== undefined ? customPayload.stock : (offer.stock?.available || 10);
     const ean = customPayload?.ean || offer.ean || '';
-    const img = offer.primaryImage || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80';
+    const sku = customPayload?.sku || offer.sku || '';
+    const img = customPayload?.primaryImage || offer.primaryImage || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80';
+    const images = customPayload?.images || (offer.primaryImage ? [offer.primaryImage] : [img]);
+    const isDraft = customPayload?.isDraft !== undefined ? customPayload.isDraft : Boolean(offer.isDraft);
+    const shippingRateId = customPayload?.shippingRateId || offer.delivery?.shippingRates?.id;
+    const parameters = customPayload?.parameters || offer.parameters || [];
+    const description = customPayload?.description || offer.description || offer.name;
+
+    const offerPayload = {
+      title: cleanTitle,
+      name: cleanTitle,
+      categoryId: String(catId),
+      price: String(price),
+      currency: 'PLN',
+      stock: Number(stock),
+      ean: String(ean || '').trim(),
+      sku: String(sku || '').trim(),
+      primaryImage: img,
+      images,
+      isDraft,
+      shippingRateId,
+      parameters,
+      description
+    };
 
     try {
       const res = await fetch('/api/allegro/publish-offer', {
@@ -2639,21 +2685,30 @@ export class MarketplaceStore {
         body: JSON.stringify({
           accessToken,
           environment,
-          offer: {
-            title: cleanTitle,
-            categoryId: String(catId),
-            price,
-            currency: 'PLN',
-            stock,
-            ean,
-            primaryImage: img
-          }
+          offer: offerPayload
         })
       });
 
       const data = await res.json().catch(() => null);
 
+      // Log API call to store so it appears in API Console & Logs
+      this.logApiCall({
+        method: 'POST',
+        endpoint: `/sale/offers [ALLEGRO REST API: ${environment.toUpperCase()}]`,
+        status: data?.success ? 201 : (data?.status || (res.ok ? 200 : 400)),
+        durationMs: data?.durationMs || 350,
+        requestHeaders: {
+          'Authorization': `Bearer ${accessToken ? `${accessToken.slice(0, 15)}...` : 'MISSING'}`,
+          'Accept': 'application/vnd.allegro.public.v1+json',
+          'Content-Type': 'application/vnd.allegro.public.v1+json'
+        },
+        requestBody: offerPayload,
+        responseBody: data,
+        platform: 'allegro'
+      });
+
       if (data && data.success) {
+        const pubStatus = isDraft ? 'DRAFT' : 'ACTIVE';
         this.offers = this.offers.map(o => {
           if (o.id === offerId) {
             return {
@@ -2664,9 +2719,9 @@ export class MarketplaceStore {
               },
               publication: {
                 ...o.publication,
-                status: 'ACTIVE'
+                status: pubStatus as any
               },
-              isDraft: false
+              isDraft
             };
           }
           return o;
@@ -2677,6 +2732,7 @@ export class MarketplaceStore {
         return {
           success: true,
           offerId: data.offerId,
+          url: data.url,
           message: data.message || 'Ürün Allegro üzerinde başarıyla yayına alındı.',
           durationMs: data.durationMs
         };
@@ -2692,6 +2748,37 @@ export class MarketplaceStore {
         message: `Bağlantı hatası: ${err?.message || err}`
       };
     }
+  }
+
+  public async publishBulkOffersToAllegro(offerIds: string[]): Promise<{
+    successCount: number;
+    failCount: number;
+    total: number;
+    results: Array<{ id: string; name: string; success: boolean; message: string; offerId?: string }>;
+  }> {
+    let successCount = 0;
+    let failCount = 0;
+    const results: Array<{ id: string; name: string; success: boolean; message: string; offerId?: string }> = [];
+
+    for (const id of offerIds) {
+      const target = this.offers.find(o => o.id === id);
+      if (!target) continue;
+      const res = await this.publishOfferToAllegro(id);
+      if (res.success) {
+        successCount++;
+        results.push({ id, name: target.name, success: true, message: res.message, offerId: res.offerId });
+      } else {
+        failCount++;
+        results.push({ id, name: target.name, success: false, message: res.message });
+      }
+    }
+
+    return {
+      successCount,
+      failCount,
+      total: offerIds.length,
+      results
+    };
   }
 
   public clearAllData(): void {

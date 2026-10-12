@@ -919,6 +919,26 @@ export const CreateOfferModal: React.FC<CreateOfferModalProps> = ({
             setShowEmagLogsModal(true);
           }
         }
+
+        // Trigger real Allegro publish API transmission if Allegro is selected
+        if (selectedChannels.includes('allegro')) {
+          const allegroRes = await store.publishOfferToAllegro(editingId, {
+            name: allegroTitle.trim() || coreTitle.trim(),
+            categoryId: allegroCategoryId,
+            price: allegroPrice,
+            stock: stock,
+            ean: ean.trim(),
+            sku: sku.trim(),
+            primaryImage: imageUrl.trim(),
+            parameters: formattedAllegroParams,
+            isDraft: isDraftOffer ? !publishOnSave : false
+          });
+          if (allegroRes.success) {
+            setToastNotice(`🟢 Ürün Allegro'ya başarıyla yüklendi! (İlan No: ${allegroRes.offerId})`);
+          } else {
+            setToastNotice(`⚠️ Allegro: ${allegroRes.message}`);
+          }
+        }
       } else {
         const created = store.createOffer({
           name: coreTitle.trim(),
@@ -947,6 +967,25 @@ export const CreateOfferModal: React.FC<CreateOfferModalProps> = ({
           if (res.report) {
             setEmagExecutionReport(res.report);
             setShowEmagLogsModal(true);
+          }
+        }
+
+        if (selectedChannels.includes('allegro') && created?.id) {
+          const allegroRes = await store.publishOfferToAllegro(created.id, {
+            name: allegroTitle.trim() || coreTitle.trim(),
+            categoryId: allegroCategoryId,
+            price: allegroPrice,
+            stock: stock,
+            ean: ean.trim(),
+            sku: sku.trim(),
+            primaryImage: imageUrl.trim(),
+            parameters: formattedAllegroParams,
+            isDraft: !publishOnSave
+          });
+          if (allegroRes.success) {
+            setToastNotice(`🟢 Ürün Allegro'ya başarıyla yüklendi! (İlan No: ${allegroRes.offerId})`);
+          } else {
+            setToastNotice(`⚠️ Allegro: ${allegroRes.message}`);
           }
         }
       }

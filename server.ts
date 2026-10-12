@@ -4190,19 +4190,123 @@ app.get(['/docs/allegro', '/allegro-docs', '/docs', '/api/docs/allegro'], (req, 
 });
 
 // ============================================================================
-// ALLEGRO LIVE OFFER PUBLISHING ENDPOINT
+// ALLEGRO LIVE OFFER PUBLISHING ENDPOINTS & HELPERS
 // ============================================================================
+
+// Helper: Upload an external image URL to Allegro CDN via POST /sale/images
+async function uploadAllegroImage(apiUrl: string, token: string, imgUrl: string): Promise<string> {
+  if (!imgUrl || !imgUrl.startsWith('http')) return imgUrl;
+  if (imgUrl.includes('allegroimg.com')) return imgUrl;
+
+  try {
+    const res = await fetch(`${apiUrl}/sale/images`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token.trim()}`,
+        'Accept': 'application/vnd.allegro.public.v1+json',
+        'Content-Type': 'application/vnd.allegro.public.v1+json'
+      },
+      body: JSON.stringify({ url: imgUrl })
+    });
+    if (res.ok || res.status === 201) {
+      const data = await res.json().catch(() => null);
+      if (data?.location) {
+        return data.location;
+      }
+      const locHeader = res.headers.get('location');
+      if (locHeader) return locHeader;
+    }
+  } catch (err: any) {
+    console.warn('[Allegro Image Upload Warning]:', err?.message || err);
+  }
+  return imgUrl;
+}
+
+// Helper: Resolve a valid Allegro shipping tariff ID (Cennik dostawy)
+async function resolveAllegroShippingRate(apiUrl: string, token: string, candidate?: string): Promise<{ id: string | null; warning?: string }> {
+  if (candidate && candidate !== 'smart' && candidate !== 'default' && candidate.trim() !== '') {
+    return { id: candidate.trim() };
+  }
+
+  try {
+    const res = await fetch(`${apiUrl}/sale/shipping-rates`, {
+      headers: {
+        'Authorization': `Bearer ${token.trim()}`,
+        'Accept': 'application/vnd.allegro.public.v1+json'
+      }
+    });
+    if (res.ok) {
+      const data = await res.json().catch(() => null);
+      const rates = data?.shippingRates || [];
+      if (Array.isArray(rates) && rates.length > 0 && rates[0]?.id) {
+        return { id: rates[0].id };
+      }
+    }
+  } catch (err: any) {
+    console.warn('[Allegro Shipping Rates Resolution Warning]:', err?.message || err);
+  }
+
+  return {
+    id: null,
+    warning: 'Allegro mağazanızda en az 1 kargo şablonu (Cennik dostawy) tanımlı olmalıdır. Lütfen Allegro Satıcı Panelinden (Moje Allegro > Ustawienia dostawy) bir kargo şablonu oluşturun.'
+  };
+}
+
+// Endpoint: Fetch Allegro Shipping Rates (Kargo Şablonları Listesi)
+app.all(['/api/allegro/shipping-rates'], async (req, res) => {
+  const accessToken = (req.body?.accessToken || req.query?.accessToken || '') as string;
+  const environment = (req.body?.environment || req.query?.environment || 'production') as string;
+
+  if (!accessToken || !accessToken.trim()) {
+    return res.status(400).json({ success: false, message: 'Allegro OAuth Access Token eksik.' });
+  }
+
+  const apiUrl = environment === 'sandbox'
+    ? 'https://api.allegro.pl.allegrosandbox.pl'
+    : 'https://api.allegro.pl';
+
+  try {
+    const apiRes = await fetch(`${apiUrl}/sale/shipping-rates`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken.trim()}`,
+        'Accept': 'application/vnd.allegro.public.v1+json'
+      }
+    });
+
+    const data = await apiRes.json().catch(() => null);
+    if (apiRes.ok) {
+      const shippingRates = data?.shippingRates || [];
+      return res.json({
+        success: true,
+        count: shippingRates.length,
+        shippingRates,
+        message: `${shippingRates.length} adet Allegro kargo şablonu listelendi.`
+      });
+    } else {
+      return res.json({
+        success: false,
+        status: apiRes.status,
+        message: data?.error_description || data?.message || 'Kargo şablonları çekilemedi',
+        shippingRates: []
+      });
+    }
+  } catch (err: any) {
+    return res.json({ success: false, message: err?.message || 'Bağlantı hatası', shippingRates: [] });
+  }
+});
+
+// Endpoint: Allegro Live Offer Publishing (Ürün Yükleme & Yayına Alma)
 app.post('/api/allegro/publish-offer', async (req, res) => {
   const { accessToken, environment = 'production', offer } = req.body || {};
 
   if (!accessToken || !accessToken.trim()) {
     return res.status(400).json({
       success: false,
-      message: 'Allegro OAuth Access Token bulunamadı. Lütfen Ayarlar > Allegro sekmesinden bağlantı sağlayın.'
+      message: 'Allegro OAuth Access Token bulunamadı. Lütfen Ayarlar > Allegro sekmesinden mağazanızı bağlayın veya token girin.'
     });
   }
 
-  if (!offer || !offer.title || !offer.categoryId) {
+  if (!offer || (!offer.title && !offer.name) || !offer.categoryId) {
     return res.status(400).json({
       success: false,
       message: 'Ürün başlığı ve kategori ID zorunludur.'
@@ -4214,18 +4318,68 @@ app.post('/api/allegro/publish-offer', async (req, res) => {
     : 'https://api.allegro.pl';
 
   const startTime = Date.now();
-  const cleanTitle = String(offer.title).trim().slice(0, 75);
+  const rawTitle = String(offer.title || offer.name || '').trim();
+  const cleanTitle = rawTitle.slice(0, 75);
   const priceAmount = String(parseFloat(String(offer.price || 49.99)).toFixed(2));
   const stockAmount = Math.max(1, parseInt(String(offer.stock || 10), 10));
   const categoryId = String(offer.categoryId).trim();
   const ean = String(offer.ean || '').trim();
-  const imageUrl = offer.primaryImage || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80';
+  const rawImageUrl = offer.primaryImage || (Array.isArray(offer.images) && offer.images[0]) || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80';
+
+  // 1. Image upload to Allegro CDN
+  const uploadedImageUrl = await uploadAllegroImage(apiUrl, accessToken, rawImageUrl);
+
+  // 2. Resolve Shipping Rates
+  const { id: shippingRateId, warning: shippingWarning } = await resolveAllegroShippingRate(
+    apiUrl,
+    accessToken,
+    offer.shippingRateId || offer.delivery?.shippingRates?.id
+  );
+
+  // 3. Construct Allegro parameters
+  const parameters: any[] = [
+    { id: '11323', values: ['Nowy'] } // Stan: Nowy (Condition: New)
+  ];
+
+  if (ean && /^\d{8,14}$/.test(ean)) {
+    parameters.push({
+      id: '225693', // EAN / GTIN parameter on Allegro
+      values: [ean]
+    });
+  }
+
+  // Merge any custom parameters provided
+  if (Array.isArray(offer.parameters)) {
+    for (const p of offer.parameters) {
+      if (p?.id && p?.values && p.id !== '11323' && p.id !== '225693') {
+        parameters.push({
+          id: String(p.id),
+          values: Array.isArray(p.values) ? p.values.map(String) : [String(p.values)]
+        });
+      }
+    }
+  }
+
+  // 4. Construct description
+  const descText = offer.description || offer.name || cleanTitle;
+  const descriptionPayload = {
+    sections: [
+      {
+        items: [
+          {
+            type: 'TEXT',
+            content: `<p>${descText.replace(/\n/g, '<br/>')}</p>`
+          }
+        ]
+      }
+    ]
+  };
 
   const allegroPayload: any = {
     name: cleanTitle,
     category: { id: categoryId },
-    primaryImage: { url: imageUrl },
-    images: [{ url: imageUrl }],
+    primaryImage: { url: uploadedImageUrl },
+    images: [{ url: uploadedImageUrl }],
     sellingMode: {
       format: 'BUY_NOW',
       price: {
@@ -4238,22 +4392,27 @@ app.post('/api/allegro/publish-offer', async (req, res) => {
       unit: 'UNIT'
     },
     publication: {
-      status: 'ACTIVE'
+      status: offer.isDraft ? 'INACTIVE' : 'ACTIVE'
     },
-    delivery: {
-      shippingRates: { id: offer.shippingRateId || 'smart' },
-      handlingTime: 'PT24H'
-    },
-    parameters: [
-      { id: '11323', values: ['Nowy'] } // Condition: Nowy (New)
-    ]
+    parameters,
+    description: descriptionPayload
   };
 
-  if (ean && /^\d{8,14}$/.test(ean)) {
-    allegroPayload.parameters.push({
-      id: '225693', // EAN / GTIN parameter on Allegro
-      values: [ean]
-    });
+  // Add delivery if shipping tariff found
+  if (shippingRateId) {
+    allegroPayload.delivery = {
+      shippingRates: { id: shippingRateId },
+      handlingTime: offer.handlingTime || 'PT24H'
+    };
+  }
+
+  // Add payments invoice
+  allegroPayload.payments = {
+    invoice: 'VAT'
+  };
+
+  if (offer.sku) {
+    allegroPayload.external = { id: String(offer.sku).slice(0, 50) };
   }
 
   try {
@@ -4272,20 +4431,30 @@ app.post('/api/allegro/publish-offer', async (req, res) => {
 
     if (apiRes.ok || apiRes.status === 200 || apiRes.status === 201 || apiRes.status === 202) {
       const generatedOfferId = data?.id || `allg-${Date.now()}`;
+      const pubStatus = data?.publication?.status || (offer.isDraft ? 'INACTIVE' : 'ACTIVE');
       return res.json({
         success: true,
         offerId: generatedOfferId,
+        url: `https://allegro.pl/oferta/${generatedOfferId}`,
         durationMs,
-        status: data?.publication?.status || 'ACTIVE',
+        status: pubStatus,
         productName: cleanTitle,
         category: categoryId,
-        message: `Ürün Allegro (${environment}) üzerinde başarıyla yayına alındı! İlan No: ${generatedOfferId}`
+        uploadedImageUrl,
+        shippingRateId,
+        message: pubStatus === 'ACTIVE'
+          ? `Ürün Allegro (${environment}) üzerinde başarıyla yayına alındı! İlan No: ${generatedOfferId}`
+          : `Ürün Allegro (${environment}) üzerine Taslak (INACTIVE) olarak başarıyla yüklendi! İlan No: ${generatedOfferId}`
       });
     } else {
-      const errorMsg = data?.errors?.map((e: any) => `${e.message} (${e.code})`).join('; ')
+      let errorMsg = data?.errors?.map((e: any) => `${e.message || e.userMessage || ''}${e.code ? ` (${e.code})` : ''}${e.path ? ` [Alan: ${e.path}]` : ''}`).filter(Boolean).join('; ')
         || data?.error_description
         || data?.error
         || `HTTP ${apiRes.status}`;
+
+      if (!shippingRateId && shippingWarning) {
+        errorMsg += ` · Not: ${shippingWarning}`;
+      }
 
       return res.json({
         success: false,

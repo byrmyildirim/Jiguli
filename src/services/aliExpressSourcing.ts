@@ -468,10 +468,14 @@ export function publishAliExpressProductMultiChannel(params: {
       platform: 'allegro'
     });
 
+    store.publishOfferToAllegro(offer.id).catch(err => {
+      console.warn('[AliExpress Auto-Publish to Allegro Notice]:', err);
+    });
+
     logs.push({
       channel: 'allegro',
       channelName: 'Allegro REST API v2',
-      endpoint: 'https://api.allegro.pl/sale/product-offers',
+      endpoint: 'https://api.allegro.pl/sale/offers',
       status: 201,
       durationMs: 340,
       requestPayload: allegroReq,
