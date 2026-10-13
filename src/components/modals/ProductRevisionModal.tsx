@@ -73,7 +73,24 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
   // --- CORE PRODUCT STATE ---
   const [name, setName] = useState(offer.name || '');
   const [sku, setSku] = useState(offer.sku || '');
-  const [ean, setEan] = useState(offer.ean || '');
+  const [ean, setEan] = useState(() => {
+    const raw = String(offer.ean || '').trim();
+    if (!raw) return '';
+    const digits = raw.replace(/\D/g, '');
+    if (/^\d{8}$|^\d{12,14}$/.test(digits)) {
+      const prefix = digits.slice(0, -1);
+      const len = prefix.length;
+      let sum = 0;
+      for (let i = 0; i < len; i++) {
+        const digit = parseInt(prefix[len - 1 - i], 10);
+        const weight = (i % 2 === 0) ? 3 : 1;
+        sum += digit * weight;
+      }
+      const check = (10 - (sum % 10)) % 10;
+      return `${prefix}${check}`;
+    }
+    return raw;
+  });
   const [primaryImage, setPrimaryImage] = useState(offer.primaryImage || '');
   const [stock, setStock] = useState<number>(offer.stock?.available || 10);
   const [websiteUrl, setWebsiteUrl] = useState(offer.excelMetadata?.websiteLinks || '');
@@ -1852,6 +1869,49 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
                       placeholder="590..."
                       className={`w-full text-sm font-mono font-bold px-3.5 py-2.5 rounded-xl border ${c.inputBg}`}
                     />
+                    {(() => {
+                      const digits = ean.replace(/\D/g, '');
+                      if (!digits) return null;
+                      if (!/^\d{8}$|^\d{12,14}$/.test(digits)) {
+                        return (
+                          <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold">
+                            GTIN 8, 12, 13 veya 14 haneli olmalıdır.
+                          </p>
+                        );
+                      }
+                      const prefix = digits.slice(0, -1);
+                      const len = prefix.length;
+                      let sum = 0;
+                      for (let i = 0; i < len; i++) {
+                        const digit = parseInt(prefix[len - 1 - i], 10);
+                        const weight = (i % 2 === 0) ? 3 : 1;
+                        sum += digit * weight;
+                      }
+                      const expectedCheck = (10 - (sum % 10)) % 10;
+                      const actualCheck = parseInt(digits.slice(-1), 10);
+                      if (expectedCheck === actualCheck) {
+                        return (
+                          <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-1 font-semibold">
+                            ✓ Geçerli GS1 EAN-{digits.length} Doğrulandı
+                          </p>
+                        );
+                      }
+                      const fixedGtin = `${prefix}${expectedCheck}`;
+                      return (
+                        <div className="flex items-center justify-between mt-1 text-[10px]">
+                          <span className="text-amber-600 dark:text-amber-400 font-semibold">
+                            ⚠️ Hatalı kontrol basamağı (Son hane {expectedCheck} olmalı)
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setEan(fixedGtin)}
+                            className="font-bold text-amber-700 hover:text-amber-800 dark:text-amber-300 underline cursor-pointer"
+                          >
+                            Düzelt: {fixedGtin}
+                          </button>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
 

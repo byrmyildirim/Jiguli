@@ -3617,7 +3617,7 @@ app.post('/api/allegro/products', async (req, res) => {
           isDraft,
           delivery: { shippingRates: { id: 'smart', name: 'Allegro Smart! DPD/InPost' }, handlingTime: 'PT24H' },
           sku: String(o.external?.id || `ALLG-SKU-${id}`),
-          ean: String(o.ean || o.parameters?.find((p: any) => p.id === '225693')?.values?.[0] || '5909876543210'),
+          ean: String(o.ean || o.parameters?.find((p: any) => p.id === '225693')?.values?.[0] || '5909876543213'),
           smartEligible: true,
           channelSync: { allegro: 'synced', emag: 'unlinked', baselinker: 'unlinked' },
           updatedAt: new Date().toISOString()
@@ -4377,6 +4377,25 @@ async function resolveAllegroShippingRate(apiUrl: string, token: string, candida
   };
 }
 
+// Helper: Calculate GS1 Check Digit and Validate/Fix GTIN (EAN-8, GTIN-12, EAN-13, GTIN-14)
+export function validateAndFixGtin(gtin?: string): string | null {
+  if (!gtin) return null;
+  const cleaned = String(gtin).replace(/\D/g, '');
+  if (!/^\d{8}$|^\d{12,14}$/.test(cleaned)) return null;
+
+  const prefix = cleaned.slice(0, -1);
+  const len = prefix.length;
+  let sum = 0;
+  for (let i = 0; i < len; i++) {
+    const digit = parseInt(prefix[len - 1 - i], 10);
+    const weight = (i % 2 === 0) ? 3 : 1;
+    sum += digit * weight;
+  }
+  const expectedCheck = (10 - (sum % 10)) % 10;
+  return `${prefix}${expectedCheck}`;
+}
+
+
 // Helper: Sanitize & Format Offer Description according to Allegro REST API strict rules:
 // - Allowed tags: <h1>, <h2>, <p>, <b>, <ul>, <ol>, <li>
 // - Disallowed: <h3>-<h6> (converted to <h2>), <strong> (converted to <b>), <br> (converted to separate <p>)
@@ -4712,7 +4731,8 @@ app.post('/api/allegro/publish-offer', async (req, res) => {
   const priceAmount = String(parseFloat(String(offer.price || 49.99)).toFixed(2));
   const stockAmount = Math.max(1, parseInt(String(offer.stock || 10), 10));
   const categoryId = String(offer.categoryId).trim();
-  const ean = String(offer.ean || '').trim();
+  const rawEan = String(offer.ean || '').trim();
+  const validEan = validateAndFixGtin(rawEan);
   const rawImageUrl = offer.primaryImage || (Array.isArray(offer.images) && offer.images[0]) || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80';
 
   // 1. Image upload to Allegro CDN
@@ -4730,11 +4750,12 @@ app.post('/api/allegro/publish-offer', async (req, res) => {
 
   if (!matchedCatalogProductId) {
     try {
-      if (ean && /^\d{8,14}$/.test(ean)) {
-        const prodRes = await fetch(`${apiUrl}/sale/products?ean=${encodeURIComponent(ean)}`, {
+      if (validEan) {
+        const prodRes = await fetch(`${apiUrl}/sale/products?ean=${encodeURIComponent(validEan)}`, {
           headers: {
             'Authorization': `Bearer ${accessToken.trim()}`,
-            'Accept': 'application/vnd.allegro.public.v1+json'
+            'Accept': 'application/vnd.allegro.public.v1+json',
+            'Accept-Language': 'pl-PL'
           }
         });
         const prodData = await prodRes.json().catch(() => null);
@@ -4748,7 +4769,8 @@ app.post('/api/allegro/publish-offer', async (req, res) => {
         const prodRes2 = await fetch(`${apiUrl}/sale/products?phrase=${encodeURIComponent(searchPhrase)}`, {
           headers: {
             'Authorization': `Bearer ${accessToken.trim()}`,
-            'Accept': 'application/vnd.allegro.public.v1+json'
+            'Accept': 'application/vnd.allegro.public.v1+json',
+            'Accept-Language': 'pl-PL'
           }
         });
         const prodData2 = await prodRes2.json().catch(() => null);
@@ -4777,8 +4799,8 @@ app.post('/api/allegro/publish-offer', async (req, res) => {
   } else {
     // Creating proposal product
     const productParams: any[] = [];
-    if (ean && /^\d{8,14}$/.test(ean)) {
-      productParams.push({ id: '225693', values: [ean] });
+    if (validEan) {
+      productParams.push({ id: '225693', values: [validEan] });
     }
     productSet = [
       {
