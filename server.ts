@@ -4377,6 +4377,116 @@ async function resolveAllegroShippingRate(apiUrl: string, token: string, candida
   };
 }
 
+// Helper: Sanitize & Format Offer Description according to Allegro REST API strict rules:
+// - Allowed tags: <h1>, <h2>, <p>, <b>, <ul>, <ol>, <li>
+// - Disallowed: <h3>-<h6> (converted to <h2>), <strong> (converted to <b>), <br> (converted to separate <p>)
+// - Tags must not contain ANY attributes (style, class, id, etc.)
+// - Headings (h1, h2) and lists (ul, ol) CANNOT be nested inside <p> (Allegro error: Invalid tag: "h2", allowed tags: {b})
+// - Paragraphs (<p>) cannot be nested inside <p>
+export function sanitizeAllegroDescription(rawDesc: any, defaultTitle: string): { sections: Array<{ items: Array<{ type: string; content: string }> }> } {
+  let inputHtml = '';
+  if (typeof rawDesc === 'object' && rawDesc !== null && Array.isArray(rawDesc.sections)) {
+    inputHtml = rawDesc.sections
+      .flatMap((sec: any) => sec.items || [])
+      .filter((item: any) => item.type === 'TEXT')
+      .map((item: any) => item.content)
+      .join('\n');
+  } else if (typeof rawDesc === 'string') {
+    inputHtml = rawDesc;
+  }
+  inputHtml = (inputHtml || '').trim();
+
+  const cleanHeader = defaultTitle.replace(/<[^>]*>/g, '').trim().slice(0, 75);
+
+  if (!inputHtml) {
+    return {
+      sections: [{
+        items: [{
+          type: 'TEXT',
+          content: `<h1>${cleanHeader}</h1><p>Wysokiej jakości produkt z gwarancją producenta. Szybka i bezpieczna wysyłka.</p>`
+        }]
+      }]
+    };
+  }
+
+  // 1. Remove comments, scripts, styles
+  let html = inputHtml
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '');
+
+  // 2. Convert line break tags <br>, <br/>, <br /> to paragraph split
+  html = html.replace(/<br\s*\/?>/gi, '</p><p>');
+
+  // 3. Map headings <h3>-<h6> to <h2>
+  html = html.replace(/<\/?h[3-6][^>]*>/gi, (m) => m.startsWith('</') ? '</h2>' : '<h2>');
+
+  // 4. Map strong to b
+  html = html.replace(/<\/?strong[^>]*>/gi, (m) => m.startsWith('</') ? '</b>' : '<b>');
+
+  // 5. Strip all tag attributes: e.g. <p class="..."> -> <p>
+  html = html.replace(/<(\/?)(h1|h2|p|b|ul|ol|li)(?:\s+[^>]*)?>/gi, '<$1$2>');
+
+  // 6. Strip all other disallowed HTML tags (div, span, a, font, img, etc.)
+  html = html.replace(/<(?!\/?(?:h1|h2|p|b|ul|ol|li)\b)[^>]+>/gi, '');
+
+  // 7. If text has no allowed tags, treat as plain text paragraphs
+  if (!/<\/?(?:h1|h2|p|b|ul|ol|li)\b/i.test(html)) {
+    const paragraphs = html
+      .split(/\n+/)
+      .map(p => p.trim())
+      .filter(Boolean);
+    const body = paragraphs.length > 0
+      ? paragraphs.map(p => `<p>${p}</p>`).join('')
+      : '<p>Wysokiej jakości produkt z gwarancją producenta. Szybka i bezpieczna wysyłka.</p>';
+    return {
+      sections: [{
+        items: [{
+          type: 'TEXT',
+          content: `<h1>${cleanHeader}</h1>${body}`
+        }]
+      }]
+    };
+  }
+
+  // 8. Fix headers or lists nested inside <p>...</p> (resolves "Invalid tag: h2, allowed tags: {b}")
+  for (let round = 0; round < 3; round++) {
+    html = html.replace(/<p>\s*<p>/gi, '<p>').replace(/<\/p>\s*<\/p>/gi, '</p>');
+    html = html.replace(/<p>((?:(?!<\/p>|<p>).)*?)<(h1|h2|ul|ol)>([\s\S]*?)<\/\2>((?:(?!<\/p>|<p>).)*?)<\/p>/gi, 
+      (_match, before, tag, inner, after) => {
+        const p1 = before.trim() ? `<p>${before.trim()}</p>` : '';
+        const block = `<${tag}>${inner.trim()}</${tag}>`;
+        const p2 = after.trim() ? `<p>${after.trim()}</p>` : '';
+        return `${p1}${block}${p2}`;
+      }
+    );
+  }
+
+  // 9. Remove empty tags
+  html = html.replace(/<(p|h1|h2|b|li)>\s*<\/\1>/gi, '');
+
+  // 10. Clean whitespace between tags
+  html = html.replace(/>\s+</g, '><').trim();
+
+  // If text starts or ends without tags, wrap properly
+  if (!html.startsWith('<')) {
+    html = `<p>${html}`;
+  }
+  if (!html.endsWith('>')) {
+    html = `${html}</p>`;
+  }
+
+  return {
+    sections: [{
+      items: [{
+        type: 'TEXT',
+        content: html
+      }]
+    }]
+  };
+}
+
+
 // Endpoint: Fetch Allegro Shipping Rates (Kargo Şablonları Listesi)
 app.all(['/api/allegro/shipping-rates'], async (req, res) => {
   const reqToken = (req.body?.accessToken || req.query?.accessToken || '') as string;
@@ -4655,20 +4765,8 @@ app.post('/api/allegro/publish-offer', async (req, res) => {
     ];
   }
 
-  // 5. Construct description
-  const descText = offer.description || offer.name || cleanTitle;
-  const descriptionPayload = {
-    sections: [
-      {
-        items: [
-          {
-            type: 'TEXT',
-            content: `<h2>${cleanTitle}</h2><p>${descText.replace(/\n/g, '<br/>')}</p>`
-          }
-        ]
-      }
-    ]
-  };
+  // 5. Construct description (Strictly formatted & sanitized for Allegro REST API)
+  const descriptionPayload = sanitizeAllegroDescription(offer.description || offer.name, cleanTitle);
 
   // 6. Build compliant POST /sale/product-offers payload
   const productOfferPayload: any = {

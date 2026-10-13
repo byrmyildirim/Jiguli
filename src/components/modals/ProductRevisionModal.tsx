@@ -163,10 +163,15 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
   );
   const [allegroShippingRates, setAllegroShippingRates] = useState<any[]>([]);
   const [isLoadingShippingRates, setIsLoadingShippingRates] = useState(false);
-  const [allegroDescription, setAllegroDescription] = useState<string>(
-    offer.description?.sections?.[0]?.items?.[0]?.content ||
-    `<h2>${offer.name}</h2><p>Wysokiej jakości produkt z gwarancją producenta. Szybka i bezpieczna wysyłka.</p>`
-  );
+  const [allegroDescription, setAllegroDescription] = useState<string>(() => {
+    if (typeof offer.description === 'string' && offer.description.trim()) {
+      return offer.description;
+    }
+    if (offer.description?.sections?.[0]?.items?.[0]?.content) {
+      return offer.description.sections[0].items[0].content;
+    }
+    return `<h1>${offer.name}</h1><p>Wysokiej jakości produkt z gwarancją producenta. Szybka i bezpieczna wysyłka.</p>`;
+  });
 
   // Allegro Category Search & Suggestions
   const [allegroCategorySearch, setAllegroCategorySearch] = useState('');
@@ -1954,15 +1959,23 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
 
                 {/* BÖLÜM 6: LEHÇE ÜRÜN AÇIKLAMASI */}
                 <div>
-                  <label className={`text-xs font-bold block mb-1.5 ${c.label}`}>
-                    Lehçe Ürün Açıklaması (HTML Destekli)
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className={`text-xs font-bold ${c.label}`}>
+                      Lehçe Ürün Açıklaması (HTML Destekli)
+                    </label>
+                    <span className="text-[10px] text-zinc-400">
+                      İzin verilen etiketler: &lt;h1&gt;, &lt;h2&gt;, &lt;p&gt;, &lt;b&gt;, &lt;ul&gt;, &lt;ol&gt;, &lt;li&gt;
+                    </span>
+                  </div>
                   <textarea
                     rows={4}
                     value={allegroDescription}
                     onChange={(e) => setAllegroDescription(e.target.value)}
                     className={`w-full text-xs font-mono px-3.5 py-2.5 rounded-xl border ${c.inputBg}`}
                   />
+                  <p className={`text-[10px] mt-1 ${c.hint}`}>
+                    Allegro kuralları: Başlıklar (&lt;h1&gt;, &lt;h2&gt;) &lt;p&gt; etiketi içine gömülemez. Sistem gönderim sırasında otomatik olarak etiketleri kurallara uygun biçimlendirir.
+                  </p>
                 </div>
 
                 {/* BÖLÜM 7: CANLI YAYINA ALMA AKSİYON KARTI */}
