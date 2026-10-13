@@ -407,6 +407,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
           platform: 'allegro'
         });
 
+        if (data?.tokenRefreshed && data?.access_token) {
+          const updated = {
+            ...creds.allegro,
+            accessToken: data.access_token,
+            tokenExpiresAt: Date.now() + (data.expiresIn || 43199) * 1000
+          };
+          setCreds(prev => ({ ...prev, allegro: updated }));
+          store.savePlatformCredentials({ allegro: updated });
+          store.updateAllegroConfig({
+            bearerToken: data.access_token,
+            isConnected: true,
+            tokenExpiresAt: updated.tokenExpiresAt
+          });
+          showNotice('Eski token otomatik güncellendi ve yeni Allegro canlı tokenı kaydedildi!');
+        }
+
         setTestingPlatform(null);
         setPingStatus(prev => ({
           ...prev,
@@ -1798,7 +1814,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-700">Doğrudan Bearer Token (Opsiyonel):</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-700">Doğrudan Bearer Token (Opsiyonel):</label>
+                  {allegroToken && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAllegroToken('');
+                        const updated = { ...creds.allegro, accessToken: '' };
+                        setCreds(prev => ({ ...prev, allegro: updated }));
+                        store.savePlatformCredentials({ allegro: updated });
+                        store.updateAllegroConfig({ bearerToken: '', isConnected: Boolean(creds.allegro.clientId) });
+                        showNotice('Eski Allegro tokenı temizlendi.');
+                      }}
+                      className="text-[10px] text-rose-600 hover:underline cursor-pointer"
+                    >
+                      Tokenı Temizle
+                    </button>
+                  )}
+                </div>
                 <input
                   type="password"
                   value={allegroToken}
@@ -1806,6 +1840,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
                   placeholder="Kişisel OAuth token (Varsa)..."
                   className="w-full border border-slate-200 focus:border-[#FF5A00] rounded-xl p-2.5 text-xs font-mono focus:outline-none bg-slate-50"
                 />
+                <div className="flex items-center justify-between pt-0.5">
+                  <p className="text-[10px] text-slate-500">
+                    Süre: <strong>12 saat</strong> geçerlidir (dolduğunda 401 verir).
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleFetchAllegroOAuthToken}
+                    disabled={activeTransfer?.loading && activeTransfer.platform === 'allegro' && activeTransfer.action === 'token'}
+                    className="text-[10px] font-bold text-[#FF5A00] hover:text-[#e04f00] hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${activeTransfer?.loading && activeTransfer.platform === 'allegro' && activeTransfer.action === 'token' ? 'animate-spin' : ''}`} />
+                    <span>Yeni Canlı Token Üret</span>
+                  </button>
+                </div>
               </div>
             </div>
 

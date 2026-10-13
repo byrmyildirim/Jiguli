@@ -3250,11 +3250,50 @@ app.post('/api/allegro/test-credentials', async (req, res) => {
         });
       } else {
         const errJson = await pingRes.json().catch(() => null);
+        const errDesc = String(errJson?.error_description || errJson?.error || '');
+        const isExpired = pingRes.status === 401 && (
+          errDesc.toLowerCase().includes('expired') ||
+          errJson?.error === 'invalid_token'
+        );
+
+        // If expired and Client ID & Secret are available, automatically fetch a fresh token!
+        if (isExpired && clientId && clientSecret) {
+          try {
+            const basicAuth = Buffer.from(`${clientId.trim()}:${clientSecret.trim()}`).toString('base64');
+            const tokenRes = await fetch(`${authUrl}?grant_type=client_credentials`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Basic ${basicAuth}`,
+                'Content-Type': 'application/x-www-form-urlencoded'
+              }
+            });
+            const tokenData = await tokenRes.json().catch(() => null);
+            if (tokenRes.ok && tokenData?.access_token) {
+              const refreshDurationMs = Date.now() - startTime;
+              return res.json({
+                success: true,
+                status: 200,
+                durationMs: refreshDurationMs,
+                tokenRefreshed: true,
+                access_token: tokenData.access_token,
+                expiresIn: tokenData.expires_in,
+                tokenExpiresAt: Math.floor(Date.now() / 1000) + (tokenData.expires_in || 43199),
+                message: `Önceki tokenın süresi (12 saat) dolmuştu. Client ID ve Secret kullanılarak yeni canlı Allegro (${environment}) tokenı otomatik alındı ve doğrulandı (HTTP 200 OK)!`
+              });
+            }
+          } catch (autoErr: any) {
+            console.warn('[Auto Token Fetch Error]:', autoErr?.message || autoErr);
+          }
+        }
+
         return res.json({
           success: false,
           status: pingRes.status,
           durationMs,
-          message: `Allegro Token Hatası (${pingRes.status}): ${errJson?.error_description || errJson?.error || 'Token süresi dolmuş veya yetkisiz'}`
+          isExpired,
+          message: isExpired
+            ? `Allegro Token Süresi Dolmuş (401): Allegro access tokenları güvenlik gereği 12 saat geçerlidir. Client ID & Secret ile otomatik yenileyebilir veya "OAuth ile Bağlan" butonundan yeni token alabilirsiniz.`
+            : `Allegro Token Hatası (${pingRes.status}): ${errDesc || 'Token süresi dolmuş veya yetkisiz'}`
         });
       }
     } catch (err: any) {
