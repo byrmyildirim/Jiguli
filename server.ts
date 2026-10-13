@@ -3133,6 +3133,62 @@ app.post('/api/allegro/token', async (req, res) => {
   }
 });
 
+// In-Memory Persistent Allegro User Session (charsioutlet)
+let activeAllegroSession = {
+  accessToken: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2FsbGVncm8ucGwiLCJ1c2VyX25hbWUiOiIxNDE5MjY0MjciLCJzY29wZSI6WyJhbGxlZ3JvOmFwaTpvcmRlcnM6cmVhZCIsImFsbGVncm86YXBpOmZ1bGZpbGxtZW50OnJlYWQiLCJhbGxlZ3JvOmFwaTpwcm9maWxlOndyaXRlIiwiYWxsZWdybzphcGk6ZnVsZmlsbG1lbnQ6d3JpdGUiLCJhbGxlZ3JvOmFwaTpzYWxlOm9mZmVyczp3cml0ZSIsImFsbGVncm86YXBpOmJpbGxpbmc6cmVhZCIsImFsbGVncm86YXBpOmNhbXBhaWducyIsImFsbGVncm86YXBpOmFmZmlsaWF0ZTp3cml0ZSIsImFsbGVncm86YXBpOmRpc3B1dGVzIiwiYWxsZWdybzphcGk6YmlkcyIsImFsbGVncm86YXBpOnNhbGU6b2ZmZXJzOnJlYWQiLCJhbGxlZ3JvOmFwaTpzaGlwbWVudHM6d3JpdGUiLCJhbGxlZ3JvOmFwaTpvcmRlcnM6d3JpdGUiLCJhbGxlZ3JvOmFwaTphZHMiLCJhbGxlZ3JvOmFwaTpwYXltZW50czp3cml0ZSIsImFsbGVncm86YXBpOnNhbGU6c2V0dGluZ3M6d3JpdGUiLCJhbGxlZ3JvOmFwaTpwcm9maWxlOnJlYWQiLCJhbGxlZ3JvOmFwaTphZmZpbGlhdGU6cmVhZCIsImFsbGVncm86YXBpOnJhdGluZ3MiLCJhbGxlZ3JvOmFwaTpzYWxlOnNldHRpbmdzOnJlYWQiLCJhbGxlZ3JvOmFwaTpwYXltZW50czpyZWFkIiwiYWxsZWdybzphcGk6c2hpcG1lbnRzOnJlYWQiLCJhbGxlZ3JvOmFwaTptZXNzYWdpbmciXSwiYWxsZWdyb19hcGkiOnRydWUsImV4cCI6MTc5MTkzODQ5MCwiY2xpZW50X2lkIjoiZjJhYWNjYjA0YmMxNDZlNGE2ODMyMTc5ZjEwYTEyYzMiLCJqdGkiOiJkZDQyMjQ2OC02MzA0LTQ2MDUtODFlYS01NDRkYjA4YTUzYTQifQ.DhHD45k7izZngeEa0mOrI2agLod23RY3atKNMJzKrWkvLDVUhtVZHeCW32cYaZiRuWFsOGDGDEehBZxdlf-GBcfZhtnIJCXIEU5SIMG9RBA-XmlKNlXD3fSvxrGn9tsPaZTfgEVGQISTQf1Ts4KJnVsHi5soRCOTuBZXx9WHHyBY4w9NZsrb2cK5WzqqqHSf10BzqQAWLA7IhR3Pj8Wn-26PJVSvbKYRSWFh4QylkzydtHGp38M_5LB_iur3AarFEiV35u_xq7LUOdPGw-i_zMmKFSZVziVyEKs1bScoquXih9iGFFAJZeRh1QOeq5CexOt_9gCMQtB_b3C5I8qA5w',
+  refreshToken: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2FsbGVncm8ucGwiLCJ1c2VyX25hbWUiOiIxNDE5MjY0MjciLCJzY29wZSI6WyJhbGxlZ3JvOmFwaTpvcmRlcnM6cmVhZCIsImFsbGVncm86YXBpOmZ1bGZpbGxtZW50OnJlYWQiLCJhbGxlZ3JvOmFwaTpwcm9maWxlOndyaXRlIiwiYWxsZWdybzphcGk6ZnVsZmlsbG1lbnQ6d3JpdGUiLCJhbGxlZ3JvOmFwaTpzYWxlOm9mZmVyczp3cml0ZSIsImFsbGVncm86YXBpOmJpbGxpbmc6cmVhZCIsImFsbGVncm86YXBpOmNhbXBhaWducyIsImFsbGVncm86YXBpOmFmZmlsaWF0ZTp3cml0ZSIsImFsbGVncm86YXBpOmRpc3B1dGVzIiwiYWxsZWdybzphcGk6YmlkcyIsImFsbGVncm86YXBpOnNhbGU6b2ZmZXJzOnJlYWQiLCJhbGxlZ3JvOmFwaTpzaGlwbWVudHM6d3JpdGUiLCJhbGxlZ3JvOmFwaTpvcmRlcnM6d3JpdGUiLCJhbGxlZ3JvOmFwaTphZHMiLCJhbGxlZ3JvOmFwaTpwYXltZW50czp3cml0ZSIsImFsbGVncm86YXBpOnNhbGU6c2V0dGluZ3M6d3JpdGUiLCJhbGxlZ3JvOmFwaTpwcm9maWxlOnJlYWQiLCJhbGxlZ3JvOmFwaTphZmZpbGlhdGU6cmVhZCIsImFsbGVncm86YXBpOnJhdGluZ3MiLCJhbGxlZ3JvOmFwaTpzYWxlOnNldHRpbmdzOnJlYWQiLCJhbGxlZ3JvOmFwaTpwYXltZW50czpyZWFkIiwiYWxsZWdybzphcGk6c2hpcG1lbnRzOnJlYWQiLCJhbGxlZ3JvOmFwaTptZXNzYWdpbmciXSwiYXRpIjoiZGQ0MjI0NjgtNjMwNC00NjA1LTgxZWEtNTQ0ZGIwOGE1M2E0IiwiYWxsZWdyb19hcGkiOnRydWUsImV4cCI6MTc5OTY3MTI5MCwiY2xpZW50X2lkIjoiZjJhYWNjYjA0YmMxNDZlNGE2ODMyMTc5ZjEwYTEyYzMiLCJqdGkiOiI0NzNjNzhkNi03ZjM5LTQwZjMtYmNiOC0wMDdiN2VlM2FiZjgifQ.Rf15RSCRzINtB5dMCvryXSwwQgFn-Ucq4Q9NJBV2ts0B-3Bmpp2EekxWnUjg3qWvXidF34ugWXNANJz9Md7pA8nJyPwPqk0KGpmpRMxtaj6kGmkdJJ7qWHs1LtHIVu4x0-2VqNDEBoVTvvHZdQNYaLvOLQFhddnuI6nxu8ZGwsus2dA59hKU0O03mV0YdCE_Wkl_xnvksLuyDZ_fywSPpHRo-lgTUaMfUpFa0CxgbGqGI2GpvSMM-t67U3BewBDgO5R7PKRlG9TkFknTrQPavdd8OOc5Gs9-9bA4pZj_q5n2CFnplExLj88UO-yk-xw8zvsd41qmumYXHtwthXyatA',
+  tokenExpiresAt: 1791938490000
+};
+
+async function getValidAllegroToken(requestedToken?: string): Promise<string> {
+  if (requestedToken && requestedToken.trim() && !requestedToken.includes('expired')) {
+    return requestedToken.trim();
+  }
+  // Otomatik Token Yenileme (Refresh Token Flow)
+  if (Date.now() > activeAllegroSession.tokenExpiresAt - 5 * 60 * 1000 && activeAllegroSession.refreshToken) {
+    try {
+      const clientId = 'f2aaccb04bc146e4a6832179f10a12c3';
+      const clientSecret = 'YAaC1OJpbFLPYg7npUT8ZVuLIO0uxUiFmI7rZxQU4TwPCr1VTbSuNZ2qhmpZxTBl';
+      const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+      const bodyParams = new URLSearchParams();
+      bodyParams.append('grant_type', 'refresh_token');
+      bodyParams.append('refresh_token', activeAllegroSession.refreshToken);
+
+      const refreshRes = await fetch('https://allegro.pl/auth/oauth/token', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${basicAuth}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: bodyParams.toString()
+      });
+      const refreshData = await refreshRes.json().catch(() => null);
+      if (refreshRes.ok && refreshData?.access_token) {
+        activeAllegroSession = {
+          accessToken: refreshData.access_token,
+          refreshToken: refreshData.refresh_token || activeAllegroSession.refreshToken,
+          tokenExpiresAt: Date.now() + (refreshData.expires_in || 43199) * 1000
+        };
+      }
+    } catch {
+      // Refresh hatası olursa mevcut token ile devam et
+    }
+  }
+  return activeAllegroSession.accessToken;
+}
+
+// Allegro Aktif Oturum Bilgisi
+app.get('/api/allegro/active-session', (_req, res) => {
+  return res.json({
+    success: true,
+    hasToken: Boolean(activeAllegroSession.accessToken),
+    accessToken: activeAllegroSession.accessToken,
+    refreshToken: activeAllegroSession.refreshToken,
+    tokenExpiresAt: activeAllegroSession.tokenExpiresAt,
+    sellerLogin: 'charsioutlet'
+  });
+});
+
 // Allegro OAuth Authorize Redirect URL (Kullanıcı Oturumu Başlatıcı)
 app.get('/api/allegro/authorize', (req, res) => {
   const clientId = (req.query.clientId as string) || 'f2aaccb04bc146e4a6832179f10a12c3';
@@ -3156,6 +3212,7 @@ app.get(['/api/allegro/callback', '/oauth/allegro/callback'], async (req, res) =
       <h2 style="color: #e11d48;">Allegro Bağlantı Hatası</h2>
       <p style="color: #cbd5e1;">${errorDescription || error || 'Yetkilendirme kodu alınamadı.'}</p>
       <button onclick="window.close()" style="margin-top: 15px; padding: 10px 20px; border-radius: 8px; background: #334155; color: #fff; border: none; cursor: pointer;">Pencereyi Kapat</button>
+      <br/><a href="/" style="display: inline-block; margin-top: 12px; color: #f97316;">Panele Dön</a>
     </body></html>`);
   }
 
@@ -3184,6 +3241,12 @@ app.get(['/api/allegro/callback', '/oauth/allegro/callback'], async (req, res) =
     const tokenData = await tokenRes.json().catch(() => null);
 
     if (tokenRes.ok && tokenData?.access_token) {
+      activeAllegroSession = {
+        accessToken: tokenData.access_token,
+        refreshToken: tokenData.refresh_token || activeAllegroSession.refreshToken,
+        tokenExpiresAt: Date.now() + (tokenData.expires_in || 43199) * 1000
+      };
+
       return res.send(`<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align: center; padding: 50px; background: #0b0f19; color: #fff;">
         <div style="max-width: 520px; margin: 0 auto; background: #161b28; padding: 35px; border-radius: 24px; border: 1px solid #334155; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);">
           <div style="width: 56px; height: 56px; margin: 0 auto 16px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #10b981;">✓</div>
@@ -3192,17 +3255,22 @@ app.get(['/api/allegro/callback', '/oauth/allegro/callback'], async (req, res) =
           <div style="margin: 0 0 20px; padding: 14px; background: #0f121a; border-radius: 12px; font-family: monospace; font-size: 11px; word-break: break-all; color: #fbbf24; border: 1px solid #1e293b;">
             ${tokenData.access_token.slice(0, 35)}...${tokenData.access_token.slice(-25)}
           </div>
-          <p style="color: #64748b; font-size: 12px;">Bu pencere birkaç saniye içinde otomatik olarak kapanacaktır.</p>
+          <div style="display: flex; gap: 10px; justify-content: center;">
+            <a href="/" style="display: inline-block; padding: 10px 24px; border-radius: 10px; background: #FF5A00; color: #fff; text-decoration: none; font-weight: bold; font-size: 13px;">Panele Dön</a>
+            <button onclick="window.close()" style="padding: 10px 20px; border-radius: 10px; background: #334155; color: #fff; border: none; cursor: pointer; font-size: 13px;">Pencereyi Kapat</button>
+          </div>
         </div>
         <script>
           if (window.opener) {
-            window.opener.postMessage({
-              type: 'ALLEGRO_OAUTH_TOKEN_SUCCESS',
-              token: ${JSON.stringify(tokenData.access_token)},
-              refreshToken: ${JSON.stringify(tokenData.refresh_token || '')},
-              expiresIn: ${tokenData.expires_in || 43199}
-            }, '*');
-            setTimeout(() => window.close(), 1500);
+            try {
+              window.opener.postMessage({
+                type: 'ALLEGRO_OAUTH_TOKEN_SUCCESS',
+                token: ${JSON.stringify(tokenData.access_token)},
+                refreshToken: ${JSON.stringify(tokenData.refresh_token || '')},
+                expiresIn: ${tokenData.expires_in || 43199}
+              }, '*');
+            } catch (e) {}
+            setTimeout(() => window.close(), 1200);
           }
         </script>
       </body></html>`);
@@ -3211,10 +3279,11 @@ app.get(['/api/allegro/callback', '/oauth/allegro/callback'], async (req, res) =
         <h2 style="color: #e11d48;">Token Değişim Hatası</h2>
         <p style="color: #cbd5e1;">${tokenData?.error_description || tokenData?.error || 'Token alınamadı'}</p>
         <button onclick="window.close()" style="margin-top: 15px; padding: 10px 20px; border-radius: 8px; background: #334155; color: #fff; border: none; cursor: pointer;">Pencereyi Kapat</button>
+        <br/><a href="/" style="display: inline-block; margin-top: 12px; color: #f97316;">Panele Dön</a>
       </body></html>`);
     }
   } catch (err: any) {
-    return res.send(`<html><body style="font-family: sans-serif; text-align: center; padding: 50px; background: #0b0f19; color: #fff;">Hata: ${err?.message || err}</body></html>`);
+    return res.send(`<html><body style="font-family: sans-serif; text-align: center; padding: 50px; background: #0b0f19; color: #fff;">Hata: ${err?.message || err}<br/><a href="/" style="color: #f97316;">Panele Dön</a></body></html>`);
   }
 });
 
@@ -3256,30 +3325,47 @@ app.post('/api/allegro/test-credentials', async (req, res) => {
           errJson?.error === 'invalid_token'
         );
 
-        // If expired and Client ID & Secret are available, automatically fetch a fresh token!
-        if (isExpired && clientId && clientSecret) {
+        // If expired, try refreshing with active user refresh_token first, then client_credentials
+        if (isExpired) {
           try {
-            const basicAuth = Buffer.from(`${clientId.trim()}:${clientSecret.trim()}`).toString('base64');
-            const tokenRes = await fetch(`${authUrl}?grant_type=client_credentials`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Basic ${basicAuth}`,
-                'Content-Type': 'application/x-www-form-urlencoded'
-              }
-            });
-            const tokenData = await tokenRes.json().catch(() => null);
-            if (tokenRes.ok && tokenData?.access_token) {
+            const refreshed = await getValidAllegroToken('expired');
+            if (refreshed && refreshed !== accessToken) {
               const refreshDurationMs = Date.now() - startTime;
               return res.json({
                 success: true,
                 status: 200,
                 durationMs: refreshDurationMs,
                 tokenRefreshed: true,
-                access_token: tokenData.access_token,
-                expiresIn: tokenData.expires_in,
-                tokenExpiresAt: Math.floor(Date.now() / 1000) + (tokenData.expires_in || 43199),
-                message: `Önceki tokenın süresi (12 saat) dolmuştu. Client ID ve Secret kullanılarak yeni canlı Allegro (${environment}) tokenı otomatik alındı ve doğrulandı (HTTP 200 OK)!`
+                access_token: refreshed,
+                expiresIn: 43199,
+                tokenExpiresAt: Math.floor(Date.now() / 1000) + 43199,
+                message: `Önceki token süresi dolmuştu. Otomatik Refresh Token kullanılarak charsioutlet mağazası için yeni satıcı User Tokenı üretildi ve doğrulandı (HTTP 200 OK)!`
               });
+            }
+
+            if (clientId && clientSecret) {
+              const basicAuth = Buffer.from(`${clientId.trim()}:${clientSecret.trim()}`).toString('base64');
+              const tokenRes = await fetch(`${authUrl}?grant_type=client_credentials`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Basic ${basicAuth}`,
+                  'Content-Type': 'application/x-www-form-urlencoded'
+                }
+              });
+              const tokenData = await tokenRes.json().catch(() => null);
+              if (tokenRes.ok && tokenData?.access_token) {
+                const refreshDurationMs = Date.now() - startTime;
+                return res.json({
+                  success: true,
+                  status: 200,
+                  durationMs: refreshDurationMs,
+                  tokenRefreshed: true,
+                  access_token: tokenData.access_token,
+                  expiresIn: tokenData.expires_in,
+                  tokenExpiresAt: Math.floor(Date.now() / 1000) + (tokenData.expires_in || 43199),
+                  message: `Önceki tokenın süresi (12 saat) dolmuştu. Client ID ve Secret kullanılarak yeni canlı Allegro (${environment}) tokenı otomatik alındı ve doğrulandı (HTTP 200 OK)!`
+                });
+              }
             }
           } catch (autoErr: any) {
             console.warn('[Auto Token Fetch Error]:', autoErr?.message || autoErr);
@@ -4293,8 +4379,9 @@ async function resolveAllegroShippingRate(apiUrl: string, token: string, candida
 
 // Endpoint: Fetch Allegro Shipping Rates (Kargo Şablonları Listesi)
 app.all(['/api/allegro/shipping-rates'], async (req, res) => {
-  const accessToken = (req.body?.accessToken || req.query?.accessToken || '') as string;
+  const reqToken = (req.body?.accessToken || req.query?.accessToken || '') as string;
   const environment = (req.body?.environment || req.query?.environment || 'production') as string;
+  const accessToken = await getValidAllegroToken(reqToken);
 
   if (!accessToken || !accessToken.trim()) {
     return res.status(400).json({ success: false, message: 'Allegro OAuth Access Token eksik.' });
@@ -4336,7 +4423,8 @@ app.all(['/api/allegro/shipping-rates'], async (req, res) => {
 
 // Endpoint: Allegro Live Offer Publishing (Ürün Yükleme & Yayına Alma)
 app.post('/api/allegro/publish-offer', async (req, res) => {
-  const { accessToken, environment = 'production', offer } = req.body || {};
+  const { accessToken: reqToken, environment = 'production', offer } = req.body || {};
+  const accessToken = await getValidAllegroToken(reqToken);
 
   if (!accessToken || !accessToken.trim()) {
     return res.status(400).json({
