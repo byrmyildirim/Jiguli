@@ -4383,6 +4383,7 @@ async function resolveAllegroShippingRate(apiUrl: string, token: string, candida
 // - Tags must not contain ANY attributes (style, class, id, etc.)
 // - Headings (h1, h2) and lists (ul, ol) CANNOT be nested inside <p> (Allegro error: Invalid tag: "h2", allowed tags: {b})
 // - Paragraphs (<p>) cannot be nested inside <p>
+// - Ampersands (&) MUST be escaped as &amp;. Allowed entities: &amp;, &nbsp;, &quot;, &apos;, &lt;, &gt;, &#160;
 export function sanitizeAllegroDescription(rawDesc: any, defaultTitle: string): { sections: Array<{ items: Array<{ type: string; content: string }> }> } {
   let inputHtml = '';
   if (typeof rawDesc === 'object' && rawDesc !== null && Array.isArray(rawDesc.sections)) {
@@ -4396,6 +4397,33 @@ export function sanitizeAllegroDescription(rawDesc: any, defaultTitle: string): 
   }
   inputHtml = (inputHtml || '').trim();
 
+  // Helper to ensure all & characters comply with Allegro description XML entity rules:
+  // Allegro allows ONLY: &amp;, &nbsp;, &quot;, &apos;, &lt;, &gt;, &#160;
+  const escapeAllegroEntities = (str: string): string => {
+    const commonEntities: Record<string, string> = {
+      '&copy;': '©',
+      '&reg;': '®',
+      '&trade;': '™',
+      '&deg;': '°',
+      '&bull;': '•',
+      '&ndash;': '–',
+      '&mdash;': '—',
+      '&euro;': '€',
+      '&pound;': '£',
+      '&yen;': '¥',
+      '&cent;': '¢',
+      '&plusmn;': '±',
+      '&micro;': 'µ',
+      '&hellip;': '...'
+    };
+    let out = str;
+    for (const [entity, replacement] of Object.entries(commonEntities)) {
+      out = out.split(entity).join(replacement);
+    }
+    // Replace any raw & not part of allowed entities:
+    return out.replace(/&(?!((?:amp|nbsp|quot|apos|lt|gt|#160);))/gi, '&amp;');
+  };
+
   const cleanHeader = defaultTitle.replace(/<[^>]*>/g, '').trim().slice(0, 75);
 
   if (!inputHtml) {
@@ -4403,7 +4431,7 @@ export function sanitizeAllegroDescription(rawDesc: any, defaultTitle: string): 
       sections: [{
         items: [{
           type: 'TEXT',
-          content: `<h1>${cleanHeader}</h1><p>Wysokiej jakości produkt z gwarancją producenta. Szybka i bezpieczna wysyłka.</p>`
+          content: escapeAllegroEntities(`<h1>${cleanHeader}</h1><p>Wysokiej jakości produkt z gwarancją producenta. Szybka i bezpieczna wysyłka.</p>`)
         }]
       }]
     };
@@ -4443,7 +4471,7 @@ export function sanitizeAllegroDescription(rawDesc: any, defaultTitle: string): 
       sections: [{
         items: [{
           type: 'TEXT',
-          content: `<h1>${cleanHeader}</h1>${body}`
+          content: escapeAllegroEntities(`<h1>${cleanHeader}</h1>${body}`)
         }]
       }]
     };
@@ -4480,7 +4508,7 @@ export function sanitizeAllegroDescription(rawDesc: any, defaultTitle: string): 
     sections: [{
       items: [{
         type: 'TEXT',
-        content: html
+        content: escapeAllegroEntities(html)
       }]
     }]
   };
