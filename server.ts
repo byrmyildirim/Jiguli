@@ -4421,7 +4421,126 @@ app.all(['/api/allegro/shipping-rates'], async (req, res) => {
   }
 });
 
-// Endpoint: Allegro Live Offer Publishing (Ürün Yükleme & Yayına Alma)
+// Endpoint: Allegro Matching Categories (Akıllı Kategori Eşleştirme & Arama)
+app.all(['/api/allegro/matching-categories'], async (req, res) => {
+  const reqToken = (req.body?.accessToken || req.query?.accessToken || '') as string;
+  const name = String(req.body?.name || req.query?.name || '').trim();
+  const environment = (req.body?.environment || req.query?.environment || 'production') as string;
+  const accessToken = await getValidAllegroToken(reqToken);
+
+  if (!accessToken || !accessToken.trim()) {
+    return res.status(400).json({ success: false, message: 'Allegro OAuth Access Token eksik.' });
+  }
+
+  if (!name) {
+    return res.json({ success: true, count: 0, categories: [] });
+  }
+
+  const apiUrl = environment === 'sandbox'
+    ? 'https://api.allegro.pl.allegrosandbox.pl'
+    : 'https://api.allegro.pl';
+
+  try {
+    const apiRes = await fetch(`${apiUrl}/sale/matching-categories?name=${encodeURIComponent(name)}`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken.trim()}`,
+        'Accept': 'application/vnd.allegro.public.v1+json',
+        'Accept-Language': 'pl-PL'
+      }
+    });
+
+    const data = await apiRes.json().catch(() => null);
+    if (apiRes.ok) {
+      const rawCategories = data?.matchingCategories || [];
+      const categories = rawCategories.map((cat: any) => {
+        const pathParts: string[] = [];
+        let curr = cat;
+        while (curr) {
+          if (curr.name) pathParts.unshift(curr.name);
+          curr = curr.parent;
+        }
+        return {
+          id: String(cat.id),
+          name: cat.name,
+          leaf: Boolean(cat.leaf ?? true),
+          fullPath: pathParts.join(' > ')
+        };
+      });
+
+      return res.json({
+        success: true,
+        count: categories.length,
+        categories
+      });
+    } else {
+      return res.json({
+        success: false,
+        status: apiRes.status,
+        message: data?.error_description || data?.message || 'Kategori eşleştirme başarısız',
+        categories: []
+      });
+    }
+  } catch (err: any) {
+    return res.json({ success: false, message: err?.message || 'Bağlantı hatası', categories: [] });
+  }
+});
+
+// Endpoint: Allegro Catalog Products Search (Katalog Ürün Arama)
+app.all(['/api/allegro/products'], async (req, res) => {
+  const reqToken = (req.body?.accessToken || req.query?.accessToken || '') as string;
+  const phrase = String(req.body?.phrase || req.query?.phrase || '').trim();
+  const ean = String(req.body?.ean || req.query?.ean || '').trim();
+  const environment = (req.body?.environment || req.query?.environment || 'production') as string;
+  const accessToken = await getValidAllegroToken(reqToken);
+
+  if (!accessToken || !accessToken.trim()) {
+    return res.status(400).json({ success: false, message: 'Allegro OAuth Access Token eksik.' });
+  }
+
+  const apiUrl = environment === 'sandbox'
+    ? 'https://api.allegro.pl.allegrosandbox.pl'
+    : 'https://api.allegro.pl';
+
+  try {
+    const searchParam = ean ? `ean=${encodeURIComponent(ean)}` : `phrase=${encodeURIComponent(phrase)}`;
+    const apiRes = await fetch(`${apiUrl}/sale/products?${searchParam}`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken.trim()}`,
+        'Accept': 'application/vnd.allegro.public.v1+json',
+        'Accept-Language': 'pl-PL'
+      }
+    });
+
+    const data = await apiRes.json().catch(() => null);
+    if (apiRes.ok) {
+      const rawProducts = data?.products || [];
+      const products = rawProducts.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        category: p.category,
+        image: p.images?.[0] || null,
+        parameters: p.parameters || []
+      }));
+
+      return res.json({
+        success: true,
+        count: products.length,
+        products
+      });
+    } else {
+      return res.json({
+        success: false,
+        status: apiRes.status,
+        message: data?.error_description || data?.message || 'Ürün araması başarısız',
+        products: []
+      });
+    }
+  } catch (err: any) {
+    return res.json({ success: false, message: err?.message || 'Bağlantı hatası', products: [] });
+  }
+});
+
+// Endpoint: Allegro Live Offer Publishing via POST /sale/product-offers (Ürün Yükleme & Yayına Alma)
 app.post('/api/allegro/publish-offer', async (req, res) => {
   const { accessToken: reqToken, environment = 'production', offer } = req.body || {};
   const accessToken = await getValidAllegroToken(reqToken);
@@ -4445,8 +4564,13 @@ app.post('/api/allegro/publish-offer', async (req, res) => {
     : 'https://api.allegro.pl';
 
   const startTime = Date.now();
-  const rawTitle = String(offer.title || offer.name || '').trim();
-  const cleanTitle = rawTitle.slice(0, 75);
+  let rawTitle = String(offer.title || offer.name || '').trim();
+  // Allegro requires title to have at least 3 words and max 75 characters
+  const wordCount = rawTitle.split(/\s+/).filter(Boolean).length;
+  if (wordCount < 3) {
+    rawTitle = `${rawTitle} nowy produkt wysokiej jakości`;
+  }
+  const cleanTitle = rawTitle.slice(0, 75).trim();
   const priceAmount = String(parseFloat(String(offer.price || 49.99)).toFixed(2));
   const stockAmount = Math.max(1, parseInt(String(offer.stock || 10), 10));
   const categoryId = String(offer.categoryId).trim();
@@ -4463,31 +4587,75 @@ app.post('/api/allegro/publish-offer', async (req, res) => {
     offer.shippingRateId || offer.delivery?.shippingRates?.id
   );
 
-  // 3. Construct Allegro parameters
-  const parameters: any[] = [
-    { id: '11323', values: ['Nowy'] } // Stan: Nowy (Condition: New)
-  ];
+  // 3. Search Allegro Catalog to link product if available
+  let matchedCatalogProductId: string | null = offer.productId ? String(offer.productId).trim() : null;
 
-  if (ean && /^\d{8,14}$/.test(ean)) {
-    parameters.push({
-      id: '225693', // EAN / GTIN parameter on Allegro
-      values: [ean]
-    });
-  }
-
-  // Merge any custom parameters provided
-  if (Array.isArray(offer.parameters)) {
-    for (const p of offer.parameters) {
-      if (p?.id && p?.values && p.id !== '11323' && p.id !== '225693') {
-        parameters.push({
-          id: String(p.id),
-          values: Array.isArray(p.values) ? p.values.map(String) : [String(p.values)]
+  if (!matchedCatalogProductId) {
+    try {
+      if (ean && /^\d{8,14}$/.test(ean)) {
+        const prodRes = await fetch(`${apiUrl}/sale/products?ean=${encodeURIComponent(ean)}`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken.trim()}`,
+            'Accept': 'application/vnd.allegro.public.v1+json'
+          }
         });
+        const prodData = await prodRes.json().catch(() => null);
+        if (prodRes.ok && Array.isArray(prodData?.products) && prodData.products.length > 0) {
+          matchedCatalogProductId = prodData.products[0].id;
+        }
       }
+
+      if (!matchedCatalogProductId) {
+        const searchPhrase = cleanTitle.split(/\s+/).slice(0, 4).join(' ');
+        const prodRes2 = await fetch(`${apiUrl}/sale/products?phrase=${encodeURIComponent(searchPhrase)}`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken.trim()}`,
+            'Accept': 'application/vnd.allegro.public.v1+json'
+          }
+        });
+        const prodData2 = await prodRes2.json().catch(() => null);
+        if (prodRes2.ok && Array.isArray(prodData2?.products) && prodData2.products.length > 0) {
+          // If the product matches the category, link it
+          const exactCatMatch = prodData2.products.find((p: any) => String(p.category?.id) === categoryId);
+          matchedCatalogProductId = exactCatMatch ? exactCatMatch.id : prodData2.products[0].id;
+        }
+      }
+    } catch {
+      // Ignore catalog search failure and fall back to product proposal
     }
   }
 
-  // 4. Construct description
+  // 4. Construct ProductSet
+  let productSet: any[];
+  if (matchedCatalogProductId) {
+    productSet = [
+      {
+        quantity: { value: 1 },
+        product: {
+          id: matchedCatalogProductId
+        }
+      }
+    ];
+  } else {
+    // Creating proposal product
+    const productParams: any[] = [];
+    if (ean && /^\d{8,14}$/.test(ean)) {
+      productParams.push({ id: '225693', values: [ean] });
+    }
+    productSet = [
+      {
+        quantity: { value: 1 },
+        product: {
+          name: cleanTitle,
+          category: { id: categoryId },
+          images: [uploadedImageUrl],
+          parameters: productParams
+        }
+      }
+    ];
+  }
+
+  // 5. Construct description
   const descText = offer.description || offer.name || cleanTitle;
   const descriptionPayload = {
     sections: [
@@ -4495,18 +4663,22 @@ app.post('/api/allegro/publish-offer', async (req, res) => {
         items: [
           {
             type: 'TEXT',
-            content: `<p>${descText.replace(/\n/g, '<br/>')}</p>`
+            content: `<h2>${cleanTitle}</h2><p>${descText.replace(/\n/g, '<br/>')}</p>`
           }
         ]
       }
     ]
   };
 
-  const allegroPayload: any = {
+  // 6. Build compliant POST /sale/product-offers payload
+  const productOfferPayload: any = {
     name: cleanTitle,
     category: { id: categoryId },
-    primaryImage: { url: uploadedImageUrl },
-    images: [{ url: uploadedImageUrl }],
+    productSet,
+    parameters: [
+      { id: '11323', valuesIds: ['11323_1'] } // Condition: New (Stan: Nowy)
+    ],
+    images: [uploadedImageUrl],
     sellingMode: {
       format: 'BUY_NOW',
       price: {
@@ -4521,36 +4693,37 @@ app.post('/api/allegro/publish-offer', async (req, res) => {
     publication: {
       status: offer.isDraft ? 'INACTIVE' : 'ACTIVE'
     },
-    parameters,
-    description: descriptionPayload
+    description: descriptionPayload,
+    language: 'pl-PL'
   };
 
   // Add delivery if shipping tariff found
   if (shippingRateId) {
-    allegroPayload.delivery = {
+    productOfferPayload.delivery = {
       shippingRates: { id: shippingRateId },
       handlingTime: offer.handlingTime || 'PT24H'
     };
   }
 
   // Add payments invoice
-  allegroPayload.payments = {
+  productOfferPayload.payments = {
     invoice: 'VAT'
   };
 
   if (offer.sku) {
-    allegroPayload.external = { id: String(offer.sku).slice(0, 50) };
+    productOfferPayload.external = { id: String(offer.sku).slice(0, 50) };
   }
 
   try {
-    const apiRes = await fetch(`${apiUrl}/sale/offers`, {
+    // Send to modern /sale/product-offers endpoint
+    const apiRes = await fetch(`${apiUrl}/sale/product-offers`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken.trim()}`,
         'Accept': 'application/vnd.allegro.public.v1+json',
         'Content-Type': 'application/vnd.allegro.public.v1+json'
       },
-      body: JSON.stringify(allegroPayload)
+      body: JSON.stringify(productOfferPayload)
     });
 
     const durationMs = Date.now() - startTime;
@@ -4569,6 +4742,7 @@ app.post('/api/allegro/publish-offer', async (req, res) => {
         category: categoryId,
         uploadedImageUrl,
         shippingRateId,
+        linkedCatalogProduct: matchedCatalogProductId,
         message: pubStatus === 'ACTIVE'
           ? `Ürün Allegro (${environment}) üzerinde başarıyla yayına alındı! İlan No: ${generatedOfferId}`
           : `Ürün Allegro (${environment}) üzerine Taslak (INACTIVE) olarak başarıyla yüklendi! İlan No: ${generatedOfferId}`

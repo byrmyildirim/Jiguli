@@ -170,6 +170,9 @@ export interface AllegroOffer {
       title?: string;
       price?: { amount: string; currency: string };
       categoryId?: string;
+      categoryName?: string;
+      shippingRateId?: string;
+      description?: string;
       smartEligible?: boolean;
       parameters?: any;
     };
