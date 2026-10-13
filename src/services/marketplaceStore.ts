@@ -2685,7 +2685,9 @@ export class MarketplaceStore {
       isDraft,
       shippingRateId,
       parameters,
-      description
+      description,
+      responsibleProducer: customPayload?.responsibleProducer || offer.channelData?.allegro?.responsibleProducer,
+      safetyInformation: customPayload?.safetyInformation || offer.channelData?.allegro?.safetyInformation
     };
 
     try {

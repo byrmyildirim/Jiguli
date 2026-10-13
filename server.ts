@@ -4395,6 +4395,69 @@ export function validateAndFixGtin(gtin?: string): string | null {
   return `${prefix}${expectedCheck}`;
 }
 
+// Helper: Resolve or Create GPSR Responsible Producer (Osoba Odpowiedzialna / Producent)
+async function resolveAllegroResponsibleProducer(
+  apiUrl: string,
+  token: string,
+  candidateName = 'FUERS'
+): Promise<{ id: string | null; warning?: string }> {
+  try {
+    // 1. Fetch existing producers for this seller
+    const getRes = await fetch(`${apiUrl}/sale/responsible-producers`, {
+      headers: {
+        'Authorization': `Bearer ${token.trim()}`,
+        'Accept': 'application/vnd.allegro.public.v1+json'
+      }
+    });
+
+    if (getRes.ok) {
+      const data = await getRes.json().catch(() => null);
+      const producers = data?.responsibleProducers || [];
+      if (Array.isArray(producers) && producers.length > 0 && producers[0]?.id) {
+        return { id: producers[0].id };
+      }
+    }
+
+    // 2. If none exists, auto-create a default producer entity for GPSR compliance
+    const brand = candidateName.trim() || 'FUERS';
+    const createRes = await fetch(`${apiUrl}/sale/responsible-producers`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token.trim()}`,
+        'Accept': 'application/vnd.allegro.public.v1+json',
+        'Content-Type': 'application/vnd.allegro.public.v1+json'
+      },
+      body: JSON.stringify({
+        name: `${brand} EU`,
+        producerData: {
+          tradeName: brand,
+          address: {
+            countryCode: 'PL',
+            street: 'Prosta 1',
+            postalCode: '00-850',
+            city: 'Warszawa'
+          },
+          contact: {
+            email: 'kontakt@charsioutlet.pl'
+          }
+        }
+      })
+    });
+
+    if (createRes.ok || createRes.status === 201) {
+      const createdData = await createRes.json().catch(() => null);
+      if (createdData?.id) {
+        return { id: createdData.id };
+      }
+    }
+  } catch (err: any) {
+    console.warn('[Allegro Responsible Producer Resolution Warning]:', err?.message || err);
+  }
+
+  return { id: null, warning: 'Allegro GPSR Sorumlu Üretici (Responsible Producer) tanımlanamadı.' };
+}
+
+
 
 // Helper: Sanitize & Format Offer Description according to Allegro REST API strict rules:
 // - Allowed tags: <h1>, <h2>, <p>, <b>, <ul>, <ol>, <li>
@@ -4785,7 +4848,26 @@ app.post('/api/allegro/publish-offer', async (req, res) => {
     }
   }
 
-  // 4. Construct ProductSet
+  // 4. Resolve GPSR Compliance (Responsible Producer & Safety Information)
+  const brandWord = cleanTitle.split(/\s+/)[0] || 'FUERS';
+  const { id: responsibleProducerId } = await resolveAllegroResponsibleProducer(
+    apiUrl,
+    accessToken,
+    offer.responsibleProducer?.name || brandWord
+  );
+
+  const safetyInformation = offer.safetyInformation?.description
+    ? { type: 'TEXT', description: offer.safetyInformation.description }
+    : {
+        type: 'TEXT',
+        description: 'Produkt bezpieczny w użytkowaniu. Używać zgodnie z dołączoną instrukcją obsługi i przeznaczeniem.'
+      };
+
+  const responsibleProducer = responsibleProducerId
+    ? { type: 'ID', id: responsibleProducerId }
+    : { type: 'NAME', name: `${brandWord} EU` };
+
+  // 5. Construct ProductSet with GPSR compliance
   let productSet: any[];
   if (matchedCatalogProductId) {
     productSet = [
@@ -4793,7 +4875,9 @@ app.post('/api/allegro/publish-offer', async (req, res) => {
         quantity: { value: 1 },
         product: {
           id: matchedCatalogProductId
-        }
+        },
+        responsibleProducer,
+        safetyInformation
       }
     ];
   } else {
@@ -4810,7 +4894,9 @@ app.post('/api/allegro/publish-offer', async (req, res) => {
           category: { id: categoryId },
           images: [uploadedImageUrl],
           parameters: productParams
-        }
+        },
+        responsibleProducer,
+        safetyInformation
       }
     ];
   }

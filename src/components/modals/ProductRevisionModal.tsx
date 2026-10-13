@@ -433,7 +433,11 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
         ean: ean,
         shippingRateId: allegroShippingRateId,
         productId: matchedCatalogProduct?.id,
-        description: allegroDescription
+        description: allegroDescription,
+        responsibleProducer: { name: 'FUERS EU' },
+        safetyInformation: {
+          description: 'Produkt bezpieczny w użytkowaniu. Używać zgodnie z dołączoną instrukcją obsługi i przeznaczeniem.'
+        }
       });
       setAllegroPublishNotice({
         success: res.success,
