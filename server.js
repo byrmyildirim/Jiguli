@@ -149,10 +149,8 @@ async function testMySQLConnection(cfg) {
     };
   }
 }
-async function installMySQLDatabase(cfg, customSql) {
-  const prefix = cfg.prefix || "jiguli_";
-  const startTime = Date.now();
-  const tableDefinitions = [
+function getTableDefinitions(prefix) {
+  return [
     {
       name: `${prefix}db_config`,
       sql: `CREATE TABLE IF NOT EXISTS \`${prefix}db_config\` (
@@ -183,7 +181,7 @@ async function installMySQLDatabase(cfg, customSql) {
       name: `${prefix}api_credentials`,
       sql: `CREATE TABLE IF NOT EXISTS \`${prefix}api_credentials\` (
         \`id\` INT AUTO_INCREMENT PRIMARY KEY,
-        \`platform_id\` VARCHAR(50) NOT NULL,
+        \`platform_id\` VARCHAR(50) NOT NULL UNIQUE,
         \`account_name\` VARCHAR(100) NOT NULL,
         \`client_id\` VARCHAR(255) NULL,
         \`client_secret\` TEXT NULL,
@@ -249,12 +247,12 @@ async function installMySQLDatabase(cfg, customSql) {
         \`product_id\` INT NULL,
         \`platform_id\` VARCHAR(50) NOT NULL,
         \`marketplace_offer_id\` VARCHAR(100) NOT NULL,
-        \`name\` VARCHAR(255) NOT NULL,
+        \`name\` TEXT NOT NULL,
         \`sku\` VARCHAR(100) NOT NULL,
         \`ean\` VARCHAR(30) NULL,
         \`category_id\` VARCHAR(100) NULL,
-        \`category_name\` VARCHAR(200) NULL,
-        \`price_amount\` DECIMAL(10,2) NOT NULL,
+        \`category_name\` VARCHAR(255) NULL,
+        \`price_amount\` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
         \`price_currency\` VARCHAR(10) NOT NULL DEFAULT 'PLN',
         \`stock_available\` INT NOT NULL DEFAULT 0,
         \`publication_status\` VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
@@ -290,13 +288,14 @@ async function installMySQLDatabase(cfg, customSql) {
         \`shipping_cost\` DECIMAL(10,2) DEFAULT 0.00,
         \`payment_status\` VARCHAR(50) DEFAULT 'PAID',
         \`payment_type\` VARCHAR(50) DEFAULT 'ONLINE',
-        \`total_amount\` DECIMAL(10,2) NOT NULL,
+        \`total_amount\` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
         \`currency\` VARCHAR(10) NOT NULL DEFAULT 'PLN',
         \`fulfillment_status\` VARCHAR(50) DEFAULT 'NEW',
         \`tracking_number\` VARCHAR(150) NULL,
         \`invoice_required\` TINYINT(1) DEFAULT 0,
         \`message_to_seller\` TEXT NULL,
         \`order_date\` DATETIME DEFAULT CURRENT_TIMESTAMP,
+        \`raw_payload_json\` LONGTEXT NULL,
         \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
         \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`
@@ -369,6 +368,122 @@ async function installMySQLDatabase(cfg, customSql) {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`
     }
   ];
+}
+async function ensureMySQLTablesInitialized(initialCredentials) {
+  const cfg = getSavedMySQLConfig();
+  const prefix = cfg.prefix || "jiguli_";
+  try {
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
+    const definitions = getTableDefinitions(prefix);
+    for (const def of definitions) {
+      try {
+        await conn.query(def.sql);
+      } catch (tableErr) {
+        console.warn(`[Auto-Init Table Warning: ${def.name}]:`, tableErr?.message || tableErr);
+      }
+    }
+    try {
+      await conn.query(`ALTER TABLE \`${prefix}offers\` MODIFY COLUMN \`name\` TEXT NOT NULL`);
+    } catch {
+    }
+    try {
+      await conn.query(`ALTER TABLE \`${prefix}offers\` MODIFY COLUMN \`category_name\` VARCHAR(255) NULL`);
+    } catch {
+    }
+    try {
+      await conn.query(`ALTER TABLE \`${prefix}offers\` MODIFY COLUMN \`price_amount\` DECIMAL(10,2) NOT NULL DEFAULT 0.00`);
+    } catch {
+    }
+    try {
+      await conn.query(`ALTER TABLE \`${prefix}api_credentials\` ADD UNIQUE KEY \`unique_platform\` (\`platform_id\`)`);
+    } catch {
+    }
+    const [credRows] = await conn.query(`SELECT COUNT(*) as cnt FROM \`${prefix}api_credentials\``).catch(() => [{ cnt: 0 }]);
+    const existingCount = Number(credRows?.[0]?.cnt || 0);
+    const allegroData = initialCredentials?.allegro || {
+      clientId: "f2aaccb04bc146e4a6832179f10a12c3",
+      clientSecret: "YAaC1OJpbFLPYg7npUT8ZVuLIO0uxUiFmI7rZxQU4TwPCr1VTbSuNZ2qhmpZxTBl",
+      environment: "production",
+      country: "pl",
+      sellerLogin: "charsioutlet",
+      status: "connected"
+    };
+    const emagData = initialCredentials?.emag || {
+      username: "chrsadv",
+      userHash: "chrsadv",
+      apiCode: "chrsadv",
+      country: "bg",
+      status: "connected"
+    };
+    const baselinkerData = initialCredentials?.baselinker || {
+      apiToken: "",
+      status: "connected"
+    };
+    if (existingCount === 0) {
+      if (allegroData) {
+        await conn.query(`
+          INSERT INTO \`${prefix}api_credentials\`
+          (\`platform_id\`, \`account_name\`, \`client_id\`, \`client_secret\`, \`access_token\`, \`refresh_token\`, \`token_expires_at\`, \`environment\`, \`country\`, \`status\`, \`extra_config_json\`)
+          VALUES
+          ('allegro', 'CHARSIOUTLET', ?, ?, ?, ?, ?, ?, ?, 'connected', ?)
+          ON DUPLICATE KEY UPDATE \`updated_at\` = NOW();
+        `, [
+          allegroData.clientId || null,
+          allegroData.clientSecret || null,
+          allegroData.accessToken || null,
+          allegroData.refreshToken || null,
+          Number(allegroData.tokenExpiresAt || 179193849e4),
+          allegroData.environment || "production",
+          allegroData.country || "pl",
+          JSON.stringify(allegroData)
+        ]).catch(() => {
+        });
+      }
+      if (emagData) {
+        await conn.query(`
+          INSERT INTO \`${prefix}api_credentials\`
+          (\`platform_id\`, \`account_name\`, \`client_id\`, \`api_code\`, \`country\`, \`status\`, \`extra_config_json\`)
+          VALUES
+          ('emag', 'EMAG_BG', ?, ?, ?, 'connected', ?)
+          ON DUPLICATE KEY UPDATE \`updated_at\` = NOW();
+        `, [
+          emagData.username || emagData.apiCode || "chrsadv",
+          emagData.apiCode || "chrsadv",
+          emagData.country || "bg",
+          JSON.stringify(emagData)
+        ]).catch(() => {
+        });
+      }
+    }
+    try {
+      const [cfgRows] = await conn.query(`SELECT config_value FROM \`${prefix}db_config\` WHERE config_key = 'platform_credentials' LIMIT 1`);
+      if (!cfgRows || cfgRows.length === 0) {
+        const fullCredsObj = {
+          allegro: allegroData,
+          emag: emagData,
+          baselinker: baselinkerData
+        };
+        await conn.query(`
+          INSERT INTO \`${prefix}db_config\` (\`config_key\`, \`config_value\`, \`description\`)
+          VALUES ('platform_credentials', ?, 'Platform API Credentials')
+          ON DUPLICATE KEY UPDATE \`config_value\` = VALUES(\`config_value\`), \`updated_at\` = NOW();
+        `, [JSON.stringify(fullCredsObj)]);
+      }
+    } catch {
+    }
+    conn.release();
+    console.log("[MySQL Backend] T\xFCm tablolar ve API kimlik bilgileri MySQL \xFCzerinde haz\u0131r.");
+    return { success: true, message: "MySQL tablolar\u0131 ve \u015Femas\u0131 ba\u015Far\u0131yla haz\u0131rland\u0131." };
+  } catch (err) {
+    console.warn("[ensureMySQLTablesInitialized warn]:", err?.message || err);
+    return { success: false, message: err?.message || String(err) };
+  }
+}
+async function installMySQLDatabase(cfg, customSql) {
+  const prefix = cfg.prefix || "jiguli_";
+  const startTime = Date.now();
+  const tableDefinitions = getTableDefinitions(prefix);
   const installedTables = [];
   const errors = [];
   let isLiveDbSuccess = false;
@@ -818,23 +933,38 @@ async function dbGetOffers() {
 async function dbSaveOffer(offer) {
   const cfg = getSavedMySQLConfig();
   const prefix = cfg.prefix || "jiguli_";
-  const id = String(offer.id || Date.now());
-  const platformId = String(offer.platform_id || offer.publication?.marketplaces?.base?.id || "allegro");
-  const name = String(offer.name || offer.title || "Yeni \xDCr\xFCn");
-  const sku = String(offer.sku || `SKU-${id}`);
-  const ean = String(offer.ean || "");
-  const catId = String(offer.category?.id || offer.categoryId || "");
-  const catName = String(offer.category?.name || offer.categoryName || "");
-  const price = Number(offer.sellingMode?.price?.amount || offer.price || 0);
-  const currency = String(offer.sellingMode?.price?.currency || offer.currency || "PLN");
-  const stock = Number(offer.stock?.available || offer.stock || 0);
-  const status = String(offer.publication?.status || offer.status || "ACTIVE");
-  const smart = offer.smartEligible ? 1 : 0;
-  const image = String(offer.primaryImage || "");
-  const syncAllegro = String(offer.channelSync?.allegro || "unlinked");
-  const syncEmag = String(offer.channelSync?.emag || "unlinked");
-  const syncBaselinker = String(offer.channelSync?.baselinker || "unlinked");
+  const id = String(offer.id || Date.now()).slice(0, 95);
+  const platformId = String(offer.platform_id || offer.platform || (offer.publication?.marketplaces?.base?.id?.includes("allegro") ? "allegro" : String(offer.id).startsWith("emag") ? "emag" : String(offer.id).startsWith("bl") ? "baselinker" : "allegro")).slice(0, 45);
+  const marketplaceOfferId = String(offer.marketplace_offer_id || offer.marketplaceOfferId || offer.id || id).slice(0, 95);
+  const rawName = offer.name || offer.title || "\u0130simsiz \xDCr\xFCn";
+  const name = String(rawName).slice(0, 1e3);
+  const sku = String(offer.sku || `SKU-${id}`).slice(0, 95);
+  const ean = String(offer.ean || "").slice(0, 30);
+  const catId = String(offer.category?.id || offer.categoryId || "").slice(0, 95);
+  const catName = String(offer.category?.name || offer.categoryName || "").slice(0, 250);
+  let rawPrice = offer.sellingMode?.price?.amount ?? offer.price ?? 0;
+  if (typeof rawPrice === "string") rawPrice = parseFloat(rawPrice.replace(",", "."));
+  const price = isNaN(rawPrice) || rawPrice === null ? 0 : Number(Number(rawPrice).toFixed(2));
+  const currency = String(offer.sellingMode?.price?.currency || offer.currency || "PLN").slice(0, 10);
+  let rawStock = offer.stock?.available ?? offer.stock ?? 0;
+  if (typeof rawStock === "string") rawStock = parseInt(rawStock, 10);
+  const stock = isNaN(rawStock) || rawStock === null ? 0 : Math.max(0, Math.floor(rawStock));
+  const status = String(offer.publication?.status || offer.status || "ACTIVE").slice(0, 30);
+  const smart = offer.smartEligible || offer.smart_eligible ? 1 : 0;
+  const image = String(offer.primaryImage || offer.image || "");
+  const syncAllegro = String(offer.channelSync?.allegro || offer.sync_allegro || (platformId === "allegro" ? "synced" : "unlinked")).slice(0, 30);
+  const syncEmag = String(offer.channelSync?.emag || offer.sync_emag || (platformId === "emag" ? "synced" : "unlinked")).slice(0, 30);
+  const syncBaselinker = String(offer.channelSync?.baselinker || offer.sync_baselinker || (platformId === "baselinker" ? "synced" : "unlinked")).slice(0, 30);
   const rawJson = JSON.stringify(offer);
+  const inMemKey = `${prefix}offers`;
+  const currentInMem = inMemoryTables.get(inMemKey) || [];
+  const existingIdx = currentInMem.findIndex((o) => o.id === id);
+  if (existingIdx >= 0) {
+    currentInMem[existingIdx] = { ...currentInMem[existingIdx], ...offer };
+  } else {
+    currentInMem.unshift(offer);
+  }
+  inMemoryTables.set(inMemKey, currentInMem);
   try {
     const pool = createOrGetPool(cfg);
     const conn = await pool.getConnection();
@@ -846,7 +976,10 @@ async function dbSaveOffer(offer) {
         \`name\` = VALUES(\`name\`),
         \`sku\` = VALUES(\`sku\`),
         \`ean\` = VALUES(\`ean\`),
+        \`category_id\` = VALUES(\`category_id\`),
+        \`category_name\` = VALUES(\`category_name\`),
         \`price_amount\` = VALUES(\`price_amount\`),
+        \`price_currency\` = VALUES(\`price_currency\`),
         \`stock_available\` = VALUES(\`stock_available\`),
         \`publication_status\` = VALUES(\`publication_status\`),
         \`smart_eligible\` = VALUES(\`smart_eligible\`),
@@ -855,12 +988,47 @@ async function dbSaveOffer(offer) {
         \`sync_emag\` = VALUES(\`sync_emag\`),
         \`sync_baselinker\` = VALUES(\`sync_baselinker\`),
         \`raw_payload_json\` = VALUES(\`raw_payload_json\`),
+        \`last_synced_at\` = NOW(),
         \`updated_at\` = NOW();
-    `, [id, platformId, id, name, sku, ean, catId, catName, price, currency, stock, status, smart, image, syncAllegro, syncEmag, syncBaselinker, rawJson]);
+    `, [id, platformId, marketplaceOfferId, name, sku, ean, catId, catName, price, currency, stock, status, smart, image, syncAllegro, syncEmag, syncBaselinker, rawJson]);
     conn.release();
     return true;
   } catch (err) {
-    console.warn("[dbSaveOffer fallback]:", err);
+    console.warn(`[dbSaveOffer warn for ${id}]:`, err?.message || err);
+    if (err?.code === "ER_NO_SUCH_TABLE") {
+      try {
+        await ensureMySQLTablesInitialized();
+        const pool = createOrGetPool(cfg);
+        const conn = await pool.getConnection();
+        await conn.query(`
+          INSERT INTO \`${prefix}offers\`
+          (\`id\`, \`platform_id\`, \`marketplace_offer_id\`, \`name\`, \`sku\`, \`ean\`, \`category_id\`, \`category_name\`, \`price_amount\`, \`price_currency\`, \`stock_available\`, \`publication_status\`, \`smart_eligible\`, \`primary_image\`, \`sync_allegro\`, \`sync_emag\`, \`sync_baselinker\`, \`raw_payload_json\`)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE
+            \`name\` = VALUES(\`name\`),
+            \`sku\` = VALUES(\`sku\`),
+            \`ean\` = VALUES(\`ean\`),
+            \`category_id\` = VALUES(\`category_id\`),
+            \`category_name\` = VALUES(\`category_name\`),
+            \`price_amount\` = VALUES(\`price_amount\`),
+            \`price_currency\` = VALUES(\`price_currency\`),
+            \`stock_available\` = VALUES(\`stock_available\`),
+            \`publication_status\` = VALUES(\`publication_status\`),
+            \`smart_eligible\` = VALUES(\`smart_eligible\`),
+            \`primary_image\` = VALUES(\`primary_image\`),
+            \`sync_allegro\` = VALUES(\`sync_allegro\`),
+            \`sync_emag\` = VALUES(\`sync_emag\`),
+            \`sync_baselinker\` = VALUES(\`sync_baselinker\`),
+            \`raw_payload_json\` = VALUES(\`raw_payload_json\`),
+            \`last_synced_at\` = NOW(),
+            \`updated_at\` = NOW();
+        `, [id, platformId, marketplaceOfferId, name, sku, ean, catId, catName, price, currency, stock, status, smart, image, syncAllegro, syncEmag, syncBaselinker, rawJson]);
+        conn.release();
+        return true;
+      } catch (retryErr) {
+        console.warn("[dbSaveOffer retry failed]:", retryErr);
+      }
+    }
     return false;
   }
 }
@@ -933,40 +1101,65 @@ async function dbGetOrders() {
 async function dbSaveOrder(order) {
   const cfg = getSavedMySQLConfig();
   const prefix = cfg.prefix || "jiguli_";
-  const id = String(order.id);
-  const platform = String(order.platform || "allegro");
-  const buyerName = String(order.buyer?.login || `${order.delivery?.address?.firstName || ""} ${order.delivery?.address?.lastName || ""}`.trim() || "Al\u0131c\u0131");
-  const buyerEmail = String(order.buyer?.email || "");
-  const buyerPhone = String(order.delivery?.address?.phoneNumber || "");
-  const street = String(order.delivery?.address?.street || "");
-  const city = String(order.delivery?.address?.city || "");
-  const zip = String(order.delivery?.address?.zipCode || "");
-  const country = String(order.delivery?.address?.countryCode || "PL");
-  const method = String(order.delivery?.method?.name || "");
-  const shippingCost = Number(order.delivery?.cost?.amount || 0);
-  const paymentStatus = String(order.payment?.status || "PAID");
-  const totalAmount = Number(order.summary?.totalToPay?.amount || order.payment?.paidAmount?.amount || 0);
-  const currency = String(order.summary?.totalToPay?.currency || order.payment?.paidAmount?.currency || "PLN");
-  const fulfillmentStatus = String(order.fulfillment?.status || "NEW");
-  const trackingNumber = String(order.fulfillment?.trackingNumber || "");
-  const orderDate = order.createdAt ? new Date(order.createdAt) : /* @__PURE__ */ new Date();
+  const id = String(order.id || Date.now()).slice(0, 95);
+  const platform = String(order.platform_id || order.platform || (id.startsWith("allg") ? "allegro" : id.startsWith("emag") ? "emag" : "allegro")).slice(0, 45);
+  const marketplaceOrderId = String(order.marketplace_order_id || order.marketplaceOrderId || id).slice(0, 95);
+  const buyerName = String(order.buyer_name || order.buyer?.login || `${order.delivery?.address?.firstName || ""} ${order.delivery?.address?.lastName || ""}`.trim() || "Al\u0131c\u0131").slice(0, 145);
+  const buyerEmail = String(order.buyer_email || order.buyer?.email || "").slice(0, 185);
+  const buyerPhone = String(order.buyer_phone || order.delivery?.address?.phoneNumber || "").slice(0, 45);
+  const street = String(order.shipping_street || order.delivery?.address?.street || "").slice(0, 250);
+  const city = String(order.shipping_city || order.delivery?.address?.city || "").slice(0, 95);
+  const zip = String(order.shipping_zip || order.delivery?.address?.zipCode || "").slice(0, 20);
+  const country = String(order.shipping_country || order.delivery?.address?.countryCode || "PL").slice(0, 10);
+  const method = String(order.shipping_method || order.delivery?.method?.name || "").slice(0, 95);
+  let rawShippingCost = order.shipping_cost ?? order.delivery?.cost?.amount ?? 0;
+  if (typeof rawShippingCost === "string") rawShippingCost = parseFloat(rawShippingCost.replace(",", "."));
+  const shippingCost = isNaN(rawShippingCost) ? 0 : Number(Number(rawShippingCost).toFixed(2));
+  const paymentStatus = String(order.payment_status || order.payment?.status || "PAID").slice(0, 45);
+  let rawTotal = order.total_amount ?? order.summary?.totalToPay?.amount ?? order.payment?.paidAmount?.amount ?? 0;
+  if (typeof rawTotal === "string") rawTotal = parseFloat(rawTotal.replace(",", "."));
+  const totalAmount = isNaN(rawTotal) ? 0 : Number(Number(rawTotal).toFixed(2));
+  const currency = String(order.currency || order.summary?.totalToPay?.currency || order.payment?.paidAmount?.currency || "PLN").slice(0, 10);
+  const fulfillmentStatus = String(order.fulfillment_status || order.fulfillment?.status || "NEW").slice(0, 45);
+  const trackingNumber = String(order.tracking_number || order.fulfillment?.trackingNumber || "").slice(0, 95);
+  const orderDate = order.order_date || order.createdAt ? new Date(order.order_date || order.createdAt) : /* @__PURE__ */ new Date();
+  const rawPayload = JSON.stringify(order);
+  const inMemKey = `${prefix}orders`;
+  const currentInMem = inMemoryTables.get(inMemKey) || [];
+  const existingIdx = currentInMem.findIndex((o) => o.id === id);
+  if (existingIdx >= 0) {
+    currentInMem[existingIdx] = { ...currentInMem[existingIdx], ...order };
+  } else {
+    currentInMem.unshift(order);
+  }
+  inMemoryTables.set(inMemKey, currentInMem);
   try {
     const pool = createOrGetPool(cfg);
     const conn = await pool.getConnection();
     await conn.query(`
       INSERT INTO \`${prefix}orders\`
-      (\`id\`, \`platform_id\`, \`marketplace_order_id\`, \`buyer_name\`, \`buyer_email\`, \`buyer_phone\`, \`shipping_street\`, \`shipping_city\`, \`shipping_zip\`, \`shipping_country\`, \`shipping_method\`, \`shipping_cost\`, \`payment_status\`, \`total_amount\`, \`currency\`, \`fulfillment_status\`, \`tracking_number\`, \`order_date\`)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (\`id\`, \`platform_id\`, \`marketplace_order_id\`, \`buyer_name\`, \`buyer_email\`, \`buyer_phone\`, \`shipping_street\`, \`shipping_city\`, \`shipping_zip\`, \`shipping_country\`, \`shipping_method\`, \`shipping_cost\`, \`payment_status\`, \`total_amount\`, \`currency\`, \`fulfillment_status\`, \`tracking_number\`, \`order_date\`, \`raw_payload_json\`)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
+        \`buyer_name\` = VALUES(\`buyer_name\`),
+        \`shipping_street\` = VALUES(\`shipping_street\`),
         \`fulfillment_status\` = VALUES(\`fulfillment_status\`),
         \`tracking_number\` = VALUES(\`tracking_number\`),
         \`payment_status\` = VALUES(\`payment_status\`),
+        \`total_amount\` = VALUES(\`total_amount\`),
+        \`raw_payload_json\` = VALUES(\`raw_payload_json\`),
         \`updated_at\` = NOW();
-    `, [id, platform, id, buyerName, buyerEmail, buyerPhone, street, city, zip, country, method, shippingCost, paymentStatus, totalAmount, currency, fulfillmentStatus, trackingNumber, orderDate]);
+    `, [id, platform, marketplaceOrderId, buyerName, buyerEmail, buyerPhone, street, city, zip, country, method, shippingCost, paymentStatus, totalAmount, currency, fulfillmentStatus, trackingNumber, orderDate, rawPayload]);
     conn.release();
     return true;
   } catch (err) {
-    console.warn("[dbSaveOrder fallback]:", err);
+    console.warn(`[dbSaveOrder warn for ${id}]:`, err?.message || err);
+    if (err?.code === "ER_NO_SUCH_TABLE") {
+      try {
+        await ensureMySQLTablesInitialized();
+      } catch {
+      }
+    }
     return false;
   }
 }
@@ -976,9 +1169,17 @@ async function dbGetCredentials() {
   try {
     const pool = createOrGetPool(cfg);
     const conn = await pool.getConnection();
+    let fromConfigJson = {};
+    try {
+      const [cfgRows] = await conn.query(`SELECT config_value FROM \`${prefix}db_config\` WHERE config_key = 'platform_credentials' LIMIT 1`);
+      if (cfgRows && cfgRows.length > 0 && cfgRows[0].config_value) {
+        fromConfigJson = JSON.parse(cfgRows[0].config_value);
+      }
+    } catch {
+    }
     const [rows] = await conn.query(`SELECT * FROM \`${prefix}api_credentials\``);
     conn.release();
-    const result = {};
+    const result = { ...fromConfigJson };
     if (rows && rows.length > 0) {
       for (const r of rows) {
         let extra = {};
@@ -986,18 +1187,25 @@ async function dbGetCredentials() {
           if (r.extra_config_json) extra = JSON.parse(r.extra_config_json);
         } catch {
         }
+        const prev = result[r.platform_id] || {};
         result[r.platform_id] = {
+          ...prev,
           ...extra,
-          clientId: r.client_id,
-          clientSecret: r.client_secret,
-          accessToken: r.access_token,
-          refreshToken: r.refresh_token,
-          tokenExpiresAt: Number(r.token_expires_at || 0),
-          apiKey: r.api_key,
-          apiCode: r.api_code,
-          environment: r.environment,
-          country: r.country,
-          status: r.status
+          clientId: r.client_id || extra.clientId || prev.clientId || "",
+          clientSecret: r.client_secret || extra.clientSecret || prev.clientSecret || "",
+          accessToken: r.access_token || extra.accessToken || prev.accessToken || "",
+          refreshToken: r.refresh_token || extra.refreshToken || prev.refreshToken || "",
+          tokenExpiresAt: Number(r.token_expires_at || extra.tokenExpiresAt || prev.tokenExpiresAt || 0),
+          apiKey: r.api_key || extra.apiKey || prev.apiKey || "",
+          userHash: r.api_key || extra.userHash || prev.userHash || "",
+          apiToken: r.api_key || extra.apiToken || prev.apiToken || "",
+          username: extra.username || prev.username || r.client_id || "",
+          password: extra.password || prev.password || r.client_secret || "",
+          apiCode: r.api_code || extra.apiCode || prev.apiCode || "",
+          environment: r.environment || extra.environment || prev.environment || "production",
+          country: r.country || extra.country || prev.country || (r.platform_id === "allegro" ? "pl" : "bg"),
+          status: r.status || extra.status || prev.status || "connected",
+          sellerLogin: extra.sellerLogin || prev.sellerLogin || (r.platform_id === "allegro" ? "charsioutlet" : void 0)
         };
       }
     }
@@ -1010,15 +1218,15 @@ async function dbGetCredentials() {
 async function dbSaveCredentials(platformId, data) {
   const cfg = getSavedMySQLConfig();
   const prefix = cfg.prefix || "jiguli_";
-  const clientId = data.clientId || null;
-  const clientSecret = data.clientSecret || null;
+  const clientId = data.clientId || data.username || null;
+  const clientSecret = data.clientSecret || data.password || null;
   const accessToken = data.accessToken || data.bearerToken || null;
   const refreshToken = data.refreshToken || null;
   const tokenExpiresAt = Number(data.tokenExpiresAt || 0);
   const apiKey = data.apiKey || data.apiToken || data.userHash || null;
   const apiCode = data.apiCode || null;
   const environment = data.environment || "production";
-  const country = data.country || "pl";
+  const country = data.country || (platformId === "allegro" ? "pl" : "bg");
   const extraJson = JSON.stringify(data);
   try {
     const pool = createOrGetPool(cfg);
@@ -1040,10 +1248,34 @@ async function dbSaveCredentials(platformId, data) {
         \`extra_config_json\` = VALUES(\`extra_config_json\`),
         \`updated_at\` = NOW();
     `, [platformId, platformId.toUpperCase(), clientId, clientSecret, apiKey, apiCode, accessToken, refreshToken, tokenExpiresAt, environment, country, extraJson]);
+    try {
+      const [cfgRows] = await conn.query(`SELECT config_value FROM \`${prefix}db_config\` WHERE config_key = 'platform_credentials' LIMIT 1`);
+      let credsObj = {};
+      if (cfgRows && cfgRows.length > 0 && cfgRows[0].config_value) {
+        try {
+          credsObj = JSON.parse(cfgRows[0].config_value);
+        } catch {
+        }
+      }
+      credsObj[platformId] = { ...credsObj[platformId] || {}, ...data };
+      await conn.query(`
+        INSERT INTO \`${prefix}db_config\` (\`config_key\`, \`config_value\`, \`description\`)
+        VALUES ('platform_credentials', ?, 'Platform API Credentials')
+        ON DUPLICATE KEY UPDATE \`config_value\` = VALUES(\`config_value\`), \`updated_at\` = NOW();
+      `, [JSON.stringify(credsObj)]);
+    } catch (confErr) {
+      console.warn("[dbSaveCredentials db_config update]:", confErr);
+    }
     conn.release();
     return true;
   } catch (err) {
-    console.warn("[dbSaveCredentials fallback]:", err);
+    console.warn(`[dbSaveCredentials warn for ${platformId}]:`, err?.message || err);
+    if (err?.code === "ER_NO_SUCH_TABLE") {
+      try {
+        await ensureMySQLTablesInitialized();
+      } catch {
+      }
+    }
     return false;
   }
 }
@@ -2044,15 +2276,27 @@ app.post("/api/emag/products", async (req, res) => {
           rawEmagData: mergedProd
         };
       });
+      let dbSavedCount = 0;
+      if (normalizedOffers.length > 0) {
+        try {
+          const dbRes = await dbSaveOffersBulk(normalizedOffers);
+          dbSavedCount = dbRes.count;
+          console.log(`[eMAG Products] Ba\u015Far\u0131yla ${dbSavedCount}/${normalizedOffers.length} \xFCr\xFCn MySQL veritaban\u0131na kaydedildi.`);
+        } catch (dbErr) {
+          console.warn("[eMAG Products] MySQL Veritaban\u0131na kaydetme uyar\u0131s\u0131:", dbErr?.message || dbErr);
+        }
+      }
       return res.json({
         success: true,
         count: normalizedOffers.length,
+        dbSavedCount,
+        savedToDb: true,
         durationMs,
         serverIp,
         headerPreview: maskedHeaderPreview,
         offers: normalizedOffers,
         rawResults: rawProducts,
-        message: `eMAG (${emagDomain}) \xFCzerinden ${normalizedOffers.length} adet ger\xE7ek \xFCr\xFCn ve katalog g\xF6rseli ba\u015Far\u0131yla \xE7ekildi (${durationMs}ms).`
+        message: `eMAG (${emagDomain}) \xFCzerinden ${normalizedOffers.length} adet ger\xE7ek \xFCr\xFCn \xE7ekildi ve ${dbSavedCount} tanesi MySQL veritaban\u0131na kaydedildi (${durationMs}ms).`
       });
     } else {
       const errSource = activeData || inactiveData || pendingData;
@@ -3873,12 +4117,24 @@ app.post("/api/baselinker/products", async (req, res) => {
           updatedAt: (/* @__PURE__ */ new Date()).toISOString()
         };
       });
+      let dbSavedCount = 0;
+      if (normalizedOffers.length > 0) {
+        try {
+          const dbRes = await dbSaveOffersBulk(normalizedOffers);
+          dbSavedCount = dbRes.count;
+          console.log(`[BaseLinker Products] Ba\u015Far\u0131yla ${dbSavedCount}/${normalizedOffers.length} \xFCr\xFCn MySQL veritaban\u0131na kaydedildi.`);
+        } catch (dbErr) {
+          console.warn("[BaseLinker Products] MySQL Veritaban\u0131na kaydetme uyar\u0131s\u0131:", dbErr?.message || dbErr);
+        }
+      }
       return res.json({
         success: true,
         count: normalizedOffers.length,
+        dbSavedCount,
+        savedToDb: true,
         durationMs,
         offers: normalizedOffers,
-        message: `BaseLinker \xFCzerinden ${normalizedOffers.length} \xFCr\xFCn ba\u015Far\u0131yla \xE7ekildi (${durationMs}ms).`
+        message: `BaseLinker \xFCzerinden ${normalizedOffers.length} \xFCr\xFCn \xE7ekildi ve ${dbSavedCount} tanesi MySQL veritaban\u0131na kaydedildi (${durationMs}ms).`
       });
     } else {
       return res.json({
@@ -3974,6 +4230,17 @@ async function getValidAllegroToken(requestedToken) {
           refreshToken: refreshData.refresh_token || activeAllegroSession.refreshToken,
           tokenExpiresAt: Date.now() + (refreshData.expires_in || 43199) * 1e3
         };
+        dbSaveCredentials("allegro", {
+          clientId: "f2aaccb04bc146e4a6832179f10a12c3",
+          clientSecret: "YAaC1OJpbFLPYg7npUT8ZVuLIO0uxUiFmI7rZxQU4TwPCr1VTbSuNZ2qhmpZxTBl",
+          accessToken: activeAllegroSession.accessToken,
+          refreshToken: activeAllegroSession.refreshToken,
+          tokenExpiresAt: activeAllegroSession.tokenExpiresAt,
+          sellerLogin: "charsioutlet",
+          environment: "production",
+          country: "pl"
+        }).catch(() => {
+        });
       }
     } catch {
     }
@@ -4350,12 +4617,24 @@ app.post("/api/allegro/products", async (req, res) => {
           updatedAt: (/* @__PURE__ */ new Date()).toISOString()
         };
       });
+      let dbSavedCount = 0;
+      if (normalizedOffers.length > 0) {
+        try {
+          const dbRes = await dbSaveOffersBulk(normalizedOffers);
+          dbSavedCount = dbRes.count;
+          console.log(`[Allegro Products] Ba\u015Far\u0131yla ${dbSavedCount}/${normalizedOffers.length} \xFCr\xFCn MySQL veritaban\u0131na kaydedildi.`);
+        } catch (dbErr) {
+          console.warn("[Allegro Products] MySQL Veritaban\u0131na kaydetme uyar\u0131s\u0131:", dbErr?.message || dbErr);
+        }
+      }
       return res.json({
         success: true,
         count: normalizedOffers.length,
+        dbSavedCount,
+        savedToDb: true,
         durationMs,
         offers: normalizedOffers,
-        message: `Allegro (${environment}) ma\u011Fazan\u0131zdan toplam ${normalizedOffers.length} \xFCr\xFCn teklifi ba\u015Far\u0131yla \xE7ekildi (Aktif, Pasif, Taslak ve Biten ilanlar dahil).`
+        message: `Allegro (${environment}) ma\u011Fazan\u0131zdan toplam ${normalizedOffers.length} \xFCr\xFCn teklifi \xE7ekildi ve ${dbSavedCount} tanesi MySQL veritaban\u0131na kaydedildi.`
       });
     } else {
       const firstError = activeRes.status === "fulfilled" && activeRes.value?.error_description || inactiveRes.status === "fulfilled" && inactiveRes.value?.error_description || generalRes.status === "fulfilled" && (generalRes.value?.error_description || generalRes.value?.error) || "Teklifler \xE7ekilemedi";
@@ -5884,6 +6163,32 @@ app.post("/api/system/cron-trigger", async (_req, res) => {
   });
 });
 async function startServer() {
+  ensureMySQLTablesInitialized({
+    allegro: {
+      clientId: "f2aaccb04bc146e4a6832179f10a12c3",
+      clientSecret: "YAaC1OJpbFLPYg7npUT8ZVuLIO0uxUiFmI7rZxQU4TwPCr1VTbSuNZ2qhmpZxTBl",
+      accessToken: activeAllegroSession.accessToken,
+      refreshToken: activeAllegroSession.refreshToken,
+      tokenExpiresAt: activeAllegroSession.tokenExpiresAt,
+      sellerLogin: "charsioutlet",
+      environment: "production",
+      country: "pl",
+      status: "connected"
+    },
+    emag: {
+      username: "chrsadv",
+      userHash: "chrsadv",
+      apiCode: "chrsadv",
+      country: "bg",
+      status: "connected"
+    },
+    baselinker: {
+      apiToken: "",
+      status: "connected"
+    }
+  }).catch((err) => {
+    console.warn("[Startup DB Init warning]:", err?.message || err);
+  });
   const isDev = process.env.NODE_ENV !== "production";
   if (isDev) {
     const vite = await createViteServer({

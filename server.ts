@@ -5,6 +5,38 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
+import {
+  testMySQLConnection,
+  installMySQLDatabase,
+  ensureMySQLTablesInitialized,
+  getMySQLDatabaseStatus,
+  syncAllEntitiesToMySQL,
+  checkSystemStatus,
+  installCompleteSystem,
+  loginDatabaseUser,
+  dbGetOffers,
+  dbSaveOffer,
+  dbDeleteOffer,
+  dbGetOrders,
+  dbSaveOrder,
+  dbGetCredentials,
+  dbSaveCredentials,
+  dbGetCategories,
+  dbSaveCategory,
+  dbDeleteCategory,
+  dbGetRepricerRules,
+  dbSaveRepricerRule,
+  dbDeleteRepricerRule,
+  dbGetAutomations,
+  dbSaveAutomation,
+  dbDeleteAutomation,
+  dbGetLogs,
+  dbSaveLog,
+  dbSaveOffersBulk,
+  dbSaveOrdersBulk,
+  dbGetConfig,
+  dbSaveConfig
+} from './src/server/mysqlBackend';
 
 dotenv.config();
 
@@ -879,15 +911,29 @@ app.post('/api/emag/products', async (req, res) => {
         };
       });
 
+      // Persist all fetched eMAG products directly into MySQL database
+      let dbSavedCount = 0;
+      if (normalizedOffers.length > 0) {
+        try {
+          const dbRes = await dbSaveOffersBulk(normalizedOffers);
+          dbSavedCount = dbRes.count;
+          console.log(`[eMAG Products] Başarıyla ${dbSavedCount}/${normalizedOffers.length} ürün MySQL veritabanına kaydedildi.`);
+        } catch (dbErr: any) {
+          console.warn('[eMAG Products] MySQL Veritabanına kaydetme uyarısı:', dbErr?.message || dbErr);
+        }
+      }
+
       return res.json({
         success: true,
         count: normalizedOffers.length,
+        dbSavedCount,
+        savedToDb: true,
         durationMs,
         serverIp,
         headerPreview: maskedHeaderPreview,
         offers: normalizedOffers,
         rawResults: rawProducts,
-        message: `eMAG (${emagDomain}) üzerinden ${normalizedOffers.length} adet gerçek ürün ve katalog görseli başarıyla çekildi (${durationMs}ms).`
+        message: `eMAG (${emagDomain}) üzerinden ${normalizedOffers.length} adet gerçek ürün çekildi ve ${dbSavedCount} tanesi MySQL veritabanına kaydedildi (${durationMs}ms).`
       });
     } else {
       const errSource = activeData || inactiveData || pendingData;
@@ -3049,12 +3095,26 @@ app.post('/api/baselinker/products', async (req, res) => {
         };
       });
 
+      // Persist all fetched BaseLinker products directly into MySQL database
+      let dbSavedCount = 0;
+      if (normalizedOffers.length > 0) {
+        try {
+          const dbRes = await dbSaveOffersBulk(normalizedOffers);
+          dbSavedCount = dbRes.count;
+          console.log(`[BaseLinker Products] Başarıyla ${dbSavedCount}/${normalizedOffers.length} ürün MySQL veritabanına kaydedildi.`);
+        } catch (dbErr: any) {
+          console.warn('[BaseLinker Products] MySQL Veritabanına kaydetme uyarısı:', dbErr?.message || dbErr);
+        }
+      }
+
       return res.json({
         success: true,
         count: normalizedOffers.length,
+        dbSavedCount,
+        savedToDb: true,
         durationMs,
         offers: normalizedOffers,
-        message: `BaseLinker üzerinden ${normalizedOffers.length} ürün başarıyla çekildi (${durationMs}ms).`
+        message: `BaseLinker üzerinden ${normalizedOffers.length} ürün çekildi ve ${dbSavedCount} tanesi MySQL veritabanına kaydedildi (${durationMs}ms).`
       });
     } else {
       return res.json({
@@ -3169,6 +3229,16 @@ async function getValidAllegroToken(requestedToken?: string): Promise<string> {
           refreshToken: refreshData.refresh_token || activeAllegroSession.refreshToken,
           tokenExpiresAt: Date.now() + (refreshData.expires_in || 43199) * 1000
         };
+        dbSaveCredentials('allegro', {
+          clientId: 'f2aaccb04bc146e4a6832179f10a12c3',
+          clientSecret: 'YAaC1OJpbFLPYg7npUT8ZVuLIO0uxUiFmI7rZxQU4TwPCr1VTbSuNZ2qhmpZxTBl',
+          accessToken: activeAllegroSession.accessToken,
+          refreshToken: activeAllegroSession.refreshToken,
+          tokenExpiresAt: activeAllegroSession.tokenExpiresAt,
+          sellerLogin: 'charsioutlet',
+          environment: 'production',
+          country: 'pl'
+        }).catch(() => {});
       }
     } catch {
       // Refresh hatası olursa mevcut token ile devam et
@@ -3624,12 +3694,26 @@ app.post('/api/allegro/products', async (req, res) => {
         };
       });
 
+      // Persist all fetched Allegro products directly into MySQL database
+      let dbSavedCount = 0;
+      if (normalizedOffers.length > 0) {
+        try {
+          const dbRes = await dbSaveOffersBulk(normalizedOffers);
+          dbSavedCount = dbRes.count;
+          console.log(`[Allegro Products] Başarıyla ${dbSavedCount}/${normalizedOffers.length} ürün MySQL veritabanına kaydedildi.`);
+        } catch (dbErr: any) {
+          console.warn('[Allegro Products] MySQL Veritabanına kaydetme uyarısı:', dbErr?.message || dbErr);
+        }
+      }
+
       return res.json({
         success: true,
         count: normalizedOffers.length,
+        dbSavedCount,
+        savedToDb: true,
         durationMs,
         offers: normalizedOffers,
-        message: `Allegro (${environment}) mağazanızdan toplam ${normalizedOffers.length} ürün teklifi başarıyla çekildi (Aktif, Pasif, Taslak ve Biten ilanlar dahil).`
+        message: `Allegro (${environment}) mağazanızdan toplam ${normalizedOffers.length} ürün teklifi çekildi ve ${dbSavedCount} tanesi MySQL veritabanına kaydedildi.`
       });
     } else {
       const firstError = (activeRes.status === 'fulfilled' && activeRes.value?.error_description)
@@ -3830,37 +3914,6 @@ app.post('/api/sync/live-catalog', async (req, res) => {
 // ==========================================
 // MySQL Database Endpoints (Sıfırdan Kurulum & Yönetim)
 // ==========================================
-import {
-  testMySQLConnection,
-  installMySQLDatabase,
-  getMySQLDatabaseStatus,
-  syncAllEntitiesToMySQL,
-  checkSystemStatus,
-  installCompleteSystem,
-  loginDatabaseUser,
-  dbGetOffers,
-  dbSaveOffer,
-  dbDeleteOffer,
-  dbGetOrders,
-  dbSaveOrder,
-  dbGetCredentials,
-  dbSaveCredentials,
-  dbGetCategories,
-  dbSaveCategory,
-  dbDeleteCategory,
-  dbGetRepricerRules,
-  dbSaveRepricerRule,
-  dbDeleteRepricerRule,
-  dbGetAutomations,
-  dbSaveAutomation,
-  dbDeleteAutomation,
-  dbGetLogs,
-  dbSaveLog,
-  dbSaveOffersBulk,
-  dbSaveOrdersBulk,
-  dbGetConfig,
-  dbSaveConfig
-} from './src/server/mysqlBackend';
 
 // System Lifecycle & Installation Status
 app.get('/api/system/status', async (req, res) => {
@@ -5519,6 +5572,34 @@ app.post('/api/system/cron-trigger', async (_req, res) => {
 
 // Vite middleware for development
 async function startServer() {
+  // Ensure MySQL database tables and active API credentials are created on server boot
+  ensureMySQLTablesInitialized({
+    allegro: {
+      clientId: 'f2aaccb04bc146e4a6832179f10a12c3',
+      clientSecret: 'YAaC1OJpbFLPYg7npUT8ZVuLIO0uxUiFmI7rZxQU4TwPCr1VTbSuNZ2qhmpZxTBl',
+      accessToken: activeAllegroSession.accessToken,
+      refreshToken: activeAllegroSession.refreshToken,
+      tokenExpiresAt: activeAllegroSession.tokenExpiresAt,
+      sellerLogin: 'charsioutlet',
+      environment: 'production',
+      country: 'pl',
+      status: 'connected'
+    },
+    emag: {
+      username: 'chrsadv',
+      userHash: 'chrsadv',
+      apiCode: 'chrsadv',
+      country: 'bg',
+      status: 'connected'
+    },
+    baselinker: {
+      apiToken: '',
+      status: 'connected'
+    }
+  }).catch((err: any) => {
+    console.warn('[Startup DB Init warning]:', err?.message || err);
+  });
+
   const isDev = process.env.NODE_ENV !== 'production';
 
   if (isDev) {

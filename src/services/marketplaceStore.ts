@@ -1266,7 +1266,7 @@ export class MarketplaceStore {
           this.notify();
 
           // Save fetched eMAG products directly into MySQL database
-          fetch('/api/db/offers/bulk', {
+          await fetch('/api/db/offers/bulk', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ offers: data.offers })
@@ -1284,10 +1284,11 @@ export class MarketplaceStore {
           platform: 'emag'
         });
 
+        const dbInfo = typeof data.dbSavedCount === 'number' ? ` (${data.dbSavedCount} adet veritabanına kaydedildi)` : '';
         return {
           success: true,
           count: data.count,
-          message: data.message,
+          message: `${data.message || 'eMAG ürünleri başarıyla çekildi.'}${dbInfo}`,
           offers: data.offers
         };
       } else {
@@ -1434,7 +1435,7 @@ export class MarketplaceStore {
           this.notify();
 
           // Save fetched Allegro products directly into MySQL database
-          fetch('/api/db/offers/bulk', {
+          await fetch('/api/db/offers/bulk', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ offers: data.offers })
@@ -1451,10 +1452,11 @@ export class MarketplaceStore {
           platform: 'allegro'
         });
 
+        const dbInfo = typeof data.dbSavedCount === 'number' ? ` (${data.dbSavedCount} adet veritabanına kaydedildi)` : '';
         return {
           success: true,
           count: data.count,
-          message: data.message,
+          message: `${data.message || 'Allegro ürünleri başarıyla çekildi.'}${dbInfo}`,
           offers: data.offers
         };
       } else {
@@ -1508,7 +1510,7 @@ export class MarketplaceStore {
           this.notify();
 
           // Save fetched BaseLinker products directly into MySQL database
-          fetch('/api/db/offers/bulk', {
+          await fetch('/api/db/offers/bulk', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ offers: data.offers })
@@ -1525,10 +1527,11 @@ export class MarketplaceStore {
           platform: 'baselinker'
         });
 
+        const dbInfo = typeof data.dbSavedCount === 'number' ? ` (${data.dbSavedCount} adet veritabanına kaydedildi)` : '';
         return {
           success: true,
           count: data.count,
-          message: data.message,
+          message: `${data.message || 'BaseLinker ürünleri başarıyla çekildi.'}${dbInfo}`,
           offers: data.offers
         };
       } else {
