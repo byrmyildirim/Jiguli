@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGradS" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#f1f5f9"/>
+    </linearGradient>
+    <linearGradient id="solarPanelGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="50%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="whiteBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="60%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
+    <linearGradient id="redStrobeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ef4444"/>
+      <stop offset="50%" stop-color="#dc2626"/>
+      <stop offset="100%" stop-color="#991b1b"/>
+    </linearGradient>
+    <linearGradient id="phoneGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <filter id="shadowS" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <!-- Clean Studio Background -->
+  <rect width="500" height="500" fill="url(#bgGradS)" rx="24"/>
+  <circle cx="250" cy="270" r="190" fill="#e2e8f0" opacity="0.4"/>
+
+  <!-- ALARM MAIN DEVICE -->
+  <g transform="translate(140, 70)" filter="url(#shadowS)">
+    <!-- Main Device Body (White Tapered Siren Housing) -->
+    <path d="M30 60 L150 60 L160 210 Q160 280 90 280 Q20 280 20 210 Z" fill="url(#whiteBodyGrad)" stroke="#cbd5e1" stroke-width="2"/>
+    
+    <!-- Angled Solar Panel on Top -->
+    <polygon points="15,60 165,60 180,20 0,20" fill="url(#solarPanelGrad)" stroke="#334155" stroke-width="2.5"/>
+    <!-- Solar cell grid lines -->
+    <line x1="45" y1="20" x2="52" y2="60" stroke="#38bdf8" stroke-width="1.2" opacity="0.6"/>
+    <line x1="90" y1="20" x2="90" y2="60" stroke="#38bdf8" stroke-width="1.2" opacity="0.6"/>
+    <line x1="135" y1="20" x2="128" y2="60" stroke="#38bdf8" stroke-width="1.2" opacity="0.6"/>
+    <line x1="10" y1="40" x2="170" y2="40" stroke="#38bdf8" stroke-width="1.2" opacity="0.6"/>
+
+    <!-- PIR Motion Sensor Eye Window -->
+    <circle cx="90" cy="120" r="28" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
+    <circle cx="90" cy="120" r="22" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <!-- PIR Fresnel lens texture -->
+    <circle cx="90" cy="120" r="14" fill="#e2e8f0" opacity="0.7"/>
+    <circle cx="90" cy="120" r="7" fill="#64748b"/>
+    <circle cx="88" cy="118" r="2" fill="#ffffff"/>
+
+    <!-- Siren Speaker Grille Slots -->
+    <line x1="60" y1="162" x2="120" y2="162" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="68" y1="172" x2="112" y2="172" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="75" y1="182" x2="105" y2="182" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+
+    <!-- Red Bottom Strobe Light / Flasher -->
+    <path d="M22 210 L158 210 Q160 280 90 280 Q20 280 22 210 Z" fill="url(#redStrobeGrad)" stroke="#b91c1c" stroke-width="1.5"/>
+    <path d="M35 215 Q90 230 145 215" stroke="#fca5a5" stroke-width="2" fill="none" opacity="0.7"/>
+    <circle cx="90" cy="245" r="10" fill="#ffffff" opacity="0.8"/>
+  </g>
+
+  <!-- SMARTPHONE WITH TUYA / SMART LIFE APP (Connected Alarm) -->
+  <g transform="translate(325, 200)" filter="url(#shadowS)">
+    <!-- Phone Body -->
+    <rect x="0" y="0" width="85" height="165" rx="14" fill="url(#phoneGrad)" stroke="#475569" stroke-width="2.5"/>
+    <!-- Phone Screen -->
+    <rect x="5" y="6" width="75" height="153" rx="10" fill="#ffffff"/>
+    
+    <!-- App Header (Tuya Orange) -->
+    <rect x="5" y="6" width="75" height="34" rx="8" fill="#ff5722"/>
+    <text x="42" y="27" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">tuya</text>
+    
+    <!-- App Alarm Status Card -->
+    <circle cx="42" cy="78" r="22" fill="#ecfdf5" stroke="#10b981" stroke-width="2"/>
+    <path d="M34 78 L40 84 L52 72" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="42" y="112" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="8.5" font-weight="700" fill="#0f172a" text-anchor="middle">ARMED 120dB</text>
+    
+    <!-- WiFi Connected Badge -->
+    <rect x="18" y="122" width="48" height="16" rx="8" fill="#f1f5f9"/>
+    <text x="42" y="133" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="7" font-weight="600" fill="#64748b" text-anchor="middle">WiFi · IP67</text>
+  </g>
+
+  <!-- Badges on Corner -->
+  <g transform="translate(30, 420)">
+    <rect width="170" height="34" rx="10" fill="#0f172a" opacity="0.9"/>
+    <text x="85" y="22" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">SOLAR ALARM 120dB</text>
+  </g>
+</svg>

@@ -29,12 +29,123 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { InitialInstallationWizard } from './components/auth/InitialInstallationWizard';
 import { LoginView } from './components/auth/LoginView';
 
+export const TAB_CONFIG: Record<string, { path: string; title: string }> = {
+  dashboard: { path: '/', title: 'Jiguli - Ana Sayfa & Satış Özeti' },
+  aliexpress: { path: '/sourcing', title: 'Jiguli - Görselle Ürün Bul & Kaynak' },
+  offers: { path: '/offers', title: 'Jiguli - Ürünler & Stok Yönetimi' },
+  orders: { path: '/orders', title: 'Jiguli - Siparişler & Lojistik' },
+  repricer: { path: '/repricer', title: 'Jiguli - Repricer & BuyBox' },
+  customercare: { path: '/customer-care', title: 'Jiguli - Müşteri & İade' },
+  automations: { path: '/automations', title: 'Jiguli - Otomasyon Kuralları' },
+  baselinker: { path: '/baselinker', title: 'Jiguli - BaseLinker Hub' },
+  channels: { path: '/channels', title: 'Jiguli - Pazaryerleri' },
+  database: { path: '/database', title: 'Jiguli - MySQL Kurulum & DB' },
+  settings: { path: '/settings', title: 'Jiguli - Ayarlar' },
+  allegrodocs: { path: '/allegro-docs', title: 'Jiguli - Allegro API Dokümanı' },
+  categories: { path: '/categories', title: 'Jiguli - Kategoriler & Eşleme' },
+  syncrules: { path: '/sync-rules', title: 'Jiguli - Senkronizasyon Kuralları' },
+  apilogs: { path: '/logs', title: 'Jiguli - API Logları' },
+  apiconsole: { path: '/api-console', title: 'Jiguli - API Konsolu' }
+};
+
+export const PATH_TO_TAB_MAP: Record<string, string> = {
+  '/': 'dashboard',
+  '/dashboard': 'dashboard',
+  '/sourcing': 'aliexpress',
+  '/aliexpress': 'aliexpress',
+  '/offers': 'offers',
+  '/products': 'offers',
+  '/urunler': 'offers',
+  '/orders': 'orders',
+  '/siparisler': 'orders',
+  '/repricer': 'repricer',
+  '/customer-care': 'customercare',
+  '/customercare': 'customercare',
+  '/automations': 'automations',
+  '/otomasyon': 'automations',
+  '/baselinker': 'baselinker',
+  '/channels': 'channels',
+  '/pazaryerleri': 'channels',
+  '/database': 'database',
+  '/veritabani': 'database',
+  '/settings': 'settings',
+  '/ayarlar': 'settings',
+  '/allegro-docs': 'allegrodocs',
+  '/docs': 'allegrodocs',
+  '/categories': 'categories',
+  '/kategoriler': 'categories',
+  '/sync-rules': 'syncrules',
+  '/syncrules': 'syncrules',
+  '/logs': 'apilogs',
+  '/apilogs': 'apilogs',
+  '/api-console': 'apiconsole',
+  '/apiconsole': 'apiconsole'
+};
+
+export function getTabFromPathname(pathname: string): string {
+  const norm = pathname.toLowerCase().replace(/\/+$/, '') || '/';
+  if (PATH_TO_TAB_MAP[norm]) return PATH_TO_TAB_MAP[norm];
+  for (const [prefix, tab] of Object.entries(PATH_TO_TAB_MAP)) {
+    if (prefix !== '/' && norm.startsWith(prefix)) return tab;
+  }
+  return 'dashboard';
+}
+
 function MainAppLayout() {
   const { theme, toggleTheme } = useTheme();
   const { isAuthenticated } = useAuth();
 
   const [isCheckingSystem, setIsCheckingSystem] = useState(true);
   const [isSystemInstalled, setIsSystemInstalled] = useState<boolean>(true);
+
+  // Read initial tab from URL bar
+  const [currentTab, setCurrentTab] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return getTabFromPathname(window.location.pathname);
+    }
+    return 'dashboard';
+  });
+
+  const navigateToTab = (targetTab: string, replace = false) => {
+    setCurrentTab(targetTab);
+    if (typeof window !== 'undefined') {
+      const cfg = TAB_CONFIG[targetTab] || { path: `/${targetTab}`, title: `Jiguli - ${targetTab}` };
+      const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+      const targetPath = cfg.path;
+
+      if (currentPath !== targetPath) {
+        if (replace) {
+          window.history.replaceState({ tab: targetTab }, '', targetPath);
+        } else {
+          window.history.pushState({ tab: targetTab }, '', targetPath);
+        }
+      }
+      document.title = cfg.title;
+    }
+  };
+
+  // Sync with browser Back and Forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      const tab = getTabFromPathname(window.location.pathname);
+      setCurrentTab(tab);
+      const cfg = TAB_CONFIG[tab];
+      if (cfg && typeof document !== 'undefined') {
+        document.title = cfg.title;
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Update initial title
+  useEffect(() => {
+    const cfg = TAB_CONFIG[currentTab];
+    if (cfg && typeof document !== 'undefined') {
+      document.title = cfg.title;
+    }
+  }, [currentTab]);
 
   // Fetch live exchange rates directly from TCMB on mount & check system status & sync DB
   useEffect(() => {
@@ -65,7 +176,6 @@ function MainAppLayout() {
     checkStatus();
   }, []);
 
-  const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
     try {
@@ -107,10 +217,7 @@ function MainAppLayout() {
         <AllegroDocsView
           theme={theme}
           onBackToApp={() => {
-            if (typeof window !== 'undefined' && window.location.pathname !== '/') {
-              window.history.pushState({}, '', '/');
-            }
-            setCurrentTab('settings');
+            navigateToTab('settings');
           }}
         />
       </div>
@@ -152,9 +259,9 @@ function MainAppLayout() {
       {/* Left Sidebar (Desktop + Mobile Drawer + Bottom Nav) */}
       <Sidebar
         currentTab={currentTab}
-        onSelectTab={setCurrentTab}
-        onOpenSourcing={() => setCurrentTab('aliexpress')}
-        onOpenAuth={() => setCurrentTab('settings')}
+        onSelectTab={navigateToTab}
+        onOpenSourcing={() => navigateToTab('aliexpress')}
+        onOpenAuth={() => navigateToTab('settings')}
         isMobileOpen={isMobileDrawerOpen}
         onCloseMobile={() => setIsMobileDrawerOpen(false)}
         theme={theme}
@@ -169,8 +276,8 @@ function MainAppLayout() {
         {/* Top Header */}
         <Header
           currentTab={currentTab}
-          onSelectTab={setCurrentTab}
-          onOpenAuth={() => setCurrentTab('settings')}
+          onSelectTab={navigateToTab}
+          onOpenAuth={() => navigateToTab('settings')}
           onOpenCreateOffer={() => setIsCreateOfferModalOpen(true)}
           onToggleMobileMenu={() => setIsMobileDrawerOpen(prev => !prev)}
           theme={theme}
@@ -184,16 +291,16 @@ function MainAppLayout() {
           <div className="w-full">
             {currentTab === 'dashboard' && (
               <DashboardView
-                onNavigate={setCurrentTab}
+                onNavigate={navigateToTab}
                 onOpenCreateOffer={() => setIsCreateOfferModalOpen(true)}
-                onOpenAuth={() => setCurrentTab('settings')}
+                onOpenAuth={() => navigateToTab('settings')}
                 theme={theme}
               />
             )}
 
             {currentTab === 'aliexpress' && (
               <AliExpressSourcingView
-                onNavigateToOffers={() => setCurrentTab('offers')}
+                onNavigateToOffers={() => navigateToTab('offers')}
                 theme={theme}
               />
             )}
@@ -201,7 +308,7 @@ function MainAppLayout() {
             {currentTab === 'offers' && (
               <OffersView
                 onOpenCreateOffer={() => setIsCreateOfferModalOpen(true)}
-                onNavigateToSourcing={() => setCurrentTab('aliexpress')}
+                onNavigateToSourcing={() => navigateToTab('aliexpress')}
                 theme={theme}
               />
             )}
@@ -234,21 +341,21 @@ function MainAppLayout() {
             {currentTab === 'settings' && (
               <SettingsView
                 theme={theme}
-                onNavigateToTab={(tab) => setCurrentTab(tab)}
+                onNavigateToTab={(tab) => navigateToTab(tab)}
               />
             )}
 
             {currentTab === 'allegrodocs' && (
               <AllegroDocsView
                 theme={theme}
-                onBackToApp={() => setCurrentTab('settings')}
+                onBackToApp={() => navigateToTab('settings')}
               />
             )}
 
             {currentTab === 'channels' && (
               <ChannelsView
                 onConfigurePlatform={(platform) => setSelectedPlatform(platform)}
-                onOpenAllegroAuth={() => setCurrentTab('settings')}
+                onOpenAllegroAuth={() => navigateToTab('settings')}
                 theme={theme}
               />
             )}
@@ -265,7 +372,7 @@ function MainAppLayout() {
                   const blPlatform = store.getPlatforms().find(p => p.id === 'baselinker');
                   if (blPlatform) setSelectedPlatform(blPlatform);
                 }}
-                onNavigateToOrders={() => setCurrentTab('orders')}
+                onNavigateToOrders={() => navigateToTab('orders')}
                 theme={theme}
               />
             )}
@@ -283,7 +390,7 @@ function MainAppLayout() {
                   setSelectedEmagCategoryForNewOffer(catId);
                   setIsCreateOfferModalOpen(true);
                 }}
-                onNavigateToOffers={() => setCurrentTab('offers')}
+                onNavigateToOffers={() => navigateToTab('offers')}
               />
             )}
 
