@@ -12,7 +12,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 app.use(express.json({ limit: '25mb' }));
 
@@ -5489,9 +5489,16 @@ async function startServer() {
     });
   }
 
-  app.listen(port, '0.0.0.0', () => {
-    console.log(`> OmniMarket Server ready at http://0.0.0.0:${port}`);
-  });
+  const isNamedPipeOrSocket = isNaN(Number(port));
+  if (isNamedPipeOrSocket) {
+    app.listen(port, () => {
+      console.log(`> Jiguli Server ready on socket: ${port}`);
+    });
+  } else {
+    app.listen(Number(port), '0.0.0.0', () => {
+      console.log(`> Jiguli Server ready at http://0.0.0.0:${port}`);
+    });
+  }
 }
 
 startServer();

@@ -48,9 +48,51 @@ Sistem canlı ortamda ilk defa ayağa kalktığında (`http://SUNUCU_IP_VEYA_DOM
 
 ---
 
-## 3. Canlı Sunucuya Kurulum Yöntemleri
+## 3. Kurulum Yöntemleri
 
-### Yöntem A: Docker Compose ile Tek Tıkla Kurulum (Önerilen)
+### Yöntem A: cPanel / Plesk / CloudLinux "Setup Node.js App" (Hosting İçin)
+
+cPanel veya Plesk panelli bir Node.js hosting kullanıyorsanız:
+
+1. **MySQL Veritabanı Oluşturun:**
+   - cPanel -> **MySQL Veritabanı Sihirbazı (MySQL Database Wizard)** menüsüne girin.
+   - Bir veritabanı adı belirleyin (Örn: `hesap_jigulidb`).
+   - Bir kullanıcı ve güçlü şifre oluşturun (Örn: `hesap_jiguliuser`).
+   - Tüm yetkileri (**ALL PRIVILEGES**) verip kaydedin.
+
+2. **cPanel'de Node.js Uygulamasını Tanımlayın:**
+   - cPanel -> **Setup Node.js App** menüsüne tıklayın ve **Create Application** butonuna basın:
+     - **Node.js version:** `20.x`, `22.x` veya `18.x`
+     - **Application mode:** `Production`
+     - **Application root:** `jiguli` (veya doğrudan ana dizin için `public_html`)
+     - **Application URL:** Alan adınız (Örn: `panel.siteniz.com` veya `siteniz.com`)
+     - **Application startup file:** `server.js` (veya `app.js`)
+   - **Create** butonuna basarak uygulamayı oluşturun.
+
+3. **Dosyaları Yükleyin:**
+   - Proje dosyalarını (`dist`, `src`, `server.ts`, `server.js`, `app.js`, `package.json`, `data`, `.env.example`) cPanel Dosya Yöneticisi (File Manager) veya Git ile `jiguli` klasörüne yükleyin.
+   - Veya cPanel Terminalinden:
+     ```bash
+     git clone https://github.com/byrmyildirim/Jiguli.git .
+     npm install
+     npm run build
+     ```
+   - cPanel Node.js ekranında **Run NPM Install** butonuna basarak kütüphaneleri yükleyebilirsiniz.
+
+4. **Uygulamayı Başlatın:**
+   - cPanel'de **Restart** butonuna basın.
+   - Tarayıcınızdan sitenizi açtığınızda doğrudan **Jiguli İlk Kurulum Sihirbazı** açılır.
+   - Hosting veritabanı bilgilerinizi girin:
+     - **Host:** `localhost` veya `127.0.0.1`
+     - **Port:** `3306`
+     - **Veritabanı:** `hesap_jigulidb`
+     - **Kullanıcı:** `hesap_jiguliuser`
+     - **Şifre:** Veritabanı şifreniz
+   - Admin kullanıcı adınızı ve şifrenizi girip "Kurulumu Tamamla" butonuna bastığınız anda tüm tablolar açılır ve paneliniz canlı kullanıma başlar!
+
+---
+
+### Yöntem B: Docker Compose ile Tek Tıkla Kurulum (VPS İçin)
 
 Sunucunuzda Docker ve Docker Compose kuruluysa:
 
