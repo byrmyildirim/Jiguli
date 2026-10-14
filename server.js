@@ -13,6 +13,14 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 var CONFIG_FILE_PATH = path.resolve(process.cwd(), "data", "db_config.json");
+var detectedPrefix = "cnt_";
+function getActivePrefix(cfg) {
+  if (detectedPrefix) return detectedPrefix;
+  return cfg?.prefix || getSavedMySQLConfig().prefix || "cnt_";
+}
+function setDetectedPrefix(prefix) {
+  detectedPrefix = prefix;
+}
 function getSavedMySQLConfig() {
   if (process.env.DB_HOST && process.env.DB_USER && process.env.DB_NAME) {
     return {
@@ -22,7 +30,7 @@ function getSavedMySQLConfig() {
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD || "",
       ssl: process.env.DB_SSL === "true",
-      prefix: process.env.DB_PREFIX || "jiguli_",
+      prefix: detectedPrefix || process.env.DB_PREFIX || "cnt_",
       charset: process.env.DB_CHARSET || "utf8mb4"
     };
   }
@@ -31,7 +39,10 @@ function getSavedMySQLConfig() {
       const raw = fs.readFileSync(CONFIG_FILE_PATH, "utf-8");
       const parsed = JSON.parse(raw);
       if (parsed && parsed.host && parsed.database && parsed.user) {
-        return parsed;
+        return {
+          ...parsed,
+          prefix: detectedPrefix || parsed.prefix || "cnt_"
+        };
       }
     }
   } catch (err) {
@@ -44,7 +55,7 @@ function getSavedMySQLConfig() {
     user: "u162532946_connect",
     password: "782536Cnt.",
     ssl: false,
-    prefix: "jiguli_",
+    prefix: detectedPrefix || "cnt_",
     charset: "utf8mb4"
   };
 }
@@ -74,7 +85,7 @@ ${key}="${val}"`;
     updateEnvVar("DB_NAME", cfg.database || "jiguli_db");
     updateEnvVar("DB_USER", cfg.user || "root");
     updateEnvVar("DB_PASSWORD", cfg.password || "");
-    updateEnvVar("DB_PREFIX", cfg.prefix || "jiguli_");
+    updateEnvVar("DB_PREFIX", getActivePrefix(cfg));
     updateEnvVar("DB_SSL", cfg.ssl ? "true" : "false");
     updateEnvVar("DB_CHARSET", cfg.charset || "utf8mb4");
     fs.writeFileSync(envPath, envContent.trim() + "\n", "utf-8");
@@ -371,10 +382,24 @@ function getTableDefinitions(prefix) {
 }
 async function ensureMySQLTablesInitialized(initialCredentials) {
   const cfg = getSavedMySQLConfig();
-  const prefix = cfg.prefix || "jiguli_";
   try {
     const pool = createOrGetPool(cfg);
     const conn = await pool.getConnection();
+    let prefix = cfg.prefix || "cnt_";
+    try {
+      const [tableList] = await conn.query("SHOW TABLES");
+      if (Array.isArray(tableList)) {
+        for (const r of tableList) {
+          const tName = String(Object.values(r)[0] || "");
+          if (tName.startsWith("cnt_")) {
+            prefix = "cnt_";
+            setDetectedPrefix("cnt_");
+            break;
+          }
+        }
+      }
+    } catch {
+    }
     const definitions = getTableDefinitions(prefix);
     for (const def of definitions) {
       try {
@@ -481,7 +506,7 @@ async function ensureMySQLTablesInitialized(initialCredentials) {
   }
 }
 async function installMySQLDatabase(cfg, customSql) {
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   const startTime = Date.now();
   const tableDefinitions = getTableDefinitions(prefix);
   const installedTables = [];
@@ -536,7 +561,7 @@ async function installMySQLDatabase(cfg, customSql) {
   };
 }
 async function getMySQLDatabaseStatus(cfg) {
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   const tableList = [
     { name: `${prefix}db_config`, display: "Sistem Yap\u0131land\u0131rmas\u0131", desc: "Genel ayarlar ve s\xFCr\xFCm bilgisi", pk: "id" },
     { name: `${prefix}users`, display: "Kullan\u0131c\u0131lar & Yetkiler", desc: "Y\xF6netici ve personel hesaplar\u0131", pk: "id" },
@@ -616,7 +641,7 @@ async function getMySQLDatabaseStatus(cfg) {
   };
 }
 async function syncAllEntitiesToMySQL(cfg, data) {
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   const counts = {
     products: 0,
     offers: 0,
@@ -727,7 +752,7 @@ function verifyPassword(password, hash) {
 }
 async function checkSystemStatus() {
   const cfg = getSavedMySQLConfig();
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   let isConnected = false;
   let isInstalled = false;
   let userCount = 0;
@@ -775,7 +800,7 @@ async function checkSystemStatus() {
 }
 async function installCompleteSystem(payload) {
   const cfg = payload.dbConfig;
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   const installResult = await installMySQLDatabase(cfg);
   if (!installResult.success && installResult.errors && installResult.errors.length > 0) {
     return {
@@ -830,7 +855,7 @@ async function installCompleteSystem(payload) {
 }
 async function loginDatabaseUser(username, password) {
   const cfg = getSavedMySQLConfig();
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   const trimmed = username.trim().toLowerCase();
   try {
     const pool = createOrGetPool(cfg);
@@ -882,7 +907,7 @@ async function loginDatabaseUser(username, password) {
 }
 async function dbGetOffers() {
   const cfg = getSavedMySQLConfig();
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   try {
     const pool = createOrGetPool(cfg);
     const conn = await pool.getConnection();
@@ -932,7 +957,7 @@ async function dbGetOffers() {
 }
 async function dbSaveOffer(offer) {
   const cfg = getSavedMySQLConfig();
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   const id = String(offer.id || Date.now()).slice(0, 95);
   const platformId = String(offer.platform_id || offer.platform || (offer.publication?.marketplaces?.base?.id?.includes("allegro") ? "allegro" : String(offer.id).startsWith("emag") ? "emag" : String(offer.id).startsWith("bl") ? "baselinker" : "allegro")).slice(0, 45);
   const marketplaceOfferId = String(offer.marketplace_offer_id || offer.marketplaceOfferId || offer.id || id).slice(0, 95);
@@ -998,10 +1023,11 @@ async function dbSaveOffer(offer) {
     if (err?.code === "ER_NO_SUCH_TABLE") {
       try {
         await ensureMySQLTablesInitialized();
+        const activePrefix = getActivePrefix(cfg);
         const pool = createOrGetPool(cfg);
         const conn = await pool.getConnection();
         await conn.query(`
-          INSERT INTO \`${prefix}offers\`
+          INSERT INTO \`${activePrefix}offers\`
           (\`id\`, \`platform_id\`, \`marketplace_offer_id\`, \`name\`, \`sku\`, \`ean\`, \`category_id\`, \`category_name\`, \`price_amount\`, \`price_currency\`, \`stock_available\`, \`publication_status\`, \`smart_eligible\`, \`primary_image\`, \`sync_allegro\`, \`sync_emag\`, \`sync_baselinker\`, \`raw_payload_json\`)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           ON DUPLICATE KEY UPDATE
@@ -1034,7 +1060,7 @@ async function dbSaveOffer(offer) {
 }
 async function dbDeleteOffer(id) {
   const cfg = getSavedMySQLConfig();
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   try {
     const pool = createOrGetPool(cfg);
     const conn = await pool.getConnection();
@@ -1048,7 +1074,7 @@ async function dbDeleteOffer(id) {
 }
 async function dbGetOrders() {
   const cfg = getSavedMySQLConfig();
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   try {
     const pool = createOrGetPool(cfg);
     const conn = await pool.getConnection();
@@ -1100,7 +1126,7 @@ async function dbGetOrders() {
 }
 async function dbSaveOrder(order) {
   const cfg = getSavedMySQLConfig();
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   const id = String(order.id || Date.now()).slice(0, 95);
   const platform = String(order.platform_id || order.platform || (id.startsWith("allg") ? "allegro" : id.startsWith("emag") ? "emag" : "allegro")).slice(0, 45);
   const marketplaceOrderId = String(order.marketplace_order_id || order.marketplaceOrderId || id).slice(0, 95);
@@ -1165,7 +1191,7 @@ async function dbSaveOrder(order) {
 }
 async function dbGetCredentials() {
   const cfg = getSavedMySQLConfig();
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   try {
     const pool = createOrGetPool(cfg);
     const conn = await pool.getConnection();
@@ -1217,7 +1243,7 @@ async function dbGetCredentials() {
 }
 async function dbSaveCredentials(platformId, data) {
   const cfg = getSavedMySQLConfig();
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   const clientId = data.clientId || data.username || null;
   const clientSecret = data.clientSecret || data.password || null;
   const accessToken = data.accessToken || data.bearerToken || null;
@@ -1281,7 +1307,7 @@ async function dbSaveCredentials(platformId, data) {
 }
 async function dbGetCategories() {
   const cfg = getSavedMySQLConfig();
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   try {
     const pool = createOrGetPool(cfg);
     const conn = await pool.getConnection();
@@ -1295,7 +1321,7 @@ async function dbGetCategories() {
 }
 async function dbSaveCategory(cat) {
   const cfg = getSavedMySQLConfig();
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   try {
     const pool = createOrGetPool(cfg);
     const conn = await pool.getConnection();
@@ -1317,7 +1343,7 @@ async function dbSaveCategory(cat) {
 }
 async function dbDeleteCategory(code) {
   const cfg = getSavedMySQLConfig();
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   try {
     const pool = createOrGetPool(cfg);
     const conn = await pool.getConnection();
@@ -1331,7 +1357,7 @@ async function dbDeleteCategory(code) {
 }
 async function dbGetRepricerRules() {
   const cfg = getSavedMySQLConfig();
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   try {
     const pool = createOrGetPool(cfg);
     const conn = await pool.getConnection();
@@ -1345,7 +1371,7 @@ async function dbGetRepricerRules() {
 }
 async function dbSaveRepricerRule(rule) {
   const cfg = getSavedMySQLConfig();
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   const id = String(rule.id || Date.now());
   try {
     const pool = createOrGetPool(cfg);
@@ -1373,7 +1399,7 @@ async function dbSaveRepricerRule(rule) {
 }
 async function dbDeleteRepricerRule(id) {
   const cfg = getSavedMySQLConfig();
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   try {
     const pool = createOrGetPool(cfg);
     const conn = await pool.getConnection();
@@ -1387,7 +1413,7 @@ async function dbDeleteRepricerRule(id) {
 }
 async function dbGetAutomations() {
   const cfg = getSavedMySQLConfig();
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   try {
     const pool = createOrGetPool(cfg);
     const conn = await pool.getConnection();
@@ -1405,7 +1431,7 @@ async function dbGetAutomations() {
 }
 async function dbSaveAutomation(rule) {
   const cfg = getSavedMySQLConfig();
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   const id = String(rule.id || Date.now());
   try {
     const pool = createOrGetPool(cfg);
@@ -1432,7 +1458,7 @@ async function dbSaveAutomation(rule) {
 }
 async function dbDeleteAutomation(id) {
   const cfg = getSavedMySQLConfig();
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   try {
     const pool = createOrGetPool(cfg);
     const conn = await pool.getConnection();
@@ -1446,7 +1472,7 @@ async function dbDeleteAutomation(id) {
 }
 async function dbGetLogs(limit = 100) {
   const cfg = getSavedMySQLConfig();
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   try {
     const pool = createOrGetPool(cfg);
     const conn = await pool.getConnection();
@@ -1460,7 +1486,7 @@ async function dbGetLogs(limit = 100) {
 }
 async function dbSaveLog(log) {
   const cfg = getSavedMySQLConfig();
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   try {
     const pool = createOrGetPool(cfg);
     const conn = await pool.getConnection();
@@ -1487,7 +1513,7 @@ async function dbSaveLog(log) {
 }
 async function dbGetConfig(key, defaultValue = null) {
   const cfg = getSavedMySQLConfig();
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   try {
     const pool = createOrGetPool(cfg);
     const conn = await pool.getConnection();
@@ -1509,7 +1535,7 @@ async function dbGetConfig(key, defaultValue = null) {
 }
 async function dbSaveConfig(key, value, description) {
   const cfg = getSavedMySQLConfig();
-  const prefix = cfg.prefix || "jiguli_";
+  const prefix = getActivePrefix(cfg);
   const strVal = typeof value === "string" ? value : JSON.stringify(value);
   try {
     const pool = createOrGetPool(cfg);
