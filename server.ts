@@ -34,6 +34,11 @@ import {
   dbSaveLog,
   dbSaveOffersBulk,
   dbSaveOrdersBulk,
+  dbGetProducts,
+  dbSaveProduct,
+  dbSaveProductsBulk,
+  dbDeleteProduct,
+  getActivePrefix,
   dbGetConfig,
   dbSaveConfig
 } from './src/server/mysqlBackend';
@@ -911,13 +916,16 @@ app.post('/api/emag/products', async (req, res) => {
         };
       });
 
-      // Persist all fetched eMAG products directly into MySQL database
+      // Persist all fetched eMAG products directly into MySQL database (cnt_offers & cnt_products)
       let dbSavedCount = 0;
+      let dbProductsCount = 0;
       if (normalizedOffers.length > 0) {
         try {
-          const dbRes = await dbSaveOffersBulk(normalizedOffers);
-          dbSavedCount = dbRes.count;
-          console.log(`[eMAG Products] Başarıyla ${dbSavedCount}/${normalizedOffers.length} ürün MySQL veritabanına kaydedildi.`);
+          const dbOffersRes = await dbSaveOffersBulk(normalizedOffers);
+          dbSavedCount = dbOffersRes.count;
+          const dbProductsRes = await dbSaveProductsBulk(normalizedOffers);
+          dbProductsCount = dbProductsRes.count;
+          console.log(`[eMAG Products] Başarıyla ${dbSavedCount} teklif (${getActivePrefix()}offers) ve ${dbProductsCount} ürün (${getActivePrefix()}products) veritabanına kaydedildi.`);
         } catch (dbErr: any) {
           console.warn('[eMAG Products] MySQL Veritabanına kaydetme uyarısı:', dbErr?.message || dbErr);
         }
@@ -927,6 +935,7 @@ app.post('/api/emag/products', async (req, res) => {
         success: true,
         count: normalizedOffers.length,
         dbSavedCount,
+        dbProductsCount,
         savedToDb: true,
         durationMs,
         serverIp,
@@ -3095,13 +3104,16 @@ app.post('/api/baselinker/products', async (req, res) => {
         };
       });
 
-      // Persist all fetched BaseLinker products directly into MySQL database
+      // Persist all fetched BaseLinker products directly into MySQL database (cnt_offers & cnt_products)
       let dbSavedCount = 0;
+      let dbProductsCount = 0;
       if (normalizedOffers.length > 0) {
         try {
-          const dbRes = await dbSaveOffersBulk(normalizedOffers);
-          dbSavedCount = dbRes.count;
-          console.log(`[BaseLinker Products] Başarıyla ${dbSavedCount}/${normalizedOffers.length} ürün MySQL veritabanına kaydedildi.`);
+          const dbOffersRes = await dbSaveOffersBulk(normalizedOffers);
+          dbSavedCount = dbOffersRes.count;
+          const dbProductsRes = await dbSaveProductsBulk(normalizedOffers);
+          dbProductsCount = dbProductsRes.count;
+          console.log(`[BaseLinker Products] Başarıyla ${dbSavedCount} teklif (${getActivePrefix()}offers) ve ${dbProductsCount} ürün (${getActivePrefix()}products) veritabanına kaydedildi.`);
         } catch (dbErr: any) {
           console.warn('[BaseLinker Products] MySQL Veritabanına kaydetme uyarısı:', dbErr?.message || dbErr);
         }
@@ -3111,10 +3123,11 @@ app.post('/api/baselinker/products', async (req, res) => {
         success: true,
         count: normalizedOffers.length,
         dbSavedCount,
+        dbProductsCount,
         savedToDb: true,
         durationMs,
         offers: normalizedOffers,
-        message: `BaseLinker üzerinden ${normalizedOffers.length} ürün çekildi ve ${dbSavedCount} tanesi MySQL veritabanına kaydedildi (${durationMs}ms).`
+        message: `BaseLinker üzerinden ${normalizedOffers.length} ürün çekildi ve ${dbProductsCount > 0 ? dbProductsCount : dbSavedCount} ürün veritabanına kaydedildi (${durationMs}ms).`
       });
     } else {
       return res.json({
@@ -3694,13 +3707,16 @@ app.post('/api/allegro/products', async (req, res) => {
         };
       });
 
-      // Persist all fetched Allegro products directly into MySQL database
+      // Persist all fetched Allegro products directly into MySQL database (cnt_offers & cnt_products)
       let dbSavedCount = 0;
+      let dbProductsCount = 0;
       if (normalizedOffers.length > 0) {
         try {
-          const dbRes = await dbSaveOffersBulk(normalizedOffers);
-          dbSavedCount = dbRes.count;
-          console.log(`[Allegro Products] Başarıyla ${dbSavedCount}/${normalizedOffers.length} ürün MySQL veritabanına kaydedildi.`);
+          const dbOffersRes = await dbSaveOffersBulk(normalizedOffers);
+          dbSavedCount = dbOffersRes.count;
+          const dbProductsRes = await dbSaveProductsBulk(normalizedOffers);
+          dbProductsCount = dbProductsRes.count;
+          console.log(`[Allegro Products] Başarıyla ${dbSavedCount} teklif (${getActivePrefix()}offers) ve ${dbProductsCount} ürün (${getActivePrefix()}products) veritabanına kaydedildi.`);
         } catch (dbErr: any) {
           console.warn('[Allegro Products] MySQL Veritabanına kaydetme uyarısı:', dbErr?.message || dbErr);
         }
@@ -3710,10 +3726,11 @@ app.post('/api/allegro/products', async (req, res) => {
         success: true,
         count: normalizedOffers.length,
         dbSavedCount,
+        dbProductsCount,
         savedToDb: true,
         durationMs,
         offers: normalizedOffers,
-        message: `Allegro (${environment}) mağazanızdan toplam ${normalizedOffers.length} ürün teklifi çekildi ve ${dbSavedCount} tanesi MySQL veritabanına kaydedildi.`
+        message: `Allegro (${environment}) mağazanızdan toplam ${normalizedOffers.length} ürün teklifi çekildi ve ${dbProductsCount > 0 ? dbProductsCount : dbSavedCount} ürün veritabanına kaydedildi.`
       });
     } else {
       const firstError = (activeRes.status === 'fulfilled' && activeRes.value?.error_description)
@@ -3958,6 +3975,29 @@ app.post('/api/mysql/sync-all', async (req, res) => {
 // ==========================================
 // DB-First CRUD Endpoints (MySQL)
 // ==========================================
+
+// Master Products Catalog (cnt_products)
+app.get('/api/db/products', async (req, res) => {
+  const limit = Number(req.query.limit) || 500;
+  const products = await dbGetProducts(limit);
+  res.json({ success: true, count: products.length, products });
+});
+
+app.post('/api/db/products', async (req, res) => {
+  const success = await dbSaveProduct(req.body);
+  res.json({ success });
+});
+
+app.post('/api/db/products/bulk', async (req, res) => {
+  const items = Array.isArray(req.body) ? req.body : (req.body?.products || req.body?.offers || []);
+  const result = await dbSaveProductsBulk(items);
+  res.json(result);
+});
+
+app.delete('/api/db/products/:id', async (req, res) => {
+  const success = await dbDeleteProduct(req.params.id);
+  res.json({ success });
+});
 
 // Offers
 app.get('/api/db/offers', async (req, res) => {
@@ -4947,7 +4987,7 @@ app.all(['/api/allegro/matching-categories'], async (req, res) => {
 });
 
 // Endpoint: Allegro Catalog Products Search (Katalog Ürün Arama)
-app.all(['/api/allegro/products'], async (req, res) => {
+app.get(['/api/allegro/products', '/api/allegro/catalog/products'], async (req, res) => {
   const reqToken = (req.body?.accessToken || req.query?.accessToken || '') as string;
   const phrase = String(req.body?.phrase || req.query?.phrase || '').trim();
   const ean = String(req.body?.ean || req.query?.ean || '').trim();

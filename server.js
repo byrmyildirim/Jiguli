@@ -228,9 +228,9 @@ function getTableDefinitions(prefix) {
         \`id\` INT AUTO_INCREMENT PRIMARY KEY,
         \`sku\` VARCHAR(100) NOT NULL UNIQUE,
         \`ean\` VARCHAR(30) NULL,
-        \`title_tr\` VARCHAR(255) NOT NULL,
-        \`title_pl\` VARCHAR(255) NULL,
-        \`title_en\` VARCHAR(255) NULL,
+        \`title_tr\` TEXT NOT NULL,
+        \`title_pl\` TEXT NULL,
+        \`title_en\` TEXT NULL,
         \`brand\` VARCHAR(100) DEFAULT 'OmniTech',
         \`model\` VARCHAR(100) NULL,
         \`category_code\` VARCHAR(100) NULL,
@@ -422,6 +422,22 @@ async function ensureMySQLTablesInitialized(initialCredentials) {
     }
     try {
       await conn.query(`ALTER TABLE \`${prefix}api_credentials\` ADD UNIQUE KEY \`unique_platform\` (\`platform_id\`)`);
+    } catch {
+    }
+    try {
+      await conn.query(`ALTER TABLE \`${prefix}products\` MODIFY COLUMN \`title_tr\` TEXT NOT NULL`);
+    } catch {
+    }
+    try {
+      await conn.query(`ALTER TABLE \`${prefix}products\` MODIFY COLUMN \`title_pl\` TEXT NULL`);
+    } catch {
+    }
+    try {
+      await conn.query(`ALTER TABLE \`${prefix}products\` MODIFY COLUMN \`title_en\` TEXT NULL`);
+    } catch {
+    }
+    try {
+      await conn.query(`ALTER TABLE \`${prefix}products\` MODIFY COLUMN \`category_name\` VARCHAR(255) NULL`);
     } catch {
     }
     const [credRows] = await conn.query(`SELECT COUNT(*) as cnt FROM \`${prefix}api_credentials\``).catch(() => [{ cnt: 0 }]);
@@ -697,6 +713,17 @@ async function syncAllEntitiesToMySQL(cfg, data) {
         );
       }
     }
+    const prodsToSync = Array.isArray(data.products) && data.products.length > 0 ? data.products : Array.isArray(data.offers) ? data.offers : [];
+    if (prodsToSync.length > 0) {
+      for (const prod of prodsToSync) {
+        try {
+          const ok = await dbSaveProduct(prod);
+          if (ok) counts.products++;
+        } catch (pErr) {
+          console.warn("[syncAllEntitiesToMySQL product warn]:", pErr);
+        }
+      }
+    }
     if (Array.isArray(data.orders) && data.orders.length > 0) {
       for (const ord of data.orders) {
         await conn.query(
@@ -905,6 +932,247 @@ async function loginDatabaseUser(username, password) {
     return { success: false, error: `Veritaban\u0131 ba\u011Flant\u0131 hatas\u0131: ${err?.message || err}` };
   }
 }
+async function dbGetProducts(limit = 500) {
+  const cfg = getSavedMySQLConfig();
+  const prefix = getActivePrefix(cfg);
+  try {
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
+    const [rows] = await conn.query(`SELECT * FROM \`${prefix}products\` ORDER BY \`id\` DESC LIMIT ?`, [Number(limit) || 500]);
+    conn.release();
+    return Array.isArray(rows) ? rows : [];
+  } catch (err) {
+    console.warn("[dbGetProducts fallback]:", err?.message || err);
+    return inMemoryTables.get(`${prefix}products`) || [];
+  }
+}
+async function dbSaveProduct(item) {
+  const cfg = getSavedMySQLConfig();
+  const prefix = getActivePrefix(cfg);
+  const rawId = String(item.id || item.marketplace_offer_id || item.marketplaceOfferId || Date.now()).replace(/^allg-|^emag-|^bl-/, "");
+  let sku = String(item.sku || item.code || (rawId ? `SKU-${rawId}` : `SKU-${Date.now()}`)).trim();
+  if (!sku || sku === "undefined" || sku === "null") {
+    sku = `SKU-${rawId || Date.now()}`;
+  }
+  sku = sku.slice(0, 95);
+  const ean = item.ean && String(item.ean).trim() ? String(item.ean).trim().slice(0, 30) : null;
+  const rawTitle = item.title_tr || item.name || item.title || "\u0130simsiz \xDCr\xFCn";
+  const title_tr = String(rawTitle).slice(0, 250);
+  const title_pl = String(item.title_pl || rawTitle || "").slice(0, 250) || null;
+  const title_en = item.title_en ? String(item.title_en).slice(0, 250) : null;
+  const brand = String(item.brand || "OmniTech").slice(0, 95);
+  const model = item.model ? String(item.model).slice(0, 95) : null;
+  const category_code = item.category_code || item.category?.id || item.categoryId ? String(item.category_code || item.category?.id || item.categoryId).slice(0, 95) : null;
+  const category_name = item.category_name || item.category?.name || item.categoryName ? String(item.category_name || item.category?.name || item.categoryName).slice(0, 195) : null;
+  let rawPrice = item.sellingMode?.price?.amount ?? item.price ?? item.cost_try ?? item.cost_eur ?? 0;
+  if (typeof rawPrice === "string") rawPrice = parseFloat(rawPrice.replace(",", "."));
+  const priceVal = isNaN(rawPrice) || rawPrice === null ? 0 : Number(Number(rawPrice).toFixed(2));
+  const currency = String(item.sellingMode?.price?.currency || item.currency || "PLN").toUpperCase();
+  let cost_try = 0;
+  let cost_eur = 0;
+  let cost_usd = 0;
+  if (item.cost_try !== void 0 && item.cost_try !== null && !isNaN(Number(item.cost_try))) {
+    cost_try = Number(Number(item.cost_try).toFixed(2));
+  } else if (currency === "TRY") {
+    cost_try = priceVal;
+  }
+  if (item.cost_eur !== void 0 && item.cost_eur !== null && !isNaN(Number(item.cost_eur))) {
+    cost_eur = Number(Number(item.cost_eur).toFixed(2));
+  } else if (currency === "EUR") {
+    cost_eur = priceVal;
+  } else if (currency === "PLN") {
+    cost_eur = Number((priceVal / 4.3).toFixed(2));
+  }
+  if (item.cost_usd !== void 0 && item.cost_usd !== null && !isNaN(Number(item.cost_usd))) {
+    cost_usd = Number(Number(item.cost_usd).toFixed(2));
+  } else if (currency === "USD") {
+    cost_usd = priceVal;
+  } else if (cost_eur > 0) {
+    cost_usd = Number((cost_eur * 1.08).toFixed(2));
+  }
+  let rawStock = item.stock_quantity ?? item.stock?.available ?? item.stock ?? item.quantity ?? 0;
+  if (typeof rawStock === "string") rawStock = parseInt(rawStock, 10);
+  const stock_quantity = isNaN(rawStock) || rawStock === null ? 0 : Math.max(0, Math.floor(rawStock));
+  const primary_image = String(item.primary_image || item.primaryImage || item.image || item.images?.[0]?.url || item.images?.[0] || "");
+  const gallery_images_json = item.gallery_images_json ? typeof item.gallery_images_json === "string" ? item.gallery_images_json : JSON.stringify(item.gallery_images_json) : Array.isArray(item.images) ? JSON.stringify(item.images) : null;
+  const specifications_json = item.specifications_json ? typeof item.specifications_json === "string" ? item.specifications_json : JSON.stringify(item.specifications_json) : null;
+  const features_json = item.features_json ? typeof item.features_json === "string" ? item.features_json : JSON.stringify(item.features_json) : null;
+  const description_html = item.description_html || item.description || null;
+  const source_platform = String(item.source_platform || item.platform_id || item.platform || (String(item.id).startsWith("allg") ? "allegro" : String(item.id).startsWith("emag") ? "emag" : String(item.id).startsWith("bl") ? "baselinker" : "allegro")).slice(0, 45);
+  const source_url = item.source_url ? String(item.source_url) : null;
+  const status = String(item.status || item.publication?.status || "ACTIVE").slice(0, 30);
+  const inMemKey = `${prefix}products`;
+  const currentInMem = inMemoryTables.get(inMemKey) || [];
+  const existingIdx = currentInMem.findIndex((p) => p.sku === sku);
+  const prodObj = {
+    sku,
+    ean,
+    title_tr,
+    title_pl,
+    title_en,
+    brand,
+    model,
+    category_code,
+    category_name,
+    cost_usd,
+    cost_try,
+    cost_eur,
+    stock_quantity,
+    primary_image,
+    gallery_images_json,
+    specifications_json,
+    features_json,
+    description_html,
+    source_platform,
+    source_url,
+    status,
+    updated_at: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  if (existingIdx >= 0) {
+    currentInMem[existingIdx] = { ...currentInMem[existingIdx], ...prodObj };
+  } else {
+    currentInMem.unshift({ id: currentInMem.length + 1, ...prodObj, created_at: (/* @__PURE__ */ new Date()).toISOString() });
+  }
+  inMemoryTables.set(inMemKey, currentInMem);
+  try {
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
+    await conn.query(`
+      INSERT INTO \`${prefix}products\`
+      (\`sku\`, \`ean\`, \`title_tr\`, \`title_pl\`, \`title_en\`, \`brand\`, \`model\`, \`category_code\`, \`category_name\`, \`cost_usd\`, \`cost_try\`, \`cost_eur\`, \`stock_quantity\`, \`primary_image\`, \`gallery_images_json\`, \`specifications_json\`, \`features_json\`, \`description_html\`, \`source_platform\`, \`source_url\`, \`status\`)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        \`ean\` = COALESCE(VALUES(\`ean\`), \`ean\`),
+        \`title_tr\` = VALUES(\`title_tr\`),
+        \`title_pl\` = COALESCE(VALUES(\`title_pl\`), \`title_pl\`),
+        \`title_en\` = COALESCE(VALUES(\`title_en\`), \`title_en\`),
+        \`brand\` = COALESCE(VALUES(\`brand\`), \`brand\`),
+        \`model\` = COALESCE(VALUES(\`model\`), \`model\`),
+        \`category_code\` = COALESCE(VALUES(\`category_code\`), \`category_code\`),
+        \`category_name\` = COALESCE(VALUES(\`category_name\`), \`category_name\`),
+        \`cost_usd\` = VALUES(\`cost_usd\`),
+        \`cost_try\` = VALUES(\`cost_try\`),
+        \`cost_eur\` = VALUES(\`cost_eur\`),
+        \`stock_quantity\` = VALUES(\`stock_quantity\`),
+        \`primary_image\` = COALESCE(VALUES(\`primary_image\`), \`primary_image\`),
+        \`source_platform\` = VALUES(\`source_platform\`),
+        \`status\` = VALUES(\`status\`),
+        \`updated_at\` = NOW();
+    `, [
+      sku,
+      ean,
+      title_tr,
+      title_pl,
+      title_en,
+      brand,
+      model,
+      category_code,
+      category_name,
+      cost_usd,
+      cost_try,
+      cost_eur,
+      stock_quantity,
+      primary_image,
+      gallery_images_json,
+      specifications_json,
+      features_json,
+      description_html,
+      source_platform,
+      source_url,
+      status
+    ]);
+    conn.release();
+    return true;
+  } catch (err) {
+    console.warn(`[dbSaveProduct warn for ${sku}]:`, err?.message || err);
+    if (err?.code === "ER_NO_SUCH_TABLE") {
+      try {
+        await ensureMySQLTablesInitialized();
+        const activePrefix = getActivePrefix(cfg);
+        const pool = createOrGetPool(cfg);
+        const conn = await pool.getConnection();
+        await conn.query(`
+          INSERT INTO \`${activePrefix}products\`
+          (\`sku\`, \`ean\`, \`title_tr\`, \`title_pl\`, \`title_en\`, \`brand\`, \`model\`, \`category_code\`, \`category_name\`, \`cost_usd\`, \`cost_try\`, \`cost_eur\`, \`stock_quantity\`, \`primary_image\`, \`gallery_images_json\`, \`specifications_json\`, \`features_json\`, \`description_html\`, \`source_platform\`, \`source_url\`, \`status\`)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE
+            \`ean\` = COALESCE(VALUES(\`ean\`), \`ean\`),
+            \`title_tr\` = VALUES(\`title_tr\`),
+            \`title_pl\` = COALESCE(VALUES(\`title_pl\`), \`title_pl\`),
+            \`title_en\` = COALESCE(VALUES(\`title_en\`), \`title_en\`),
+            \`brand\` = COALESCE(VALUES(\`brand\`), \`brand\`),
+            \`model\` = COALESCE(VALUES(\`model\`), \`model\`),
+            \`category_code\` = COALESCE(VALUES(\`category_code\`), \`category_code\`),
+            \`category_name\` = COALESCE(VALUES(\`category_name\`), \`category_name\`),
+            \`cost_usd\` = VALUES(\`cost_usd\`),
+            \`cost_try\` = VALUES(\`cost_try\`),
+            \`cost_eur\` = VALUES(\`cost_eur\`),
+            \`stock_quantity\` = VALUES(\`stock_quantity\`),
+            \`primary_image\` = COALESCE(VALUES(\`primary_image\`), \`primary_image\`),
+            \`source_platform\` = VALUES(\`source_platform\`),
+            \`status\` = VALUES(\`status\`),
+            \`updated_at\` = NOW();
+        `, [
+          sku,
+          ean,
+          title_tr,
+          title_pl,
+          title_en,
+          brand,
+          model,
+          category_code,
+          category_name,
+          cost_usd,
+          cost_try,
+          cost_eur,
+          stock_quantity,
+          primary_image,
+          gallery_images_json,
+          specifications_json,
+          features_json,
+          description_html,
+          source_platform,
+          source_url,
+          status
+        ]);
+        conn.release();
+        return true;
+      } catch (retryErr) {
+        console.warn("[dbSaveProduct retry failed]:", retryErr);
+      }
+    }
+    return false;
+  }
+}
+async function dbSaveProductsBulk(products) {
+  let count = 0;
+  if (!Array.isArray(products) || products.length === 0) {
+    return { success: true, count: 0 };
+  }
+  for (const p of products) {
+    try {
+      const ok = await dbSaveProduct(p);
+      if (ok) count++;
+    } catch (e) {
+      console.warn("[dbSaveProductsBulk item error]:", e);
+    }
+  }
+  return { success: count > 0, count };
+}
+async function dbDeleteProduct(idOrSku) {
+  const cfg = getSavedMySQLConfig();
+  const prefix = getActivePrefix(cfg);
+  try {
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
+    await conn.query(`DELETE FROM \`${prefix}products\` WHERE \`id\` = ? OR \`sku\` = ?`, [idOrSku, String(idOrSku)]);
+    conn.release();
+    return true;
+  } catch (err) {
+    console.warn("[dbDeleteProduct fallback]:", err);
+    return false;
+  }
+}
 async function dbGetOffers() {
   const cfg = getSavedMySQLConfig();
   const prefix = getActivePrefix(cfg);
@@ -1017,6 +1285,11 @@ async function dbSaveOffer(offer) {
         \`updated_at\` = NOW();
     `, [id, platformId, marketplaceOfferId, name, sku, ean, catId, catName, price, currency, stock, status, smart, image, syncAllegro, syncEmag, syncBaselinker, rawJson]);
     conn.release();
+    try {
+      await dbSaveProduct(offer);
+    } catch (prodErr) {
+      console.warn("[dbSaveOffer -> dbSaveProduct warn]:", prodErr);
+    }
     return true;
   } catch (err) {
     console.warn(`[dbSaveOffer warn for ${id}]:`, err?.message || err);
@@ -1050,6 +1323,10 @@ async function dbSaveOffer(offer) {
             \`updated_at\` = NOW();
         `, [id, platformId, marketplaceOfferId, name, sku, ean, catId, catName, price, currency, stock, status, smart, image, syncAllegro, syncEmag, syncBaselinker, rawJson]);
         conn.release();
+        try {
+          await dbSaveProduct(offer);
+        } catch {
+        }
         return true;
       } catch (retryErr) {
         console.warn("[dbSaveOffer retry failed]:", retryErr);
@@ -2303,11 +2580,14 @@ app.post("/api/emag/products", async (req, res) => {
         };
       });
       let dbSavedCount = 0;
+      let dbProductsCount = 0;
       if (normalizedOffers.length > 0) {
         try {
-          const dbRes = await dbSaveOffersBulk(normalizedOffers);
-          dbSavedCount = dbRes.count;
-          console.log(`[eMAG Products] Ba\u015Far\u0131yla ${dbSavedCount}/${normalizedOffers.length} \xFCr\xFCn MySQL veritaban\u0131na kaydedildi.`);
+          const dbOffersRes = await dbSaveOffersBulk(normalizedOffers);
+          dbSavedCount = dbOffersRes.count;
+          const dbProductsRes = await dbSaveProductsBulk(normalizedOffers);
+          dbProductsCount = dbProductsRes.count;
+          console.log(`[eMAG Products] Ba\u015Far\u0131yla ${dbSavedCount} teklif (${getActivePrefix()}offers) ve ${dbProductsCount} \xFCr\xFCn (${getActivePrefix()}products) veritaban\u0131na kaydedildi.`);
         } catch (dbErr) {
           console.warn("[eMAG Products] MySQL Veritaban\u0131na kaydetme uyar\u0131s\u0131:", dbErr?.message || dbErr);
         }
@@ -2316,6 +2596,7 @@ app.post("/api/emag/products", async (req, res) => {
         success: true,
         count: normalizedOffers.length,
         dbSavedCount,
+        dbProductsCount,
         savedToDb: true,
         durationMs,
         serverIp,
@@ -4144,11 +4425,14 @@ app.post("/api/baselinker/products", async (req, res) => {
         };
       });
       let dbSavedCount = 0;
+      let dbProductsCount = 0;
       if (normalizedOffers.length > 0) {
         try {
-          const dbRes = await dbSaveOffersBulk(normalizedOffers);
-          dbSavedCount = dbRes.count;
-          console.log(`[BaseLinker Products] Ba\u015Far\u0131yla ${dbSavedCount}/${normalizedOffers.length} \xFCr\xFCn MySQL veritaban\u0131na kaydedildi.`);
+          const dbOffersRes = await dbSaveOffersBulk(normalizedOffers);
+          dbSavedCount = dbOffersRes.count;
+          const dbProductsRes = await dbSaveProductsBulk(normalizedOffers);
+          dbProductsCount = dbProductsRes.count;
+          console.log(`[BaseLinker Products] Ba\u015Far\u0131yla ${dbSavedCount} teklif (${getActivePrefix()}offers) ve ${dbProductsCount} \xFCr\xFCn (${getActivePrefix()}products) veritaban\u0131na kaydedildi.`);
         } catch (dbErr) {
           console.warn("[BaseLinker Products] MySQL Veritaban\u0131na kaydetme uyar\u0131s\u0131:", dbErr?.message || dbErr);
         }
@@ -4157,10 +4441,11 @@ app.post("/api/baselinker/products", async (req, res) => {
         success: true,
         count: normalizedOffers.length,
         dbSavedCount,
+        dbProductsCount,
         savedToDb: true,
         durationMs,
         offers: normalizedOffers,
-        message: `BaseLinker \xFCzerinden ${normalizedOffers.length} \xFCr\xFCn \xE7ekildi ve ${dbSavedCount} tanesi MySQL veritaban\u0131na kaydedildi (${durationMs}ms).`
+        message: `BaseLinker \xFCzerinden ${normalizedOffers.length} \xFCr\xFCn \xE7ekildi ve ${dbProductsCount > 0 ? dbProductsCount : dbSavedCount} \xFCr\xFCn veritaban\u0131na kaydedildi (${durationMs}ms).`
       });
     } else {
       return res.json({
@@ -4644,11 +4929,14 @@ app.post("/api/allegro/products", async (req, res) => {
         };
       });
       let dbSavedCount = 0;
+      let dbProductsCount = 0;
       if (normalizedOffers.length > 0) {
         try {
-          const dbRes = await dbSaveOffersBulk(normalizedOffers);
-          dbSavedCount = dbRes.count;
-          console.log(`[Allegro Products] Ba\u015Far\u0131yla ${dbSavedCount}/${normalizedOffers.length} \xFCr\xFCn MySQL veritaban\u0131na kaydedildi.`);
+          const dbOffersRes = await dbSaveOffersBulk(normalizedOffers);
+          dbSavedCount = dbOffersRes.count;
+          const dbProductsRes = await dbSaveProductsBulk(normalizedOffers);
+          dbProductsCount = dbProductsRes.count;
+          console.log(`[Allegro Products] Ba\u015Far\u0131yla ${dbSavedCount} teklif (${getActivePrefix()}offers) ve ${dbProductsCount} \xFCr\xFCn (${getActivePrefix()}products) veritaban\u0131na kaydedildi.`);
         } catch (dbErr) {
           console.warn("[Allegro Products] MySQL Veritaban\u0131na kaydetme uyar\u0131s\u0131:", dbErr?.message || dbErr);
         }
@@ -4657,10 +4945,11 @@ app.post("/api/allegro/products", async (req, res) => {
         success: true,
         count: normalizedOffers.length,
         dbSavedCount,
+        dbProductsCount,
         savedToDb: true,
         durationMs,
         offers: normalizedOffers,
-        message: `Allegro (${environment}) ma\u011Fazan\u0131zdan toplam ${normalizedOffers.length} \xFCr\xFCn teklifi \xE7ekildi ve ${dbSavedCount} tanesi MySQL veritaban\u0131na kaydedildi.`
+        message: `Allegro (${environment}) ma\u011Fazan\u0131zdan toplam ${normalizedOffers.length} \xFCr\xFCn teklifi \xE7ekildi ve ${dbProductsCount > 0 ? dbProductsCount : dbSavedCount} \xFCr\xFCn veritaban\u0131na kaydedildi.`
       });
     } else {
       const firstError = activeRes.status === "fulfilled" && activeRes.value?.error_description || inactiveRes.status === "fulfilled" && inactiveRes.value?.error_description || generalRes.status === "fulfilled" && (generalRes.value?.error_description || generalRes.value?.error) || "Teklifler \xE7ekilemedi";
@@ -4864,6 +5153,24 @@ app.post("/api/mysql/sync-all", async (req, res) => {
   const { config, data } = req.body || {};
   const result = await syncAllEntitiesToMySQL(config || {}, data || {});
   res.json(result);
+});
+app.get("/api/db/products", async (req, res) => {
+  const limit = Number(req.query.limit) || 500;
+  const products = await dbGetProducts(limit);
+  res.json({ success: true, count: products.length, products });
+});
+app.post("/api/db/products", async (req, res) => {
+  const success = await dbSaveProduct(req.body);
+  res.json({ success });
+});
+app.post("/api/db/products/bulk", async (req, res) => {
+  const items = Array.isArray(req.body) ? req.body : req.body?.products || req.body?.offers || [];
+  const result = await dbSaveProductsBulk(items);
+  res.json(result);
+});
+app.delete("/api/db/products/:id", async (req, res) => {
+  const success = await dbDeleteProduct(req.params.id);
+  res.json({ success });
 });
 app.get("/api/db/offers", async (req, res) => {
   const offers = await dbGetOffers();
@@ -5695,7 +6002,7 @@ app.all(["/api/allegro/matching-categories"], async (req, res) => {
     return res.json({ success: false, message: err?.message || "Ba\u011Flant\u0131 hatas\u0131", categories: [] });
   }
 });
-app.all(["/api/allegro/products"], async (req, res) => {
+app.get(["/api/allegro/products", "/api/allegro/catalog/products"], async (req, res) => {
   const reqToken = req.body?.accessToken || req.query?.accessToken || "";
   const phrase = String(req.body?.phrase || req.query?.phrase || "").trim();
   const ean = String(req.body?.ean || req.query?.ean || "").trim();

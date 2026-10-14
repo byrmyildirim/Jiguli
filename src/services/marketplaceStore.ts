@@ -1265,12 +1265,19 @@ export class MarketplaceStore {
           this.saveToStorage(STORAGE_KEYS.OFFERS, this.offers);
           this.notify();
 
-          // Save fetched eMAG products directly into MySQL database
-          await fetch('/api/db/offers/bulk', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ offers: data.offers })
-          }).catch(() => {});
+          // Save fetched eMAG products directly into MySQL database (cnt_offers & cnt_products)
+          await Promise.allSettled([
+            fetch('/api/db/offers/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ offers: data.offers })
+            }),
+            fetch('/api/db/products/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ products: data.offers })
+            })
+          ]).catch(() => {});
         }
 
         this.logApiCall({
@@ -1434,12 +1441,19 @@ export class MarketplaceStore {
           this.saveToStorage(STORAGE_KEYS.OFFERS, this.offers);
           this.notify();
 
-          // Save fetched Allegro products directly into MySQL database
-          await fetch('/api/db/offers/bulk', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ offers: data.offers })
-          }).catch(() => {});
+          // Save fetched Allegro products directly into MySQL database (cnt_offers & cnt_products)
+          await Promise.allSettled([
+            fetch('/api/db/offers/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ offers: data.offers })
+            }),
+            fetch('/api/db/products/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ products: data.offers })
+            })
+          ]).catch(() => {});
         }
 
         this.logApiCall({
@@ -1509,12 +1523,19 @@ export class MarketplaceStore {
           this.saveToStorage(STORAGE_KEYS.OFFERS, this.offers);
           this.notify();
 
-          // Save fetched BaseLinker products directly into MySQL database
-          await fetch('/api/db/offers/bulk', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ offers: data.offers })
-          }).catch(() => {});
+          // Save fetched BaseLinker products directly into MySQL database (cnt_offers & cnt_products)
+          await Promise.allSettled([
+            fetch('/api/db/offers/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ offers: data.offers })
+            }),
+            fetch('/api/db/products/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ products: data.offers })
+            })
+          ]).catch(() => {});
         }
 
         this.logApiCall({
