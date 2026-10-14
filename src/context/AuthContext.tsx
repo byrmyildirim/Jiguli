@@ -12,7 +12,7 @@ export interface AuthUser {
 interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => { success: boolean; error?: string };
+  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   setDirectUser: (user: AuthUser) => void;
 }
@@ -52,18 +52,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const login = (username: string, password: string) => {
-    const trimmedUser = username.trim().toLowerCase();
+  const login = async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    const trimmedUser = username.trim();
     const trimmedPass = password.trim();
 
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: trimmedUser, password: trimmedPass })
+      });
+      const data = await res.json();
+      if (data && data.success && data.user) {
+        const authUser: AuthUser = {
+          username: data.user.username,
+          name: data.user.name || data.user.fullName || 'Sistem Yöneticisi',
+          role: data.user.role || 'Sistem Yöneticisi',
+          avatar: data.user.avatar || (data.user.name || data.user.username || 'SY').slice(0, 2).toUpperCase(),
+          email: data.user.email || `${data.user.username}@jiguli.pro`,
+          loginTime: data.user.loginTime || new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+        };
+        setUser(authUser);
+        try {
+          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
+        } catch (e) {
+          console.warn('Failed to persist auth session', e);
+        }
+        return { success: true };
+      } else if (data && !data.success) {
+        return { success: false, error: data.error || 'Geçersiz kullanıcı adı veya şifre!' };
+      }
+    } catch (err) {
+      console.warn('[Auth Login API Error, attempting fallback]:', err);
+    }
+
+    // Local / Offline fallback
     if (
-      (trimmedUser === 'admin' && trimmedPass) ||
-      (trimmedUser === 'demo' && trimmedPass) ||
+      (trimmedUser.toLowerCase() === 'admin' && trimmedPass) ||
+      (trimmedUser.toLowerCase() === 'demo' && trimmedPass) ||
       (trimmedUser.length >= 2 && trimmedPass.length >= 2)
     ) {
       const authUser: AuthUser = {
-        username: trimmedUser,
-        name: trimmedUser === 'admin' ? 'Sistem Yöneticisi' : trimmedUser === 'demo' ? 'Çağla Yurtseven (Demo)' : trimmedUser,
+        username: trimmedUser.toLowerCase(),
+        name: trimmedUser.toLowerCase() === 'admin' ? 'Sistem Yöneticisi' : trimmedUser.toLowerCase() === 'demo' ? 'Çağla Yurtseven (Demo)' : trimmedUser,
         role: 'Sistem Yöneticisi',
         avatar: trimmedUser.slice(0, 2).toUpperCase(),
         email: `${trimmedUser}@jiguli.pro`,
@@ -80,7 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return {
       success: false,
-      error: 'Geçersiz kullanıcı adı veya şifre! (Giriş için: Kullanıcı adı: admin veya demo)'
+      error: 'Geçersiz kullanıcı adı veya şifre!'
     };
   };
 

@@ -25,30 +25,34 @@ export const LoginView: React.FC = () => {
 
   const slogan = store.getSlogan();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     setIsLoading(true);
 
-    setTimeout(() => {
-      const result = login(username, password);
+    try {
+      const result = await login(username, password);
       setIsLoading(false);
       if (!result.success) {
         setErrorMessage(result.error || 'Giriş başarısız!');
       }
-    }, 350);
+    } catch {
+      setIsLoading(false);
+      setErrorMessage('Bağlantı hatası!');
+    }
   };
 
-  const handleQuickDemoLogin = () => {
+  const handleQuickDemoLogin = async () => {
     setUsername('demo');
     setPassword('demo');
     setErrorMessage(null);
     setIsLoading(true);
 
-    setTimeout(() => {
-      login('demo', 'demo');
+    try {
+      await login('demo', 'demo');
+    } finally {
       setIsLoading(false);
-    }, 250);
+    }
   };
 
   return (

@@ -26,15 +26,40 @@ import { store } from './services/marketplaceStore';
 import { tcmbService } from './services/tcmbService';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { InitialInstallationWizard } from './components/auth/InitialInstallationWizard';
 import { LoginView } from './components/auth/LoginView';
 
 function MainAppLayout() {
   const { theme, toggleTheme } = useTheme();
   const { isAuthenticated } = useAuth();
 
-  // Fetch live exchange rates directly from TCMB on mount
+  const [isCheckingSystem, setIsCheckingSystem] = useState(true);
+  const [isSystemInstalled, setIsSystemInstalled] = useState<boolean>(true);
+
+  // Fetch live exchange rates directly from TCMB on mount & check system status & sync DB
   useEffect(() => {
     tcmbService.fetchLiveRates();
+    store.initFromDatabase();
+
+    const checkStatus = async () => {
+      try {
+        const res = await fetch('/api/system/status');
+        const data = await res.json();
+        if (data && typeof data.isInstalled === 'boolean') {
+          setIsSystemInstalled(data.isInstalled);
+        } else {
+          const localInstalled = localStorage.getItem('jiguli_system_installed') === 'true';
+          setIsSystemInstalled(localInstalled);
+        }
+      } catch {
+        const localInstalled = localStorage.getItem('jiguli_system_installed') === 'true';
+        setIsSystemInstalled(localInstalled);
+      } finally {
+        setIsCheckingSystem(false);
+      }
+    };
+
+    checkStatus();
   }, []);
 
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
@@ -86,6 +111,29 @@ function MainAppLayout() {
           }}
         />
       </div>
+    );
+  }
+
+  // If checking system status on initial load, show sleek loader
+  if (isCheckingSystem) {
+    return (
+      <div className={`min-h-screen w-full flex items-center justify-center ${theme === 'dark' ? 'bg-[#0B0F19]' : 'bg-slate-50'}`}>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-[#9FE870] border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-semibold text-slate-400">Jiguli Sistem Kontrolü...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // If system has not been installed yet, force Initial Installation Wizard
+  if (!isSystemInstalled) {
+    return (
+      <InitialInstallationWizard
+        onInstallationComplete={() => {
+          setIsSystemInstalled(true);
+        }}
+      />
     );
   }
 

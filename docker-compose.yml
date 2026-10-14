@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: jiguli_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: jiguli_secure_password_2026
+      MYSQL_DATABASE: jiguli_db
+      MYSQL_USER: jiguli_user
+      MYSQL_PASSWORD: jiguli_user_pass_2026
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-authentication-plugin=mysql_native_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - jiguli_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    container_name: jiguli_app
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: jiguli_db
+      DB_USER: jiguli_user
+      DB_PASSWORD: jiguli_user_pass_2026
+      DB_PREFIX: jiguli_
+      DB_SSL: "false"
+      DB_CHARSET: utf8mb4
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+
+volumes:
+  jiguli_mysql_data:

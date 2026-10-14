@@ -114,13 +114,11 @@ export const InitialInstallationWizard: React.FC<InitialInstallationWizardProps>
     setIsInstalling(true);
     setErrorMessage(null);
     try {
-      // 1. Install tables
+      // Install / verify tables
       const res = await mysqlService.installSchema(config);
       if (!res.success && res.errors && res.errors.length > 0) {
         setErrorMessage(res.errors.join(', '));
       }
-      
-      // Move to admin user creation
       setStep(4);
     } catch (err: any) {
       setErrorMessage(`Kurulum sırasında hata: ${err?.message || err}`);
@@ -129,8 +127,37 @@ export const InitialInstallationWizard: React.FC<InitialInstallationWizardProps>
     }
   };
 
+  const handleSaveAdminAndInstall = async () => {
+    setIsInstalling(true);
+    setErrorMessage(null);
+    try {
+      const res = await fetch('/api/system/install', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dbConfig: config,
+          admin: {
+            username: adminUsername.trim() || 'admin',
+            password: adminPassword.trim() || 'admin123',
+            fullName: adminFullName.trim() || 'Sistem Yöneticisi',
+            email: adminEmail.trim() || 'admin@jiguli.pro'
+          }
+        })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setErrorMessage(data.message || 'Kurulum gerçekleştirilemedi.');
+        return;
+      }
+      setStep(5);
+    } catch (err: any) {
+      setErrorMessage(`Kurulum sunucu hatası: ${err?.message || err}`);
+    } finally {
+      setIsInstalling(false);
+    }
+  };
+
   const handleFinalizeSetup = () => {
-    // Save admin user session
     const authUser = {
       username: adminUsername.trim() || 'admin',
       name: adminFullName.trim() || 'Sistem Yöneticisi',
@@ -561,11 +588,21 @@ export const InitialInstallationWizard: React.FC<InitialInstallationWizardProps>
 
                 <button
                   type="button"
-                  onClick={() => setStep(5)}
-                  className="px-6 py-2.5 rounded-2xl bg-[#9FE870] hover:bg-[#8CD85C] text-[#163300] text-xs font-black flex items-center gap-2 cursor-pointer shadow-md"
+                  disabled={isInstalling}
+                  onClick={handleSaveAdminAndInstall}
+                  className="px-6 py-2.5 rounded-2xl bg-[#9FE870] hover:bg-[#8CD85C] text-[#163300] text-xs font-black flex items-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
                 >
-                  <span>Hesabı Kaydet & İlerle</span>
-                  <ArrowRight className="w-4 h-4" />
+                  {isInstalling ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-[#163300] border-t-transparent rounded-full animate-spin" />
+                      <span>Veritabanı Kuruluyor...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Hesabı Kaydet & Veritabanını Kur</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
               </div>
             </div>

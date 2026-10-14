@@ -455,6 +455,79 @@ export class MarketplaceStore {
     return MarketplaceStore.instance;
   }
 
+  public async initFromDatabase(): Promise<void> {
+    try {
+      // 1. Fetch offers from MySQL
+      const offRes = await fetch('/api/db/offers');
+      if (offRes.ok) {
+        const offData = await offRes.json();
+        if (offData && Array.isArray(offData.offers) && offData.offers.length > 0) {
+          this.offers = offData.offers;
+          this.saveToStorage(STORAGE_KEYS.OFFERS, this.offers);
+        }
+      }
+
+      // 2. Fetch orders from MySQL
+      const ordRes = await fetch('/api/db/orders');
+      if (ordRes.ok) {
+        const ordData = await ordRes.json();
+        if (ordData && Array.isArray(ordData.orders) && ordData.orders.length > 0) {
+          this.orders = ordData.orders;
+          this.saveToStorage(STORAGE_KEYS.ORDERS, this.orders);
+        }
+      }
+
+      // 3. Fetch credentials from MySQL
+      const credRes = await fetch('/api/db/credentials');
+      if (credRes.ok) {
+        const credData = await credRes.json();
+        if (credData && credData.credentials && Object.keys(credData.credentials).length > 0) {
+          this.platformCredentials = {
+            ...this.platformCredentials,
+            ...credData.credentials
+          };
+          this.saveToStorage(STORAGE_KEYS.PLATFORM_CREDENTIALS, this.platformCredentials);
+        }
+      }
+
+      // 4. Fetch categories from MySQL
+      const catRes = await fetch('/api/db/categories');
+      if (catRes.ok) {
+        const catData = await catRes.json();
+        if (catData && Array.isArray(catData.categories) && catData.categories.length > 0) {
+          this.categories = catData.categories.map((c: any) => ({
+            id: c.allegro_id || c.category_code,
+            name: c.name,
+            parent: c.parent_code ? { id: c.parent_code, name: '' } : undefined
+          }));
+        }
+      }
+
+      // 5. Fetch repricer rules from MySQL
+      const repRes = await fetch('/api/db/repricer');
+      if (repRes.ok) {
+        const repData = await repRes.json();
+        if (repData && Array.isArray(repData.rules) && repData.rules.length > 0) {
+          this.repricingItems = repData.rules.map((r: any) => ({
+            id: r.id,
+            name: r.name,
+            platform: r.platform_id,
+            currentPrice: Number(r.current_price),
+            minPrice: Number(r.min_price),
+            maxPrice: Number(r.max_price),
+            status: r.status,
+            sku: r.sku
+          }));
+          this.saveToStorage(STORAGE_KEYS.REPRICING_ITEMS, this.repricingItems);
+        }
+      }
+
+      this.notify();
+    } catch (err) {
+      console.warn('[DB Init sync warning]:', err);
+    }
+  }
+
   private loadFromStorage<T>(key: string, defaultValue: T): T {
     try {
       const data = localStorage.getItem(key);
@@ -612,6 +685,13 @@ export class MarketplaceStore {
 
     this.offers = [offer, ...this.offers];
     this.saveToStorage(STORAGE_KEYS.OFFERS, this.offers);
+
+    // Sync to MySQL
+    fetch('/api/db/offers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(offer)
+    }).catch(() => {});
 
     // Update active listings count in platforms
     this.platforms = this.platforms.map(p => {
@@ -1918,6 +1998,7 @@ export class MarketplaceStore {
   public removeOffer(offerId: string) {
     this.offers = this.offers.filter(o => o.id !== offerId);
     this.saveToStorage(STORAGE_KEYS.OFFERS, this.offers);
+    fetch(`/api/db/offers/${encodeURIComponent(offerId)}`, { method: 'DELETE' }).catch(() => {});
     this.notify();
   }
 
@@ -2255,6 +2336,17 @@ export class MarketplaceStore {
           token: this.platformCredentials.baselinker.apiToken
         }
       });
+    }
+
+    // Sync credentials to MySQL database
+    for (const [pId, pData] of Object.entries(updates)) {
+      if (pData) {
+        fetch('/api/db/credentials', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ platformId: pId, data: pData })
+        }).catch(() => {});
+      }
     }
 
     this.notify();
@@ -2686,8 +2778,8 @@ export class MarketplaceStore {
       shippingRateId,
       parameters,
       description,
-      responsibleProducer: customPayload?.responsibleProducer || offer.channelData?.allegro?.responsibleProducer,
-      safetyInformation: customPayload?.safetyInformation || offer.channelData?.allegro?.safetyInformation
+      responsibleProducer: (customPayload as any)?.responsibleProducer || (offer.channelData?.allegro as any)?.responsibleProducer,
+      safetyInformation: (customPayload as any)?.safetyInformation || (offer.channelData?.allegro as any)?.safetyInformation
     };
 
     try {

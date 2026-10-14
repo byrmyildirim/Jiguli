@@ -3834,9 +3834,49 @@ import {
   testMySQLConnection,
   installMySQLDatabase,
   getMySQLDatabaseStatus,
-  syncAllEntitiesToMySQL
+  syncAllEntitiesToMySQL,
+  checkSystemStatus,
+  installCompleteSystem,
+  loginDatabaseUser,
+  dbGetOffers,
+  dbSaveOffer,
+  dbDeleteOffer,
+  dbGetOrders,
+  dbSaveOrder,
+  dbGetCredentials,
+  dbSaveCredentials,
+  dbGetCategories,
+  dbSaveCategory,
+  dbDeleteCategory,
+  dbGetRepricerRules,
+  dbSaveRepricerRule,
+  dbDeleteRepricerRule,
+  dbGetAutomations,
+  dbSaveAutomation,
+  dbDeleteAutomation,
+  dbGetLogs,
+  dbSaveLog
 } from './src/server/mysqlBackend';
 
+// System Lifecycle & Installation Status
+app.get('/api/system/status', async (req, res) => {
+  const result = await checkSystemStatus();
+  res.json(result);
+});
+
+app.post('/api/system/install', async (req, res) => {
+  const result = await installCompleteSystem(req.body);
+  res.json(result);
+});
+
+// Authentication
+app.post('/api/auth/login', async (req, res) => {
+  const { username, password } = req.body || {};
+  const result = await loginDatabaseUser(String(username || ''), String(password || ''));
+  res.json(result);
+});
+
+// Legacy / Direct MySQL Maintenance Endpoints
 app.post('/api/mysql/test-connection', async (req, res) => {
   const result = await testMySQLConnection(req.body);
   res.json(result);
@@ -3856,6 +3896,109 @@ app.post('/api/mysql/sync-all', async (req, res) => {
   const { config, data } = req.body || {};
   const result = await syncAllEntitiesToMySQL(config || {}, data || {});
   res.json(result);
+});
+
+// ==========================================
+// DB-First CRUD Endpoints (MySQL)
+// ==========================================
+
+// Offers
+app.get('/api/db/offers', async (req, res) => {
+  const offers = await dbGetOffers();
+  res.json({ success: true, offers });
+});
+
+app.post('/api/db/offers', async (req, res) => {
+  const success = await dbSaveOffer(req.body);
+  res.json({ success });
+});
+
+app.delete('/api/db/offers/:id', async (req, res) => {
+  const success = await dbDeleteOffer(req.params.id);
+  res.json({ success });
+});
+
+// Orders
+app.get('/api/db/orders', async (req, res) => {
+  const orders = await dbGetOrders();
+  res.json({ success: true, orders });
+});
+
+app.post('/api/db/orders', async (req, res) => {
+  const success = await dbSaveOrder(req.body);
+  res.json({ success });
+});
+
+// Platform Credentials
+app.get('/api/db/credentials', async (req, res) => {
+  const credentials = await dbGetCredentials();
+  res.json({ success: true, credentials });
+});
+
+app.post('/api/db/credentials', async (req, res) => {
+  const { platformId, data } = req.body || {};
+  const success = await dbSaveCredentials(String(platformId || ''), data || {});
+  res.json({ success });
+});
+
+// Categories
+app.get('/api/db/categories', async (req, res) => {
+  const categories = await dbGetCategories();
+  res.json({ success: true, categories });
+});
+
+app.post('/api/db/categories', async (req, res) => {
+  const success = await dbSaveCategory(req.body);
+  res.json({ success });
+});
+
+app.delete('/api/db/categories/:code', async (req, res) => {
+  const success = await dbDeleteCategory(req.params.code);
+  res.json({ success });
+});
+
+// Repricer Rules
+app.get('/api/db/repricer', async (req, res) => {
+  const rules = await dbGetRepricerRules();
+  res.json({ success: true, rules });
+});
+
+app.post('/api/db/repricer', async (req, res) => {
+  const success = await dbSaveRepricerRule(req.body);
+  res.json({ success });
+});
+
+app.delete('/api/db/repricer/:id', async (req, res) => {
+  const success = await dbDeleteRepricerRule(req.params.id);
+  res.json({ success });
+});
+
+// Automations
+app.get('/api/db/automations', async (req, res) => {
+  const automations = await dbGetAutomations();
+  res.json({ success: true, automations });
+});
+
+app.post('/api/db/automations', async (req, res) => {
+  const success = await dbSaveAutomation(req.body);
+  res.json({ success });
+});
+
+app.delete('/api/db/automations/:id', async (req, res) => {
+  const success = await dbDeleteAutomation(req.params.id);
+  res.json({ success });
+});
+
+// Logs
+app.get('/api/db/logs', async (req, res) => {
+  const limit = Number(req.query.limit) || 100;
+  const logs = await dbGetLogs(limit);
+  res.json({ success: true, logs });
+});
+
+app.post('/api/db/logs', async (req, res) => {
+  const success = await dbSaveLog(req.body);
+  res.json({ success });
 });
 
 // ==========================================
