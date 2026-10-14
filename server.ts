@@ -3855,7 +3855,11 @@ import {
   dbSaveAutomation,
   dbDeleteAutomation,
   dbGetLogs,
-  dbSaveLog
+  dbSaveLog,
+  dbSaveOffersBulk,
+  dbSaveOrdersBulk,
+  dbGetConfig,
+  dbSaveConfig
 } from './src/server/mysqlBackend';
 
 // System Lifecycle & Installation Status
@@ -3913,6 +3917,12 @@ app.post('/api/db/offers', async (req, res) => {
   res.json({ success });
 });
 
+app.post('/api/db/offers/bulk', async (req, res) => {
+  const items = Array.isArray(req.body) ? req.body : (req.body?.offers || []);
+  const result = await dbSaveOffersBulk(items);
+  res.json(result);
+});
+
 app.delete('/api/db/offers/:id', async (req, res) => {
   const success = await dbDeleteOffer(req.params.id);
   res.json({ success });
@@ -3929,6 +3939,12 @@ app.post('/api/db/orders', async (req, res) => {
   res.json({ success });
 });
 
+app.post('/api/db/orders/bulk', async (req, res) => {
+  const items = Array.isArray(req.body) ? req.body : (req.body?.orders || []);
+  const result = await dbSaveOrdersBulk(items);
+  res.json(result);
+});
+
 // Platform Credentials
 app.get('/api/db/credentials', async (req, res) => {
   const credentials = await dbGetCredentials();
@@ -3938,6 +3954,35 @@ app.get('/api/db/credentials', async (req, res) => {
 app.post('/api/db/credentials', async (req, res) => {
   const { platformId, data } = req.body || {};
   const success = await dbSaveCredentials(String(platformId || ''), data || {});
+  res.json({ success });
+});
+
+// Company & E-Invoice Tax Info
+app.get('/api/db/company-info', async (_req, res) => {
+  const info = await dbGetConfig('company_tax_info', {
+    companyName: 'Omni Merchant Global Sp. z o.o.',
+    polandNip: 'PL5252849102',
+    romaniaCui: 'RO48291048'
+  });
+  res.json({ success: true, companyInfo: info });
+});
+
+app.post('/api/db/company-info', async (req, res) => {
+  const success = await dbSaveConfig('company_tax_info', req.body, 'Şirket & E-Fatura Vergi Bilgileri');
+  res.json({ success });
+});
+
+// System Branding (Marka Adı & Slogan)
+app.get('/api/db/branding', async (_req, res) => {
+  const branding = await dbGetConfig('system_branding', {
+    brandName: 'Jiguli',
+    slogan: 'Az yakar, çok satar.'
+  });
+  res.json({ success: true, branding });
+});
+
+app.post('/api/db/branding', async (req, res) => {
+  const success = await dbSaveConfig('system_branding', req.body, 'Panel Marka Adı ve Slogan');
   res.json({ success });
 });
 

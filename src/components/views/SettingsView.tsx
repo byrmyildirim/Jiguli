@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import { store } from '../../services/marketplaceStore';
 import { SUPPORTED_CURRENCIES, EXCHANGE_RATES, CURRENCY_SYMBOLS } from '../../services/allegroData';
+import { CompanyTaxInfo } from '../../types/allegro';
 import { tcmbService, TCMBData } from '../../services/tcmbService';
 import { EmagIpWhitelistHelper } from './EmagIpWhitelistHelper';
 import { AllegroConnectionHelper } from './AllegroConnectionHelper';
@@ -64,10 +65,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
   const { theme: ctxTheme, setTheme, toggleTheme } = useTheme();
   const currentAppTheme = propTheme || ctxTheme;
   const [showResetModal, setShowResetModal] = useState(false);
-  // Slogan State
+  // Brand Name & Slogan State
+  const [brandName, setBrandName] = useState<string>(store.getBrandName());
+  const [editingBrandName, setEditingBrandName] = useState(false);
+  const [brandNameInput, setBrandNameInput] = useState<string>(store.getBrandName());
+
   const [slogan, setSlogan] = useState<string>(store.getSlogan());
   const [editingSlogan, setEditingSlogan] = useState(false);
   const [sloganInput, setSloganInput] = useState<string>(store.getSlogan());
+
+  // Company & Tax Info State
+  const [companyTax, setCompanyTax] = useState<CompanyTaxInfo>(store.getCompanyTaxInfo());
+  const [isSavingTaxInfo, setIsSavingTaxInfo] = useState(false);
 
   // Integration Tabs
   const [activeIntegrationTab, setActiveIntegrationTab] = useState<'ALL' | 'EMAG' | 'BASELINKER' | 'ALLEGRO'>('ALL');
@@ -230,26 +239,58 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
   };
 
   const sloganPresets = [
-    'Az yakar, çok satar.',
-    'Tüplü ve öfkeli e-ticaret.',
-    'Yokuşta bayılmaz, stokta yanıltmaz.',
-    'Bizde benzin değil, Złoty yakılır.',
-    'Vitesi 5’e, satışı Złoty’ye tak.',
-    'Sanayiye uğratmayan pazaryeri motoru.',
-    'Çin’den yükler, Varşova’ya gazlar.'
+    'Küresel Pazaryeri Entegrasyon & Otomasyon Suite',
+    'Çok Kanallı E-Ticaret ve Akıllı Stok Yönetimi',
+    'Allegro, eMAG ve BaseLinker Canlı Operasyon Merkezi',
+    'Yüksek Performanslı Sınır Ötesi E-Ticaret Motoru',
+    'Otomatik Fiyatlandırma, Senkronizasyon ve Lojistik Hub',
+    'Kurumsal Pazaryeri Entegrasyon Platformu',
+    'Gerçek Zamanlı Sipariş ve Envanter Yönetimi'
   ];
 
+  const brandNamePresets = [
+    'Jiguli',
+    'Techrasyon Connect',
+    'Techrasyon Omni',
+    'Omni Merchant Hub',
+    'Global Trade Hub'
+  ];
+
+  const handleSaveBrandName = () => {
+    const val = brandNameInput.trim() || 'Jiguli';
+    store.setBrandName(val);
+    setEditingBrandName(false);
+    showNotice(`Marka adı "${val}" olarak başarıyla kaydedildi!`);
+  };
+
+  const handleSelectPresetBrand = (preset: string) => {
+    setBrandNameInput(preset);
+    store.setBrandName(preset);
+    setEditingBrandName(false);
+    showNotice(`Marka adı "${preset}" olarak ayarlandı!`);
+  };
+
   const handleSaveSlogan = () => {
-    store.setSlogan(sloganInput.trim() || 'Az yakar, çok satar.');
+    const val = sloganInput.trim() || 'Küresel Pazaryeri Entegrasyon & Otomasyon Suite';
+    store.setSlogan(val);
     setEditingSlogan(false);
-    showNotice('Slogan başarıyla güncellendi!');
+    showNotice('Kurumsal slogan başarıyla güncellendi!');
   };
 
   const handleSelectPresetSlogan = (preset: string) => {
     setSloganInput(preset);
     store.setSlogan(preset);
     setEditingSlogan(false);
-    showNotice(`Slogan "${preset}" olarak ayarlandı!`);
+    showNotice(`Slogan güncellendi: "${preset}"`);
+  };
+
+  const handleSaveCompanyTax = () => {
+    setIsSavingTaxInfo(true);
+    store.saveCompanyTaxInfo(companyTax);
+    setTimeout(() => {
+      setIsSavingTaxInfo(false);
+      showNotice('Şirket & E-Fatura vergi bilgileri başarıyla veritabanına kaydedildi!');
+    }, 350);
   };
 
   const handleSaveAllegroApi = (e: React.FormEvent) => {
@@ -869,20 +910,73 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
       </div>
 
       {/* 1. Marka & Slogan Yönetimi */}
-      <div className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200 shadow-2xs space-y-4">
+      <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-2xs space-y-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-[#9FE870]/30 text-[#163300]">
+            <div className="p-2 rounded-xl bg-[#9FE870]/30 text-[#163300] dark:bg-[#9FE870]/20 dark:text-[#9FE870]">
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-[#14171A]">Marka & Slogan Yönetimi</h2>
-              <p className="text-[11px] text-slate-500">Logonun altında ve panel genelinde görünen slogan</p>
+              <h2 className="text-sm font-bold text-[#14171A] dark:text-zinc-100">Panel Kimliği (Marka Adı & Kurumsal Slogan)</h2>
+              <p className="text-[11px] text-slate-500 dark:text-zinc-400">Sol üst menüde, başlıkta ve sistem genelinde görünen marka ismi ve sloganı</p>
             </div>
           </div>
         </div>
 
+        {/* 1.1 Marka / Panel Adı */}
+        <div className="space-y-2 border-b border-slate-100 dark:border-zinc-800 pb-4">
+          <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Marka / Panel Adı:</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={editingBrandName ? brandNameInput : brandName}
+              onChange={(e) => {
+                setEditingBrandName(true);
+                setBrandNameInput(e.target.value);
+              }}
+              placeholder="Örn: Jiguli, Techrasyon Connect..."
+              className="flex-1 border border-slate-200 dark:border-zinc-700 focus:border-[#14171A] dark:focus:border-white rounded-xl p-2.5 text-xs font-bold focus:outline-none bg-slate-50 dark:bg-zinc-800 text-[#14171A] dark:text-white"
+            />
+            {editingBrandName ? (
+              <button
+                onClick={handleSaveBrandName}
+                className="bg-[#14171A] dark:bg-white text-white dark:text-black px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-black transition-colors cursor-pointer shadow-2xs"
+              >
+                Kaydet
+              </button>
+            ) : (
+              <button
+                onClick={() => setEditingBrandName(true)}
+                className="bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-[#14171A] dark:text-white px-3.5 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Değiştir</span>
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            <span className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mr-1">
+              Örnekler:
+            </span>
+            {brandNamePresets.map((bName, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleSelectPresetBrand(bName)}
+                className={`text-[11px] px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
+                  brandName === bName
+                    ? 'bg-[#14171A] text-white dark:bg-white dark:text-black border-[#14171A] font-bold'
+                    : 'bg-slate-50 dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 text-[#5D7079] dark:text-zinc-300 border-slate-200 dark:border-zinc-700'
+                }`}
+              >
+                {bName}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 1.2 Kurumsal Slogan */}
         <div className="space-y-3">
+          <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Kurumsal Slogan / Alt Başlık:</label>
           <div className="flex items-center gap-2">
             <input
               type="text"
@@ -891,20 +985,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
                 setEditingSlogan(true);
                 setSloganInput(e.target.value);
               }}
-              placeholder="Örn: Az yakar, çok satar."
-              className="flex-1 border border-slate-200 focus:border-[#14171A] rounded-xl p-2.5 text-xs font-semibold focus:outline-none bg-slate-50"
+              placeholder="Örn: Küresel Pazaryeri Entegrasyon & Otomasyon Suite"
+              className="flex-1 border border-slate-200 dark:border-zinc-700 focus:border-[#14171A] dark:focus:border-white rounded-xl p-2.5 text-xs font-semibold focus:outline-none bg-slate-50 dark:bg-zinc-800 text-[#14171A] dark:text-white"
             />
             {editingSlogan ? (
               <button
                 onClick={handleSaveSlogan}
-                className="bg-[#14171A] text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-black transition-colors cursor-pointer"
+                className="bg-[#14171A] dark:bg-white text-white dark:text-black px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-black transition-colors cursor-pointer shadow-2xs"
               >
                 Kaydet
               </button>
             ) : (
               <button
                 onClick={() => setEditingSlogan(true)}
-                className="bg-slate-100 hover:bg-slate-200 text-[#14171A] px-3.5 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+                className="bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-[#14171A] dark:text-white px-3.5 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
               >
                 <Edit3 className="w-3.5 h-3.5" />
                 <span>Düzenle</span>
@@ -913,8 +1007,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
           </div>
 
           <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
-              Hazır Slogan Şablonları (Tek Tıkla Seçin):
+            <span className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider block mb-1.5">
+              Profesyonel Kurumsal Şablonlar (Tek Tıkla Seçin):
             </span>
             <div className="flex flex-wrap gap-1.5">
               {sloganPresets.map((preset, idx) => (
@@ -923,8 +1017,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
                   onClick={() => handleSelectPresetSlogan(preset)}
                   className={`text-[11px] px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
                     slogan === preset
-                      ? 'bg-[#14171A] text-white border-[#14171A] font-bold'
-                      : 'bg-slate-50 hover:bg-slate-100 text-[#5D7079] border-slate-200'
+                      ? 'bg-[#14171A] text-white dark:bg-white dark:text-black border-[#14171A] font-bold'
+                      : 'bg-slate-50 dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 text-[#5D7079] dark:text-zinc-300 border-slate-200 dark:border-zinc-700'
                   }`}
                 >
                   "{preset}"
@@ -1984,48 +2078,65 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
       )}
 
       {/* 5. Şirket & E-Fatura Vergi Bilgileri */}
-      <div className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200 shadow-2xs space-y-4">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-slate-100 text-slate-700">
-            <Building2 className="w-4 h-4" />
+      <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-2xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200">
+              <Building2 className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-[#14171A] dark:text-zinc-100">Şirket & E-Fatura Vergi Bilgileri</h2>
+              <p className="text-[11px] text-slate-500 dark:text-zinc-400">Polonya (NIP), Romanya (CUI) ve AB KDV fatura şablonu</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-sm font-bold text-[#14171A]">Şirket & E-Fatura Vergi Bilgileri</h2>
-            <p className="text-[11px] text-slate-500">Polonya (NIP), Romanya (CUI) ve AB KDV fatura şablonu</p>
-          </div>
+
+          <button
+            onClick={handleSaveCompanyTax}
+            disabled={isSavingTaxInfo}
+            className="px-4 py-2 rounded-xl bg-[#14171A] dark:bg-white text-white dark:text-black text-xs font-bold hover:bg-black dark:hover:bg-zinc-200 transition-colors shadow-2xs cursor-pointer flex items-center gap-1.5 disabled:opacity-50 min-h-[36px]"
+          >
+            {isSavingTaxInfo ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            <span>{isSavingTaxInfo ? 'Kaydediliyor...' : 'Vergi Bilgilerini Kaydet'}</span>
+          </button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-700">Şirket Ünvanı:</label>
+            <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Şirket Ünvanı:</label>
             <input
               type="text"
-              defaultValue="Omni Merchant Global Sp. z o.o."
-              className="w-full border border-slate-200 focus:border-[#14171A] rounded-xl p-2.5 text-xs font-medium focus:outline-none bg-slate-50"
+              value={companyTax.companyName || ''}
+              onChange={(e) => setCompanyTax(prev => ({ ...prev, companyName: e.target.value }))}
+              placeholder="Örn: Omni Merchant Global Sp. z o.o."
+              className="w-full border border-slate-200 dark:border-zinc-700 focus:border-[#14171A] dark:focus:border-white rounded-xl p-2.5 text-xs font-medium focus:outline-none bg-slate-50 dark:bg-zinc-800 text-[#14171A] dark:text-white"
             />
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-700">Polonya NIP (AB KDV No):</label>
+            <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Polonya NIP (AB KDV No):</label>
             <input
               type="text"
-              defaultValue="PL5252849102"
-              className="w-full border border-slate-200 focus:border-[#14171A] rounded-xl p-2.5 text-xs font-mono focus:outline-none bg-slate-50"
+              value={companyTax.polandNip || ''}
+              onChange={(e) => setCompanyTax(prev => ({ ...prev, polandNip: e.target.value }))}
+              placeholder="Örn: PL5252849102"
+              className="w-full border border-slate-200 dark:border-zinc-700 focus:border-[#14171A] dark:focus:border-white rounded-xl p-2.5 text-xs font-mono focus:outline-none bg-slate-50 dark:bg-zinc-800 text-[#14171A] dark:text-white"
             />
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-700">Romanya CUI / CIF No:</label>
+            <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Romanya CUI / CIF No:</label>
             <input
               type="text"
-              defaultValue="RO48291048"
-              className="w-full border border-slate-200 focus:border-[#14171A] rounded-xl p-2.5 text-xs font-mono focus:outline-none bg-slate-50"
+              value={companyTax.romaniaCui || ''}
+              onChange={(e) => setCompanyTax(prev => ({ ...prev, romaniaCui: e.target.value }))}
+              placeholder="Örn: RO48291048"
+              className="w-full border border-slate-200 dark:border-zinc-700 focus:border-[#14171A] dark:focus:border-white rounded-xl p-2.5 text-xs font-mono focus:outline-none bg-slate-50 dark:bg-zinc-800 text-[#14171A] dark:text-white"
             />
           </div>
         </div>
       </div>
 
-      {/* 6. Jiguli Panel Verilerini Sıfırlama (Yerel Önbellek Yönetimi) */}
+      {/* 6. Panel Verilerini Sıfırlama (Yerel Önbellek Yönetimi) */}
       <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-2xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3">
@@ -2035,7 +2146,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-sm font-bold text-[#14171A] dark:text-zinc-100">
-                  Jiguli Panel Verilerini Sıfırla (Yerel Önbellek)
+                  {brandName} Panel Verilerini Sıfırla (Yerel Önbellek)
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
                   <ShieldCheck className="w-3 h-3" />

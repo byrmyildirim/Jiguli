@@ -44,11 +44,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleCollapse
 }) => {
   const [allegroConfig, setAllegroConfig] = useState<AllegroConfig>(store.getAllegroConfig());
+  const [brandName, setBrandName] = useState<string>(store.getBrandName());
   const [slogan, setSlogan] = useState<string>(store.getSlogan());
 
   useEffect(() => {
     return store.subscribe(() => {
       setAllegroConfig(store.getAllegroConfig());
+      setBrandName(store.getBrandName());
       setSlogan(store.getSlogan());
     });
   }, []);
@@ -100,11 +102,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: Share2
     },
     {
-      id: 'database',
-      label: 'MySQL Kurulum & DB',
-      icon: Database
-    },
-    {
       id: 'settings',
       label: 'Ayarlar',
       icon: Settings
@@ -134,7 +131,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div
               className="cursor-pointer group flex items-center min-w-0"
               onClick={() => handleTabClick('dashboard')}
-              title={`Jiguli - ${slogan}`}
+              title={`${brandName} - ${slogan}`}
             >
               {/* Çerçevesiz Siyah Ok (Tamamen çerçevesiz, arka plansız ve ikonlarla hizalı) */}
               <div className="w-10 h-10 shrink-0 flex items-center justify-center text-2xl font-black text-[#14171A] dark:text-white select-none">
@@ -150,7 +147,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 }`}
               >
                 <div className="text-2xl font-black tracking-tight text-[#14171A] dark:text-white leading-none">
-                  Jiguli
+                  {brandName}
                 </div>
                 <div className="text-[11px] font-semibold text-[#5D7079] dark:text-slate-400 truncate mt-1">
                   "{slogan}"

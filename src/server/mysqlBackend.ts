@@ -1384,3 +1384,75 @@ export async function dbSaveLog(log: any): Promise<boolean> {
   }
 }
 
+// --- System Configuration & Branding & Tax Info ---
+export async function dbGetConfig(key: string, defaultValue: any = null): Promise<any> {
+  const cfg = getSavedMySQLConfig();
+  const prefix = cfg.prefix || 'jiguli_';
+  try {
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
+    const [rows]: any = await conn.query(
+      `SELECT \`config_value\` FROM \`${prefix}db_config\` WHERE \`config_key\` = ? LIMIT 1`,
+      [key]
+    );
+    conn.release();
+    if (!rows || rows.length === 0) return defaultValue;
+    try {
+      return JSON.parse(rows[0].config_value);
+    } catch {
+      return rows[0].config_value;
+    }
+  } catch (err) {
+    console.warn(`[dbGetConfig(${key}) fallback]:`, err);
+    return defaultValue;
+  }
+}
+
+export async function dbSaveConfig(key: string, value: any, description?: string): Promise<boolean> {
+  const cfg = getSavedMySQLConfig();
+  const prefix = cfg.prefix || 'jiguli_';
+  const strVal = typeof value === 'string' ? value : JSON.stringify(value);
+  try {
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
+    await conn.query(
+      `INSERT INTO \`${prefix}db_config\` (\`config_key\`, \`config_value\`, \`description\`)
+       VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         \`config_value\` = VALUES(\`config_value\`),
+         \`description\` = COALESCE(VALUES(\`description\`), \`description\`),
+         \`updated_at\` = NOW();`,
+      [key, strVal, description || null]
+    );
+    conn.release();
+    return true;
+  } catch (err) {
+    console.warn(`[dbSaveConfig(${key}) fallback]:`, err);
+    return false;
+  }
+}
+
+export async function dbSaveOffersBulk(offers: any[]): Promise<{ success: boolean; count: number }> {
+  if (!Array.isArray(offers) || offers.length === 0) {
+    return { success: true, count: 0 };
+  }
+  let savedCount = 0;
+  for (const offer of offers) {
+    const ok = await dbSaveOffer(offer);
+    if (ok) savedCount++;
+  }
+  return { success: true, count: savedCount };
+}
+
+export async function dbSaveOrdersBulk(orders: any[]): Promise<{ success: boolean; count: number }> {
+  if (!Array.isArray(orders) || orders.length === 0) {
+    return { success: true, count: 0 };
+  }
+  let savedCount = 0;
+  for (const order of orders) {
+    const ok = await dbSaveOrder(order);
+    if (ok) savedCount++;
+  }
+  return { success: true, count: savedCount };
+}
+

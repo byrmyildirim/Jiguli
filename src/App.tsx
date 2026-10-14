@@ -37,15 +37,14 @@ export const TAB_CONFIG: Record<string, { path: string; title: string }> = {
   repricer: { path: '/repricer', title: 'Jiguli - Repricer & BuyBox' },
   customercare: { path: '/customer-care', title: 'Jiguli - Müşteri & İade' },
   automations: { path: '/automations', title: 'Jiguli - Otomasyon Kuralları' },
-  baselinker: { path: '/baselinker', title: 'Jiguli - BaseLinker Hub' },
-  channels: { path: '/channels', title: 'Jiguli - Pazaryerleri' },
-  database: { path: '/database', title: 'Jiguli - MySQL Kurulum & DB' },
-  settings: { path: '/settings', title: 'Jiguli - Ayarlar' },
-  allegrodocs: { path: '/allegro-docs', title: 'Jiguli - Allegro API Dokümanı' },
-  categories: { path: '/categories', title: 'Jiguli - Kategoriler & Eşleme' },
-  syncrules: { path: '/sync-rules', title: 'Jiguli - Senkronizasyon Kuralları' },
-  apilogs: { path: '/logs', title: 'Jiguli - API Logları' },
-  apiconsole: { path: '/api-console', title: 'Jiguli - API Konsolu' }
+  baselinker: { path: '/baselinker', title: 'BaseLinker Hub' },
+  channels: { path: '/channels', title: 'Pazaryerleri' },
+  settings: { path: '/settings', title: 'Ayarlar' },
+  allegrodocs: { path: '/allegro-docs', title: 'Allegro API Dokümanı' },
+  categories: { path: '/categories', title: 'Kategoriler & Eşleme' },
+  syncrules: { path: '/sync-rules', title: 'Senkronizasyon Kuralları' },
+  apilogs: { path: '/logs', title: 'API Logları' },
+  apiconsole: { path: '/api-console', title: 'API Konsolu' }
 };
 
 export const PATH_TO_TAB_MAP: Record<string, string> = {
@@ -66,8 +65,8 @@ export const PATH_TO_TAB_MAP: Record<string, string> = {
   '/baselinker': 'baselinker',
   '/channels': 'channels',
   '/pazaryerleri': 'channels',
-  '/database': 'database',
-  '/veritabani': 'database',
+  '/database': 'settings',
+  '/veritabani': 'settings',
   '/settings': 'settings',
   '/ayarlar': 'settings',
   '/allegro-docs': 'allegrodocs',
@@ -109,7 +108,7 @@ function MainAppLayout() {
   const navigateToTab = (targetTab: string, replace = false) => {
     setCurrentTab(targetTab);
     if (typeof window !== 'undefined') {
-      const cfg = TAB_CONFIG[targetTab] || { path: `/${targetTab}`, title: `Jiguli - ${targetTab}` };
+      const cfg = TAB_CONFIG[targetTab] || { path: `/${targetTab}`, title: targetTab };
       const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
       const targetPath = cfg.path;
 
@@ -120,7 +119,7 @@ function MainAppLayout() {
           window.history.pushState({ tab: targetTab }, '', targetPath);
         }
       }
-      document.title = cfg.title;
+      document.title = `${store.getBrandName()} - ${cfg.title}`;
     }
   };
 
@@ -131,7 +130,7 @@ function MainAppLayout() {
       setCurrentTab(tab);
       const cfg = TAB_CONFIG[tab];
       if (cfg && typeof document !== 'undefined') {
-        document.title = cfg.title;
+        document.title = `${store.getBrandName()} - ${cfg.title}`;
       }
     };
 
@@ -143,7 +142,7 @@ function MainAppLayout() {
   useEffect(() => {
     const cfg = TAB_CONFIG[currentTab];
     if (cfg && typeof document !== 'undefined') {
-      document.title = cfg.title;
+      document.title = `${store.getBrandName()} - ${cfg.title}`;
     }
   }, [currentTab]);
 
@@ -356,12 +355,6 @@ function MainAppLayout() {
               <ChannelsView
                 onConfigurePlatform={(platform) => setSelectedPlatform(platform)}
                 onOpenAllegroAuth={() => navigateToTab('settings')}
-                theme={theme}
-              />
-            )}
-
-            {currentTab === 'database' && (
-              <DatabaseSetupView
                 theme={theme}
               />
             )}

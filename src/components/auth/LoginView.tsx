@@ -23,6 +23,7 @@ export const LoginView: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  const brandName = store.getBrandName();
   const slogan = store.getSlogan();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -97,7 +98,7 @@ export const LoginView: React.FC = () => {
             <div className="text-center space-y-1.5 mb-6">
               <div className="flex items-center justify-center text-3xl sm:text-4xl font-black tracking-tight">
                 <span className="text-[#163300] dark:text-white mr-1.5 font-bold brand-logo-arrow">↗</span>
-                <span className={isDark ? 'text-white' : 'text-[#14171A]'}>Jiguli</span>
+                <span className={isDark ? 'text-white' : 'text-[#14171A]'}>{brandName}</span>
               </div>
               <p className="text-xs font-semibold text-slate-400 tracking-tight">
                 "{slogan}"

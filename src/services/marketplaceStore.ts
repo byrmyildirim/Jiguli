@@ -13,7 +13,8 @@ import {
   CustomerMessageThread,
   ReturnDisputeItem,
   AutomationRule,
-  PlatformCredentials
+  PlatformCredentials,
+  CompanyTaxInfo
 } from '../types/allegro';
 import { matchProductToEmagCategory } from './excelCategoryMatcher';
 import {
@@ -48,7 +49,15 @@ const STORAGE_KEYS = {
   RETURN_DISPUTES: 'omni_prod_v1_return_disputes',
   AUTOMATION_RULES: 'omni_prod_v1_automation_rules',
   SLOGAN: 'omni_prod_v1_slogan',
+  BRAND_NAME: 'omni_prod_v1_brand_name',
+  COMPANY_TAX_INFO: 'omni_prod_v1_company_tax_info',
   PLATFORM_CREDENTIALS: 'omni_prod_v1_platform_credentials'
+};
+
+const DEFAULT_COMPANY_TAX_INFO: CompanyTaxInfo = {
+  companyName: 'Omni Merchant Global Sp. z o.o.',
+  polandNip: 'PL5252849102',
+  romaniaCui: 'RO48291048'
 };
 
 const DEFAULT_PLATFORM_CREDENTIALS: PlatformCredentials = {
@@ -261,7 +270,9 @@ export class MarketplaceStore {
   private apiLogs: ApiLogEntry[];
   private categories: AllegroCategory[] = INITIAL_CATEGORIES;
   private activeCurrency: SupportedCurrency = 'TRY';
+  private brandName: string;
   private slogan: string;
+  private companyTaxInfo: CompanyTaxInfo;
   private liveExchangeRates: Record<string, number> = { ...EXCHANGE_RATES };
   private tcmbMetadata: any = null;
 
@@ -381,7 +392,9 @@ export class MarketplaceStore {
     this.saveToStorage(STORAGE_KEYS.OFFERS, this.offers);
 
     this.activeCurrency = this.loadFromStorage(STORAGE_KEYS.ACTIVE_CURRENCY, 'TRY');
-    this.slogan = this.loadFromStorage(STORAGE_KEYS.SLOGAN, 'Az yakar, çok satar.');
+    this.brandName = this.loadFromStorage(STORAGE_KEYS.BRAND_NAME, 'Jiguli');
+    this.slogan = this.loadFromStorage(STORAGE_KEYS.SLOGAN, 'Küresel Pazaryeri Entegrasyon & Otomasyon Suite');
+    this.companyTaxInfo = this.loadFromStorage(STORAGE_KEYS.COMPANY_TAX_INFO, DEFAULT_COMPANY_TAX_INFO);
 
     // 100% Live Mode: Only retain real orders
     const storedOrders = this.loadFromStorage<AllegroCheckoutForm[]>(STORAGE_KEYS.ORDERS, [])
@@ -522,6 +535,32 @@ export class MarketplaceStore {
         }
       }
 
+      // 6. Fetch branding from MySQL
+      const brandRes = await fetch('/api/db/branding');
+      if (brandRes.ok) {
+        const bData = await brandRes.json();
+        if (bData && bData.branding) {
+          if (bData.branding.brandName) {
+            this.brandName = bData.branding.brandName;
+            this.saveToStorage(STORAGE_KEYS.BRAND_NAME, this.brandName);
+          }
+          if (bData.branding.slogan) {
+            this.slogan = bData.branding.slogan;
+            this.saveToStorage(STORAGE_KEYS.SLOGAN, this.slogan);
+          }
+        }
+      }
+
+      // 7. Fetch company & tax info from MySQL
+      const compRes = await fetch('/api/db/company-info');
+      if (compRes.ok) {
+        const cData = await compRes.json();
+        if (cData && cData.companyInfo) {
+          this.companyTaxInfo = { ...this.companyTaxInfo, ...cData.companyInfo };
+          this.saveToStorage(STORAGE_KEYS.COMPANY_TAX_INFO, this.companyTaxInfo);
+        }
+      }
+
       this.notify();
     } catch (err) {
       console.warn('[DB Init sync warning]:', err);
@@ -554,15 +593,54 @@ export class MarketplaceStore {
     this.listeners.forEach((cb) => cb());
   }
 
-  // Slogan
+  // Brand Name & Slogan
+  public getBrandName(): string {
+    return this.brandName || 'Jiguli';
+  }
+
+  public setBrandName(brandName: string) {
+    this.brandName = brandName;
+    this.saveToStorage(STORAGE_KEYS.BRAND_NAME, brandName);
+    this.notify();
+    fetch('/api/db/branding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ brandName, slogan: this.slogan })
+    }).catch(() => {});
+  }
+
   public getSlogan(): string {
-    return this.slogan || 'Az yakar, çok satar.';
+    return this.slogan || 'Küresel Pazaryeri Entegrasyon & Otomasyon Suite';
   }
 
   public setSlogan(slogan: string) {
     this.slogan = slogan;
     this.saveToStorage(STORAGE_KEYS.SLOGAN, slogan);
     this.notify();
+    fetch('/api/db/branding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ brandName: this.brandName, slogan })
+    }).catch(() => {});
+  }
+
+  // Company & E-Invoice Tax Info
+  public getCompanyTaxInfo(): CompanyTaxInfo {
+    return this.companyTaxInfo || DEFAULT_COMPANY_TAX_INFO;
+  }
+
+  public saveCompanyTaxInfo(info: Partial<CompanyTaxInfo>) {
+    this.companyTaxInfo = {
+      ...this.companyTaxInfo,
+      ...info
+    };
+    this.saveToStorage(STORAGE_KEYS.COMPANY_TAX_INFO, this.companyTaxInfo);
+    this.notify();
+    fetch('/api/db/company-info', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(this.companyTaxInfo)
+    }).catch(() => {});
   }
 
   // Currency
@@ -1186,6 +1264,13 @@ export class MarketplaceStore {
           this.offers = [...data.offers, ...nonEmagOffers];
           this.saveToStorage(STORAGE_KEYS.OFFERS, this.offers);
           this.notify();
+
+          // Save fetched eMAG products directly into MySQL database
+          fetch('/api/db/offers/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ offers: data.offers })
+          }).catch(() => {});
         }
 
         this.logApiCall({
@@ -1347,6 +1432,13 @@ export class MarketplaceStore {
           this.offers = [...data.offers, ...otherOffers];
           this.saveToStorage(STORAGE_KEYS.OFFERS, this.offers);
           this.notify();
+
+          // Save fetched Allegro products directly into MySQL database
+          fetch('/api/db/offers/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ offers: data.offers })
+          }).catch(() => {});
         }
 
         this.logApiCall({
@@ -1414,6 +1506,13 @@ export class MarketplaceStore {
           this.offers = [...data.offers, ...otherOffers];
           this.saveToStorage(STORAGE_KEYS.OFFERS, this.offers);
           this.notify();
+
+          // Save fetched BaseLinker products directly into MySQL database
+          fetch('/api/db/offers/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ offers: data.offers })
+          }).catch(() => {});
         }
 
         this.logApiCall({
@@ -1625,6 +1724,13 @@ export class MarketplaceStore {
           this.orders = [...mappedOrders, ...otherOrders];
           this.saveToStorage(STORAGE_KEYS.ORDERS, this.orders);
           this.notify();
+
+          // Save fetched eMAG orders directly into MySQL database
+          fetch('/api/db/orders/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orders: mappedOrders })
+          }).catch(() => {});
         }
         return { success: true, count: mappedOrders.length, message: data.message || `${mappedOrders.length} eMAG siparişi çekildi.` };
       }
@@ -1667,6 +1773,13 @@ export class MarketplaceStore {
           this.orders = [...mappedOrders, ...otherOrders];
           this.saveToStorage(STORAGE_KEYS.ORDERS, this.orders);
           this.notify();
+
+          // Save fetched Allegro orders directly into MySQL database
+          fetch('/api/db/orders/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orders: mappedOrders })
+          }).catch(() => {});
         }
         return { success: true, count: mappedOrders.length, message: data.message || `${mappedOrders.length} Allegro siparişi çekildi.` };
       }
@@ -1696,6 +1809,13 @@ export class MarketplaceStore {
           this.orders = [...mappedOrders, ...otherOrders];
           this.saveToStorage(STORAGE_KEYS.ORDERS, this.orders);
           this.notify();
+
+          // Save fetched BaseLinker orders directly into MySQL database
+          fetch('/api/db/orders/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orders: mappedOrders })
+          }).catch(() => {});
         }
         return { success: true, count: mappedOrders.length, message: data.message || `${mappedOrders.length} BaseLinker siparişi çekildi.` };
       }

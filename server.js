@@ -1253,6 +1253,73 @@ async function dbSaveLog(log) {
     return false;
   }
 }
+async function dbGetConfig(key, defaultValue = null) {
+  const cfg = getSavedMySQLConfig();
+  const prefix = cfg.prefix || "jiguli_";
+  try {
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
+    const [rows] = await conn.query(
+      `SELECT \`config_value\` FROM \`${prefix}db_config\` WHERE \`config_key\` = ? LIMIT 1`,
+      [key]
+    );
+    conn.release();
+    if (!rows || rows.length === 0) return defaultValue;
+    try {
+      return JSON.parse(rows[0].config_value);
+    } catch {
+      return rows[0].config_value;
+    }
+  } catch (err) {
+    console.warn(`[dbGetConfig(${key}) fallback]:`, err);
+    return defaultValue;
+  }
+}
+async function dbSaveConfig(key, value, description) {
+  const cfg = getSavedMySQLConfig();
+  const prefix = cfg.prefix || "jiguli_";
+  const strVal = typeof value === "string" ? value : JSON.stringify(value);
+  try {
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
+    await conn.query(
+      `INSERT INTO \`${prefix}db_config\` (\`config_key\`, \`config_value\`, \`description\`)
+       VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         \`config_value\` = VALUES(\`config_value\`),
+         \`description\` = COALESCE(VALUES(\`description\`), \`description\`),
+         \`updated_at\` = NOW();`,
+      [key, strVal, description || null]
+    );
+    conn.release();
+    return true;
+  } catch (err) {
+    console.warn(`[dbSaveConfig(${key}) fallback]:`, err);
+    return false;
+  }
+}
+async function dbSaveOffersBulk(offers) {
+  if (!Array.isArray(offers) || offers.length === 0) {
+    return { success: true, count: 0 };
+  }
+  let savedCount = 0;
+  for (const offer of offers) {
+    const ok = await dbSaveOffer(offer);
+    if (ok) savedCount++;
+  }
+  return { success: true, count: savedCount };
+}
+async function dbSaveOrdersBulk(orders) {
+  if (!Array.isArray(orders) || orders.length === 0) {
+    return { success: true, count: 0 };
+  }
+  let savedCount = 0;
+  for (const order of orders) {
+    const ok = await dbSaveOrder(order);
+    if (ok) savedCount++;
+  }
+  return { success: true, count: savedCount };
+}
 
 // server.ts
 dotenv.config();
@@ -4501,6 +4568,11 @@ app.post("/api/db/offers", async (req, res) => {
   const success = await dbSaveOffer(req.body);
   res.json({ success });
 });
+app.post("/api/db/offers/bulk", async (req, res) => {
+  const items = Array.isArray(req.body) ? req.body : req.body?.offers || [];
+  const result = await dbSaveOffersBulk(items);
+  res.json(result);
+});
 app.delete("/api/db/offers/:id", async (req, res) => {
   const success = await dbDeleteOffer(req.params.id);
   res.json({ success });
@@ -4513,6 +4585,11 @@ app.post("/api/db/orders", async (req, res) => {
   const success = await dbSaveOrder(req.body);
   res.json({ success });
 });
+app.post("/api/db/orders/bulk", async (req, res) => {
+  const items = Array.isArray(req.body) ? req.body : req.body?.orders || [];
+  const result = await dbSaveOrdersBulk(items);
+  res.json(result);
+});
 app.get("/api/db/credentials", async (req, res) => {
   const credentials = await dbGetCredentials();
   res.json({ success: true, credentials });
@@ -4520,6 +4597,29 @@ app.get("/api/db/credentials", async (req, res) => {
 app.post("/api/db/credentials", async (req, res) => {
   const { platformId, data } = req.body || {};
   const success = await dbSaveCredentials(String(platformId || ""), data || {});
+  res.json({ success });
+});
+app.get("/api/db/company-info", async (_req, res) => {
+  const info = await dbGetConfig("company_tax_info", {
+    companyName: "Omni Merchant Global Sp. z o.o.",
+    polandNip: "PL5252849102",
+    romaniaCui: "RO48291048"
+  });
+  res.json({ success: true, companyInfo: info });
+});
+app.post("/api/db/company-info", async (req, res) => {
+  const success = await dbSaveConfig("company_tax_info", req.body, "\u015Eirket & E-Fatura Vergi Bilgileri");
+  res.json({ success });
+});
+app.get("/api/db/branding", async (_req, res) => {
+  const branding = await dbGetConfig("system_branding", {
+    brandName: "Jiguli",
+    slogan: "Az yakar, \xE7ok satar."
+  });
+  res.json({ success: true, branding });
+});
+app.post("/api/db/branding", async (req, res) => {
+  const success = await dbSaveConfig("system_branding", req.body, "Panel Marka Ad\u0131 ve Slogan");
   res.json({ success });
 });
 app.get("/api/db/categories", async (req, res) => {

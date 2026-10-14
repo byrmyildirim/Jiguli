@@ -41,6 +41,15 @@ export interface PlatformCredentials {
   };
 }
 
+export interface CompanyTaxInfo {
+  companyName: string;
+  polandNip: string;
+  romaniaCui: string;
+  address?: string;
+  email?: string;
+  phone?: string;
+}
+
 export interface PlatformConfig {
   id: MarketplaceId;
   name: string;
