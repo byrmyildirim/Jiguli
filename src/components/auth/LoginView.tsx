@@ -16,8 +16,8 @@ export const LoginView: React.FC = () => {
   const { login } = useAuth();
   const { isDark } = useTheme();
 
-  const [username, setUsername] = useState('demo');
-  const [password, setPassword] = useState('demo');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -39,19 +39,6 @@ export const LoginView: React.FC = () => {
     } catch {
       setIsLoading(false);
       setErrorMessage('Bağlantı hatası!');
-    }
-  };
-
-  const handleQuickDemoLogin = async () => {
-    setUsername('demo');
-    setPassword('demo');
-    setErrorMessage(null);
-    setIsLoading(true);
-
-    try {
-      await login('demo', 'demo');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -117,34 +104,6 @@ export const LoginView: React.FC = () => {
               </p>
             </div>
 
-            {/* Quick Demo Info Box */}
-            <div className={`p-3.5 rounded-2xl border mb-5 flex items-start gap-3 transition-colors ${
-              isDark
-                ? 'bg-[#111827]/90 border-slate-700/80 text-slate-300'
-                : 'bg-[#FAFCF8] border-[#9FE870]/40 text-[#163300]'
-            }`}>
-              <Sparkles className="w-4 h-4 text-[#9FE870] shrink-0 mt-0.5" />
-              <div className="text-xs flex-1">
-                <div className="font-bold flex items-center gap-1.5">
-                  <span>Demo Giriş Bilgileri</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#9FE870]/40 text-[#163300] font-mono">
-                    Hazır
-                  </span>
-                </div>
-                <div className="mt-1 text-[11px] opacity-90 space-y-0.5 font-mono">
-                  <div>Kullanıcı: <strong className="text-[#9FE870]">demo</strong></div>
-                  <div>Şifre: <strong className="text-[#9FE870]">demo</strong></div>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleQuickDemoLogin}
-                className="px-2.5 py-1 rounded-xl bg-[#9FE870] hover:bg-[#8de058] text-[#163300] text-[11px] font-bold transition-all shrink-0 cursor-pointer shadow-2xs active:scale-95"
-              >
-                Hızlı Doldur
-              </button>
-            </div>
-
             {/* Error Banner */}
             {errorMessage && (
               <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs font-semibold flex items-center gap-2 mb-4 animate-in fade-in duration-200">
@@ -157,9 +116,8 @@ export const LoginView: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Username Input */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-400 flex items-center justify-between">
-                  <span>Kullanıcı Adı</span>
-                  <span className="text-[10px] text-slate-500 font-normal">Varsayılan: demo</span>
+                <label className="text-xs font-bold text-slate-400 block">
+                  Kullanıcı Adı veya E-Posta
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -170,7 +128,7 @@ export const LoginView: React.FC = () => {
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="demo"
+                    placeholder="Kullanıcı adınızı girin"
                     className={`w-full pl-9 pr-3 py-2.5 rounded-xl text-xs font-medium border transition-all focus:outline-none focus:ring-2 focus:ring-[#9FE870]/50 ${
                       isDark
                         ? 'bg-[#111827] border-slate-700 text-white placeholder-slate-500'
@@ -182,9 +140,8 @@ export const LoginView: React.FC = () => {
 
               {/* Password Input */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-400 flex items-center justify-between">
-                  <span>Şifre</span>
-                  <span className="text-[10px] text-slate-500 font-normal">Varsayılan: demo</span>
+                <label className="text-xs font-bold text-slate-400 block">
+                  Şifre
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -195,7 +152,7 @@ export const LoginView: React.FC = () => {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="demo"
+                    placeholder="••••••••••••"
                     className={`w-full pl-9 pr-10 py-2.5 rounded-xl text-xs font-medium border transition-all focus:outline-none focus:ring-2 focus:ring-[#9FE870]/50 ${
                       isDark
                         ? 'bg-[#111827] border-slate-700 text-white placeholder-slate-500'

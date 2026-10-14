@@ -1,0 +1,10 @@
+{
+  "host": "127.0.0.1",
+  "port": 3306,
+  "database": "u162532946_connect",
+  "user": "u162532946_connect",
+  "password": "782536Cnt.",
+  "ssl": false,
+  "prefix": "jiguli_",
+  "charset": "utf8mb4"
+}

@@ -149,6 +149,9 @@ export const InitialInstallationWizard: React.FC<InitialInstallationWizardProps>
         setErrorMessage(data.message || 'Kurulum gerçekleştirilemedi.');
         return;
       }
+      try {
+        localStorage.setItem('jiguli_system_installed', 'true');
+      } catch {}
       setStep(5);
     } catch (err: any) {
       setErrorMessage(`Kurulum sunucu hatası: ${err?.message || err}`);

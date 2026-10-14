@@ -43,13 +43,16 @@ function MainAppLayout() {
 
     const checkStatus = async () => {
       try {
+        const localInstalled = localStorage.getItem('jiguli_system_installed') === 'true';
         const res = await fetch('/api/system/status');
         const data = await res.json();
-        if (data && typeof data.isInstalled === 'boolean') {
-          setIsSystemInstalled(data.isInstalled);
+        if (localInstalled || (data && data.isInstalled === true)) {
+          setIsSystemInstalled(true);
+          try {
+            localStorage.setItem('jiguli_system_installed', 'true');
+          } catch {}
         } else {
-          const localInstalled = localStorage.getItem('jiguli_system_installed') === 'true';
-          setIsSystemInstalled(localInstalled);
+          setIsSystemInstalled(false);
         }
       } catch {
         const localInstalled = localStorage.getItem('jiguli_system_installed') === 'true';

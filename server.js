@@ -40,9 +40,9 @@ function getSavedMySQLConfig() {
   return {
     host: "127.0.0.1",
     port: 3306,
-    database: "jiguli_db",
-    user: "root",
-    password: "",
+    database: "u162532946_connect",
+    user: "u162532946_connect",
+    password: "782536Cnt.",
     ssl: false,
     prefix: "jiguli_",
     charset: "utf8mb4"
@@ -637,6 +637,10 @@ async function checkSystemStatus() {
   } catch (err) {
     errorMessage = err?.message || String(err);
   }
+  const flagPath = path.resolve(process.cwd(), "data", "installed.flag");
+  if (fs.existsSync(flagPath) || fs.existsSync(CONFIG_FILE_PATH) || userCount > 0) {
+    isInstalled = true;
+  }
   return {
     isConfigured: !!cfg.host && !!cfg.database && !!cfg.user,
     isConnected,
@@ -692,6 +696,11 @@ async function installCompleteSystem(payload) {
     };
   }
   saveMySQLConfig(cfg);
+  try {
+    const flagPath = path.resolve(process.cwd(), "data", "installed.flag");
+    fs.writeFileSync(flagPath, (/* @__PURE__ */ new Date()).toISOString(), "utf-8");
+  } catch {
+  }
   return {
     success: true,
     message: "Sistem ve veritaban\u0131 ba\u015Far\u0131yla kuruldu!",

@@ -47,9 +47,9 @@ export function getSavedMySQLConfig(): MySQLConfigPayload {
   return {
     host: '127.0.0.1',
     port: 3306,
-    database: 'jiguli_db',
-    user: 'root',
-    password: '',
+    database: 'u162532946_connect',
+    user: 'u162532946_connect',
+    password: '782536Cnt.',
     ssl: false,
     prefix: 'jiguli_',
     charset: 'utf8mb4'
@@ -706,6 +706,12 @@ export async function checkSystemStatus() {
     errorMessage = err?.message || String(err);
   }
 
+  // If installed.flag exists or data/db_config.json is configured, system is installed
+  const flagPath = path.resolve(process.cwd(), 'data', 'installed.flag');
+  if (fs.existsSync(flagPath) || fs.existsSync(CONFIG_FILE_PATH) || userCount > 0) {
+    isInstalled = true;
+  }
+
   return {
     isConfigured: !!cfg.host && !!cfg.database && !!cfg.user,
     isConnected,
@@ -780,6 +786,12 @@ export async function installCompleteSystem(payload: {
 
   // 3. Save DB config to disk & .env
   saveMySQLConfig(cfg);
+
+  // 4. Save installed flag file
+  try {
+    const flagPath = path.resolve(process.cwd(), 'data', 'installed.flag');
+    fs.writeFileSync(flagPath, new Date().toISOString(), 'utf-8');
+  } catch {}
 
   return {
     success: true,
