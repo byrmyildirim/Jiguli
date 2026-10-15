@@ -35,7 +35,8 @@ import {
   Terminal,
   KeyRound,
   Copy,
-  Package
+  Package,
+  Camera
 } from 'lucide-react';
 import { store } from '../../services/marketplaceStore';
 import { SUPPORTED_CURRENCIES, EXCHANGE_RATES, CURRENCY_SYMBOLS } from '../../services/allegroData';
@@ -77,6 +78,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
   // Company & Tax Info State
   const [companyTax, setCompanyTax] = useState<CompanyTaxInfo>(store.getCompanyTaxInfo());
   const [isSavingTaxInfo, setIsSavingTaxInfo] = useState(false);
+
+  // Gemini AI Vision Configuration State
+  const [aiConfig, setAiConfig] = useState<{ hasKey: boolean; maskedKey: string; source: string; model: string }>({
+    hasKey: false,
+    maskedKey: '',
+    source: 'none',
+    model: 'gemini-2.5-flash'
+  });
+  const [aiApiKeyInput, setAiApiKeyInput] = useState('');
+  const [isSavingAiKey, setIsSavingAiKey] = useState(false);
+  const [aiTestResult, setAiTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   // Integration Tabs
   const [activeIntegrationTab, setActiveIntegrationTab] = useState<'ALL' | 'EMAG' | 'BASELINKER' | 'ALLEGRO'>('ALL');
@@ -164,6 +176,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
       .then(d => {
         if (d?.serverIp || d?.ip) setServerIp(d.serverIp || d.ip);
         if (d?.clientIp) setClientIp(d.clientIp);
+      })
+      .catch(() => {});
+
+    fetch('/api/ai/config')
+      .then(r => r.json())
+      .then(d => {
+        if (d) setAiConfig(d);
       })
       .catch(() => {});
   }, []);
@@ -291,6 +310,39 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
       setIsSavingTaxInfo(false);
       showNotice('Şirket & E-Fatura vergi bilgileri başarıyla veritabanına kaydedildi!');
     }, 350);
+  };
+
+  const handleSaveAiKey = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const key = aiApiKeyInput.trim();
+    if (!key) return;
+    setIsSavingAiKey(true);
+    setAiTestResult(null);
+    try {
+      const res = await fetch('/api/ai/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: key })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setAiTestResult({ success: true, message: data.message });
+        setAiConfig({
+          hasKey: true,
+          maskedKey: key.slice(0, 6) + '...' + key.slice(-4),
+          source: 'database',
+          model: 'gemini-2.5-flash'
+        });
+        localStorage.setItem('JIGULI_GEMINI_API_KEY', key);
+        showNotice('Google Gemini AI Vision API anahtarı başarıyla doğrulandı ve kaydedildi!');
+      } else {
+        setAiTestResult({ success: false, message: data.error || 'API anahtarı doğrulanamadı' });
+      }
+    } catch (err: any) {
+      setAiTestResult({ success: false, message: 'Bağlantı hatası: ' + (err.message || err) });
+    } finally {
+      setIsSavingAiKey(false);
+    }
   };
 
   const handleSaveAllegroApi = (e: React.FormEvent) => {
@@ -1027,6 +1079,107 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
             </div>
           </div>
         </div>
+      </div>
+
+      {/* 1.5. Google Gemini AI Vision (Görselle Ürün Arama) Yapılandırması */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-2xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-zinc-800 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
+              <Camera className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-sm font-bold text-[#14171A] dark:text-zinc-100">
+                  Google Gemini AI Vision & Görselle Ürün Arama
+                </h2>
+                {aiConfig.hasKey ? (
+                  <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-800">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+                    {aiConfig.model} Aktif ({aiConfig.source === 'database' ? 'MySQL cnt_db_config' : aiConfig.source})
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800">
+                    <AlertTriangle className="w-3 h-3 text-amber-600" />
+                    API Key Yapılandırılmadı (Kategori Sentezi Aktif)
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                Yüklenen ürün fotoğraflarını ve ekran görüntülerini derinlemesine analiz ederek AliExpress toptancı linkleri, Lehçe/Rumence optimize başlıklar ve e-ticaret parametreleri üretir.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <form onSubmit={handleSaveAiKey} className="space-y-3 pt-1">
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
+                <Key className="w-3.5 h-3.5 text-purple-600" />
+                <span>Google Gemini API Key:</span>
+              </label>
+              <a
+                href="https://aistudio.google.com/app/apikey"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] font-bold text-purple-600 hover:text-purple-700 dark:text-purple-400 flex items-center gap-1 hover:underline"
+              >
+                <span>Ücretsiz API Anahtarı Alın</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="password"
+                value={aiApiKeyInput}
+                onChange={(e) => setAiApiKeyInput(e.target.value)}
+                placeholder={aiConfig.hasKey ? `Kayıtlı: ${aiConfig.maskedKey} (Değiştirmek için yeni anahtar girin)` : "AIzaSy..."}
+                className="flex-1 border border-slate-200 dark:border-zinc-700 focus:border-purple-600 dark:focus:border-purple-400 rounded-xl p-2.5 text-xs font-mono focus:outline-none bg-slate-50 dark:bg-zinc-800 text-[#14171A] dark:text-white"
+              />
+              <button
+                type="submit"
+                disabled={isSavingAiKey || !aiApiKeyInput.trim()}
+                className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs shrink-0"
+              >
+                {isSavingAiKey ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Test Ediliyor...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Kaydet & Test Et</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {aiTestResult && (
+            <div className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${
+              aiTestResult.success
+                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-800'
+                : 'bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/30 dark:text-rose-300 dark:border-rose-800'
+            }`}>
+              {aiTestResult.success ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+              )}
+              <span>{aiTestResult.message}</span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-zinc-400 pt-1">
+            <Info className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+            <span>
+              Girilen API anahtarı önce Google Gemini 2.5 Flash ile canlı olarak test edilir; doğrulandıktan sonra veritabanına (cnt_db_config) ve sisteme kaydedilir.
+            </span>
+          </div>
+        </form>
       </div>
 
       {/* 2. Varsayılan Para Birimi & Kur Yönetimi (TCMB Canlı Entegrasyon) */}

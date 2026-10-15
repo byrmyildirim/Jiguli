@@ -27,7 +27,10 @@ import {
   ShieldCheck,
   ChevronDown,
   ChevronRight,
-  Eye
+  Eye,
+  Key,
+  Cpu,
+  AlertCircle
 } from 'lucide-react';
 import { store } from '../../services/marketplaceStore';
 import { ProductImage } from '../common/ProductImage';
@@ -88,10 +91,117 @@ export const AliExpressSourcingView: React.FC<AliExpressSourcingViewProps> = ({
     sources: string[];
     detectedQuery?: string;
     executedAt?: string;
+    aiVisionActive?: boolean;
+    quotaNotice?: string;
   } | null>(null);
+
+  // Drag and Drop & AI Key Modal States
+  const [isDragging, setIsDragging] = useState(false);
+  const [aiConfig, setAiConfig] = useState<{ isConfigured: boolean; maskedKey: string; activeModel: string } | null>(null);
+  const [showAiKeyModal, setShowAiKeyModal] = useState(false);
+  const [inputApiKey, setInputApiKey] = useState('');
+  const [isSavingKey, setIsSavingKey] = useState(false);
+  const [keySaveMessage, setKeySaveMessage] = useState<{ text: string; error?: boolean } | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Load AI Configuration status
+  const refreshAiConfig = async () => {
+    try {
+      const res = await fetch('/api/ai/config');
+      const data = await res.json();
+      if (data.success) {
+        setAiConfig(data);
+      }
+    } catch {}
+  };
+
+  useEffect(() => {
+    refreshAiConfig();
+  }, []);
+
+  const handleSaveApiKey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputApiKey.trim()) return;
+    setIsSavingKey(true);
+    setKeySaveMessage(null);
+    try {
+      const res = await fetch('/api/ai/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: inputApiKey.trim() })
+      });
+      const data = await res.json();
+      if (data.success) {
+        localStorage.setItem('jiguli_gemini_api_key', inputApiKey.trim());
+        setKeySaveMessage({ text: data.message || 'Gemini API Anahtarı başarıyla doğrulandı ve kaydedildi!' });
+        await refreshAiConfig();
+        setTimeout(() => {
+          setShowAiKeyModal(false);
+          setKeySaveMessage(null);
+        }, 1300);
+      } else {
+        setKeySaveMessage({ text: data.message || 'API anahtarı doğrulanamadı.', error: true });
+      }
+    } catch (err: any) {
+      setKeySaveMessage({ text: 'Bağlantı hatası: ' + err?.message, error: true });
+    } finally {
+      setIsSavingKey(false);
+    }
+  };
+
+  // Clipboard Paste listener for instant screenshot search (Ctrl+V / Cmd+V)
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const file = items[i].getAsFile();
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = async () => {
+              const dataUrl = reader.result as string;
+              setUploadedPreview(dataUrl);
+              setSourcingMode('upload');
+              await executeLiveAliExpressSearch({
+                imageBase64: dataUrl,
+                mimeType: file.type || 'image/jpeg',
+                queryText: 'Panodan Yapıştırılan Görsel'
+              });
+            };
+            reader.readAsDataURL(file);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, []);
+
+  // Drop handler
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const dataUrl = reader.result as string;
+        setUploadedPreview(dataUrl);
+        await executeLiveAliExpressSearch({
+          imageBase64: dataUrl,
+          mimeType: file.type || 'image/jpeg',
+          queryText: file.name.replace(/\.[^/.]+$/, '')
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Sync customTitle when selectedProduct changes
   useEffect(() => {
@@ -251,14 +361,14 @@ export const AliExpressSourcingView: React.FC<AliExpressSourcingViewProps> = ({
     setPublishResult(null);
     setShowLiveTerminal(false);
 
-    setScanningStep('Görsel Gemini 3.8 Vision AI ile analiz ediliyor...');
+    setScanningStep('Görsel Gemini Vision AI ile analiz ediliyor...');
     const stepTimer1 = setTimeout(() => {
       setScanningStep('AliExpress pazarında canlı ilanlar ve tedarikçiler taranıyor...');
-    }, 900);
+    }, 800);
 
     const stepTimer2 = setTimeout(() => {
       setScanningStep('İngilizce/Lehçe ürün kataloğu ve fiyatlandırma verisi hazırlanıyor...');
-    }, 1900);
+    }, 1600);
 
     try {
       const result = await searchAliExpressWithAI(params);
@@ -394,6 +504,36 @@ export const AliExpressSourcingView: React.FC<AliExpressSourcingViewProps> = ({
         </div>
       )}
 
+      {/* AI Vision Status & API Key Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-slate-50 via-slate-50 to-emerald-50/50 border border-slate-200">
+        <div className="flex items-center gap-2.5">
+          <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${aiConfig?.isConfigured ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+          <div>
+            <div className="text-xs font-bold text-[#14171A] flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+              <span>{aiConfig?.isConfigured ? 'Gemini 2.5 Vision AI Aktif' : 'Gemini AI Vision Standby (Akıllı Eşleme Devrede)'}</span>
+            </div>
+            <div className="text-[11px] text-[#5D7079]">
+              {aiConfig?.isConfigured
+                ? `Model: ${aiConfig.activeModel} • Anahtar: ${aiConfig.maskedKey} (Canlı görsel analizi hazır)`
+                : 'Google Gemini API anahtarınızı tanımlayarak fotoğrafları yapay zeka ile %100 doğrulukla analiz edin.'}
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setInputApiKey('');
+            setKeySaveMessage(null);
+            setShowAiKeyModal(true);
+          }}
+          className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 text-[#14171A] border border-slate-200 shadow-2xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 self-start sm:self-auto"
+        >
+          <Key className="w-3.5 h-3.5 text-emerald-600" />
+          <span>{aiConfig?.isConfigured ? 'Anahtarı Değiştir' : 'API Anahtarı Ekle'}</span>
+        </button>
+      </div>
+
       {/* Sourcing Input: File Drag & Drop vs Image Link URL */}
       <div className="space-y-3">
         <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
@@ -423,7 +563,22 @@ export const AliExpressSourcingView: React.FC<AliExpressSourcingViewProps> = ({
         </div>
 
         {sourcingMode === 'upload' ? (
-          <label className="border-2 border-dashed border-slate-200 hover:border-[#14171A] bg-[#FAFBFC] hover:bg-[#F4F5F7] rounded-3xl p-8 text-center cursor-pointer transition-colors block">
+          <label
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              setIsDragging(false);
+            }}
+            onDrop={handleDrop}
+            className={`border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all block ${
+              isDragging
+                ? 'border-emerald-500 bg-emerald-50/70 scale-[1.01]'
+                : 'border-slate-200 hover:border-[#14171A] bg-[#FAFBFC] hover:bg-[#F4F5F7]'
+            }`}
+          >
             <input
               type="file"
               accept="image/*"
@@ -457,6 +612,9 @@ export const AliExpressSourcingView: React.FC<AliExpressSourcingViewProps> = ({
                 </div>
                 <div className="text-xs text-[#5D7079]">
                   Gemini Vision fotoğrafı tanımlar, AliExpress'te canlı arama yaparak gerçek ürünü getirir
+                </div>
+                <div className="text-[11px] text-slate-400 font-mono mt-1">
+                  💡 İpucu: Panonuzdaki ekran görüntüsünü doğrudan Ctrl+V / Cmd+V ile yapıştırabilirsiniz
                 </div>
               </div>
             )}
@@ -1146,6 +1304,94 @@ export const AliExpressSourcingView: React.FC<AliExpressSourcingViewProps> = ({
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Gemini AI Key Setup Modal */}
+      {showAiKeyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl border border-slate-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2 font-bold text-sm text-[#14171A]">
+                <Sparkles className="w-4 h-4 text-emerald-600" />
+                <span>Google Gemini AI Vision Kurulumu</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAiKeyModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-full cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="text-xs text-[#5D7079] leading-relaxed space-y-2">
+              <p>
+                Görselleri fotoğraf veya ekran görüntüsüyle %100 doğrulukla aramak ve AliExpress ile eşleştirmek için Google Gemini API anahtarı gereklidir.
+              </p>
+              <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 text-emerald-900 text-[11px] space-y-1">
+                <div className="font-bold flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Ücretsiz ve Hızlı:</span>
+                </div>
+                <div>
+                  Google AI Studio'dan tamamen ücretsiz API anahtarı alabilirsiniz.
+                </div>
+                <a
+                  href="https://aistudio.google.com/app/apikey"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-bold text-emerald-700 underline inline-flex items-center gap-1 hover:text-emerald-800 pt-0.5"
+                >
+                  <span>Ücretsiz Gemini API Anahtarı Al (aistudio.google.com)</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveApiKey} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-[#14171A] flex items-center gap-1.5">
+                  <Key className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Gemini API Key:</span>
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={inputApiKey}
+                  onChange={(e) => setInputApiKey(e.target.value)}
+                  placeholder="AIzaSy... ile başlayan anahtarı yapıştırın"
+                  className="w-full bg-[#FAFBFC] border border-slate-200 rounded-2xl px-4 py-3 text-xs text-[#14171A] focus:outline-none focus:ring-2 focus:ring-[#14171A] font-mono"
+                />
+              </div>
+
+              {keySaveMessage && (
+                <div className={`p-3 rounded-xl text-xs font-semibold ${
+                  keySaveMessage.error ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                }`}>
+                  {keySaveMessage.text}
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAiKeyModal(false)}
+                  className="px-4 py-2 rounded-full text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
+                >
+                  Kapat
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingKey || !inputApiKey.trim()}
+                  className="px-5 py-2.5 rounded-full text-xs font-bold bg-[#14171A] hover:bg-black text-white disabled:opacity-50 cursor-pointer flex items-center gap-1.5 shadow-xs"
+                >
+                  {isSavingKey ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  <span>{isSavingKey ? 'Doğrulanıyor...' : 'Doğrula & Kaydet'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

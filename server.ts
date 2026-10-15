@@ -53,7 +53,42 @@ const port = process.env.PORT || 3000;
 
 app.use(express.json({ limit: '25mb' }));
 
-// Server-side Gemini AI client initialization with User-Agent
+// Server-side Gemini AI client initialization with dynamic key retrieval
+let cachedAiClient: { ai: GoogleGenAI; key: string } | null = null;
+
+async function getAiClient(customKey?: string): Promise<{ ai: GoogleGenAI | null; apiKey: string }> {
+  let apiKey = (customKey || process.env.GEMINI_API_KEY || '').trim();
+  if (!apiKey) {
+    try {
+      const dbKey = await dbGetConfig('gemini_api_key');
+      if (dbKey && typeof dbKey === 'string' && dbKey.trim()) {
+        apiKey = dbKey.trim();
+      }
+    } catch {}
+  }
+
+  if (!apiKey) {
+    return { ai: null, apiKey: '' };
+  }
+
+  if (cachedAiClient && cachedAiClient.key === apiKey) {
+    return { ai: cachedAiClient.ai, apiKey };
+  }
+
+  const ai = new GoogleGenAI({
+    apiKey,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build'
+      }
+    }
+  });
+
+  cachedAiClient = { ai, key: apiKey };
+  return { ai, apiKey };
+}
+
+// Fallback legacy global instance (uses env if present)
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY || '',
   httpOptions: {
@@ -63,9 +98,10 @@ const ai = new GoogleGenAI({
   }
 });
 
-// Helper to execute Gemini with automatic model cascading and quota error detection
+// Helper to execute Gemini with automatic model cascading across real production models
 async function generateWithModelFallback(aiInstance: GoogleGenAI, callFn: (modelName: string) => Promise<any>) {
-  const models = ['gemini-3.8-flash', 'gemini-3.1-flash-lite'];
+  // Official Google GenAI production models
+  const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
   let lastError: any = null;
 
   for (const model of models) {
@@ -74,10 +110,9 @@ async function generateWithModelFallback(aiInstance: GoogleGenAI, callFn: (model
     } catch (err: any) {
       lastError = err;
       const status = err?.status || err?.code || (err?.message?.includes('429') ? 429 : err?.message?.includes('503') ? 503 : 500);
-      console.warn(`[Gemini Cascade] Model ${model} returned status ${status} (${err?.message?.slice(0, 70)}), checking fallback...`);
-      // If 429 Quota Exhausted, attempting next model immediately might also 429 if project-wide quota
+      console.warn(`[Gemini Cascade] Model ${model} returned (${err?.message?.slice(0, 100) || err}), trying next model...`);
       if (status === 429) {
-        break; // break early to activate intelligent local sourcing synthesis
+        // Quota issue, try next model or break if project exhausted
       }
     }
   }
@@ -85,9 +120,30 @@ async function generateWithModelFallback(aiInstance: GoogleGenAI, callFn: (model
 }
 
 // Built-in intelligent product synthesis when API quota (429/503) is hit or network fails
-function buildSynthesizedProduct(targetQuery: string, imageBase64?: string) {
-  const q = targetQuery.toLowerCase();
-  let baseTitle = targetQuery || 'Kablosuz Akıllı Elektronik Cihaz';
+function buildSynthesizedProduct(targetQuery: string, imageBase64?: string, imageUrl?: string) {
+  // Clean query from generic camera snapshots or URL noise
+  let clean = (targetQuery || '')
+    .replace(/^data:[^;]+;base64,.*/i, '')
+    .replace(/^(camera product snapshot|direct image url:|image url search|image url|snapshot|image|photo|img_\d+)/i, '')
+    .replace(/\.[a-z0-9]{3,4}$/i, '')
+    .replace(/[-_]/g, ' ')
+    .trim();
+
+  // If query was empty or generic, check if imageUrl has descriptive path
+  if (!clean && imageUrl) {
+    try {
+      const urlObj = new URL(imageUrl);
+      const pathname = urlObj.pathname.split('/').pop() || '';
+      clean = pathname
+        .replace(/\.[a-z0-9]{3,4}$/i, '')
+        .replace(/[-_]/g, ' ')
+        .replace(/\d+/g, '')
+        .trim();
+    } catch {}
+  }
+
+  const q = (clean || 'akıllı elektronik ürün').toLowerCase();
+  let baseTitle = clean || 'Akıllı Elektronik Ürün';
   let categoryName = 'Elektronika > Akcesoria i gadżety';
   let allegroCategoryId = '124921';
   let price = 14.80;
@@ -95,7 +151,7 @@ function buildSynthesizedProduct(targetQuery: string, imageBase64?: string) {
   let brand = 'OmniTech Pro';
   let modelCode = `OT-${Math.floor(1000 + Math.random() * 9000)}`;
 
-  if (q.includes('vacuum') || q.includes('süpürge') || q.includes('car')) {
+  if (q.includes('vacuum') || q.includes('süpürge') || q.includes('cleaner')) {
     baseTitle = 'Bezprzewodowy Odkurzacz Samochodowy 120W USB-C HEPA';
     categoryName = 'Elektronika > Akcesoria samochodowe > Odkurzacze';
     allegroCategoryId = '124921';
@@ -103,7 +159,7 @@ function buildSynthesizedProduct(targetQuery: string, imageBase64?: string) {
     shipping = 1.80;
     brand = 'CleanDrive';
     modelCode = 'CD-VAC-9000';
-  } else if (q.includes('charger') || q.includes('şarj') || q.includes('magsafe') || q.includes('wireless')) {
+  } else if (q.includes('charger') || q.includes('şarj') || q.includes('magsafe') || q.includes('wireless') || q.includes('powerbank')) {
     baseTitle = 'Składana Stacja Ładująca 3w1 MagSafe 15W Szybkie Ładowanie';
     categoryName = 'Elektronika > Akcesoria telefoniczne > Ładowarki indukcyjne';
     allegroCategoryId = '124921';
@@ -135,14 +191,67 @@ function buildSynthesizedProduct(targetQuery: string, imageBase64?: string) {
     shipping = 0.00;
     brand = 'SoundMaster';
     modelCode = 'SM-BT-30';
+  } else if (q.includes('watch') || q.includes('saat') || q.includes('smartwatch') || q.includes('zegarek')) {
+    baseTitle = 'Smartwatch Zegarek Męski AMOLED IP68 Rozmowy Bluetooth';
+    categoryName = 'Elektronika > Telefony i Akcesoria > Smartwatche i zegarki';
+    allegroCategoryId = '124921';
+    price = 24.50;
+    shipping = 0.00;
+    brand = 'Chronos Pro';
+    modelCode = 'CP-AMOLED-9';
+  } else if (q.includes('earbuds') || q.includes('kulaklık') || q.includes('headphone') || q.includes('słuchawki') || q.includes('anc') || q.includes('tws')) {
+    baseTitle = 'Bezprzewodowe Słuchawki Bluetooth TWS ANC Redukcja Szumów';
+    categoryName = 'Elektronika > RTV i AGD > Audio > Słuchawki bezprzewodowe';
+    allegroCategoryId = '66887';
+    price = 15.90;
+    shipping = 1.20;
+    brand = 'AcousticAir';
+    modelCode = 'AA-TWS-ANC';
+  } else if (q.includes('mouse') || q.includes('fare') || q.includes('mysz') || q.includes('klavye') || q.includes('keyboard')) {
+    baseTitle = 'Ergonomiczna Mysz Bezprzewodowa 2.4GHz Cichy Klik USB-C';
+    categoryName = 'Elektronika > Komputery > Akcesoria > Myszy i klawiatury';
+    allegroCategoryId = '42540';
+    price = 12.40;
+    shipping = 1.10;
+    brand = 'ErgoDesk';
+    modelCode = 'ED-MOUSE-SILENT';
+  } else if (q.includes('camera') || q.includes('kamera') || q.includes('drone') || q.includes('tripod') || q.includes('gimbal')) {
+    baseTitle = 'Kamera Akcji 4K 60FPS Ultra HD Wodoodporna z WiFi i Ekranem';
+    categoryName = 'Elektronika > Fotografia > Kamery sportowe';
+    allegroCategoryId = '124921';
+    price = 32.00;
+    shipping = 2.50;
+    brand = 'ActionVision';
+    modelCode = 'AV-4K-PRO';
+  } else if (q.includes('lamp') || q.includes('lamba') || q.includes('ışık') || q.includes('led') || q.includes('light')) {
+    baseTitle = 'Inteligentna Lampa LED Biurkowa Regulacja Barwy i Ściemniania';
+    categoryName = 'Dom i Ogród > Oświetlenie > Lampy biurkowe';
+    allegroCategoryId = '67414';
+    price = 14.20;
+    shipping = 1.50;
+    brand = 'LumiGlow';
+    modelCode = 'LG-DESK-LED';
+  } else if (q.includes('çanta') || q.includes('bag') || q.includes('backpack') || q.includes('cüzdan') || q.includes('wallet')) {
+    baseTitle = 'Wodoodporny Plecak Miejski na Laptopa 15.6 USB Antykradzieżowy';
+    categoryName = 'Moda > Akcesoria i dodatki > Torby i plecaki';
+    allegroCategoryId = '1454';
+    price = 17.50;
+    shipping = 2.00;
+    brand = 'TravelGuard';
+    modelCode = 'TG-CITY-BAG';
+  } else {
+    // Dynamic naming based on input
+    const displayKeyword = clean.length > 2 ? clean.split(' ').slice(0, 4).join(' ') : 'Wysokiej Jakości Produkt';
+    baseTitle = `${displayKeyword} - Nowoczesny Design & Wytrzymałość`.slice(0, 72);
   }
 
-  const liveSearchUrl = `https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(targetQuery || 'trending electronics')}`;
+  const primaryImg = (imageBase64 && imageBase64.startsWith('data:')) ? imageBase64 : (imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80');
+  const directAliUrl = `https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(clean || baseTitle)}`;
 
   return {
     id: `ali-smart-${Date.now()}`,
-    sourceUrl: liveSearchUrl,
-    directSearchUrl: liveSearchUrl,
+    sourceUrl: directAliUrl,
+    directSearchUrl: directAliUrl,
     titleEn: `${baseTitle} - High Quality Choice Global`,
     titlePl: baseTitle.slice(0, 72),
     categoryName,
@@ -153,7 +262,7 @@ function buildSynthesizedProduct(targetQuery: string, imageBase64?: string) {
     supplierRating: 4.88,
     deliveryDays: '7-10 dni roboczych (AliExpress Standard Shipping do Polski)',
     stockAvailable: 850,
-    primaryImage: imageBase64 || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80',
+    primaryImage: primaryImg,
     specifications: {
       brand,
       model: modelCode,
@@ -183,57 +292,133 @@ function buildSynthesizedProduct(targetQuery: string, imageBase64?: string) {
   };
 }
 
-// Single-step optimized AliExpress Sourcing API endpoint
-app.post('/api/sourcing/aliexpress-search', async (req, res) => {
-  const { imageBase64, mimeType = 'image/jpeg', queryText = '' } = req.body;
-  let searchTargetQuery = (queryText || '').trim();
+// AI Engine Configuration Endpoints (Gemini Vision)
+app.get('/api/ai/config', async (_req, res) => {
+  const { apiKey } = await getAiClient();
+  const isConfigured = Boolean(apiKey && apiKey.length > 8);
+  const maskedKey = isConfigured ? `${apiKey.slice(0, 6)}...${apiKey.slice(-4)}` : '';
+  res.json({
+    success: true,
+    isConfigured,
+    maskedKey,
+    activeModel: 'gemini-2.5-flash',
+    supportedModels: ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']
+  });
+});
 
-  // If no API key configured, use intelligent synthesis
-  if (!process.env.GEMINI_API_KEY) {
-    const fallbackProduct = buildSynthesizedProduct(searchTargetQuery || 'smart electronics gadget', imageBase64);
+app.post('/api/ai/config', async (req, res) => {
+  const { apiKey } = req.body || {};
+  if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length < 8) {
+    return res.status(400).json({ success: false, message: 'Geçersiz Gemini API Anahtarı.' });
+  }
+  const cleanKey = apiKey.trim();
+  try {
+    // Validate live with gemini-2.5-flash
+    const testAi = new GoogleGenAI({ apiKey: cleanKey });
+    await testAi.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [{ text: 'Respond with OK' }]
+    });
+
+    // Save to runtime, DB and .env
+    process.env.GEMINI_API_KEY = cleanKey;
+    cachedAiClient = { ai: testAi, key: cleanKey };
+    await dbSaveConfig('gemini_api_key', cleanKey, 'Google Gemini AI API Key for Vision');
+
+    // Also persist to .env
+    const envPath = path.resolve(process.cwd(), '.env');
+    let envContent = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf-8') : '';
+    const regex = /^GEMINI_API_KEY=.*$/m;
+    if (regex.test(envContent)) {
+      envContent = envContent.replace(regex, `GEMINI_API_KEY="${cleanKey}"`);
+    } else {
+      envContent += `\nGEMINI_API_KEY="${cleanKey}"`;
+    }
+    fs.writeFileSync(envPath, envContent.trim() + '\n', 'utf-8');
+
     return res.json({
       success: true,
-      product: fallbackProduct,
-      searchMetadata: {
-        queries: [`AliExpress search for ${searchTargetQuery || 'trending electronics'}`],
-        sources: [fallbackProduct.sourceUrl],
-        detectedQuery: searchTargetQuery || 'smart electronics gadget',
-        mode: 'smart-engine',
-        executedAt: new Date().toISOString()
-      }
+      message: 'Gemini AI Vision API anahtarı başarıyla doğrulandı ve kaydedildi!'
+    });
+  } catch (err: any) {
+    return res.status(400).json({
+      success: false,
+      message: `Gemini API Anahtarı doğrulanamadı: ${err?.message || err}`
     });
   }
+});
 
-  try {
-    let parsedProduct: any = null;
-    let detectedSearchTerm = searchTargetQuery;
+// Single-step optimized AliExpress Sourcing API endpoint (Image & Query Search)
+app.post('/api/sourcing/aliexpress-search', async (req, res) => {
+  const { imageBase64: rawBase64, imageUrl, mimeType: rawMime = 'image/jpeg', queryText = '', apiKey: reqKey } = req.body || {};
+  let searchTargetQuery = (queryText || '').trim();
+  let imageBase64 = rawBase64;
+  let mimeType = rawMime;
+  let sourceImagePreview = imageUrl || (rawBase64 && rawBase64.startsWith('data:') ? rawBase64 : null);
 
-    // Single-call Multimodal Gemini Vision + Sourcing:
-    // This sends the image + prompt in 1 SINGLE API call, saving 66% quota and preventing 429s!
-    const parts: any[] = [];
-
-    if (imageBase64) {
-      const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, '');
-      parts.push({
-        inlineData: {
-          mimeType: mimeType || 'image/jpeg',
-          data: cleanBase64
+  // If imageUrl is passed and no base64, fetch image on server to convert for Gemini Vision
+  if (!imageBase64 && imageUrl && /^https?:\/\/.+/i.test(imageUrl)) {
+    try {
+      const fetchRes = await fetch(imageUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
       });
+      if (fetchRes.ok) {
+        const buffer = await fetchRes.arrayBuffer();
+        const detectedMime = (fetchRes.headers.get('content-type') || 'image/jpeg').split(';')[0];
+        imageBase64 = `data:${detectedMime};base64,${Buffer.from(buffer).toString('base64')}`;
+        mimeType = detectedMime;
+      }
+    } catch (fetchErr) {
+      console.warn('[AliExpress Sourcing Image Fetch Warning]:', fetchErr);
     }
+  }
 
-    const singlePrompt = `You are a cross-border e-commerce intelligence engine connecting AliExpress suppliers with Allegro sellers.
-Analyze ${imageBase64 ? 'the provided product image' : 'the product query'} "${searchTargetQuery || 'product'}".
-Identify the exact product and format real AliExpress sourcing data as JSON:
+  // Extract clean base64 data
+  let cleanBase64 = '';
+  if (imageBase64 && typeof imageBase64 === 'string') {
+    const match = imageBase64.match(/^data:([^;]+);base64,(.+)$/s);
+    if (match) {
+      mimeType = match[1];
+      cleanBase64 = match[2].trim();
+    } else {
+      cleanBase64 = imageBase64.replace(/^data:[^;]+;base64,/, '').trim();
+    }
+  }
+
+  // Attempt Gemini Vision AI if API key is configured or provided
+  const { ai: aiClient, apiKey: activeKey } = await getAiClient(reqKey);
+
+  if (aiClient && (cleanBase64 || searchTargetQuery)) {
+    try {
+      let parsedProduct: any = null;
+      let detectedSearchTerm = searchTargetQuery;
+
+      const parts: any[] = [];
+
+      if (cleanBase64) {
+        parts.push({
+          inlineData: {
+            mimeType: mimeType || 'image/jpeg',
+            data: cleanBase64
+          }
+        });
+      }
+
+      const singlePrompt = `You are a cross-border e-commerce intelligence engine connecting AliExpress suppliers with Allegro and eMAG sellers.
+Analyze ${cleanBase64 ? 'the provided product image' : 'the product query'} "${searchTargetQuery || 'product'}".
+Identify the exact product, functionality, materials and market segment.
+Format real AliExpress sourcing data as a JSON object:
 {
-  "detectedSearchQuery": "best 4-7 word search query in English for AliExpress",
-  "titleEn": "Full commercial English title on AliExpress",
-  "titlePl": "Polish title strictly <= 72 characters compliant with Allegro standards",
+  "detectedSearchQuery": "best 4-7 word search query in English for AliExpress describing this exact product",
+  "titleEn": "Full commercial English title on AliExpress with key specifications",
+  "titlePl": "Polish title strictly <= 72 characters compliant with Allegro standards (no symbols like !?, uppercase only when proper noun)",
   "categoryName": "Allegro category hierarchy (e.g. Elektronika > Akcesoria telefoniczne > Ładowarki)",
-  "allegroCategoryId": "6-digit Allegro category id like 124921, 67414, 42540, or 66887",
+  "allegroCategoryId": "6-digit Allegro category id like 124921, 67414, 42540, 1454, or 66887",
   "priceUsd": 14.50,
   "shippingUsd": 1.20,
-  "supplierName": "Store name on AliExpress",
+  "supplierName": "Store name on AliExpress Choice / Official Store",
   "supplierRating": 4.88,
   "deliveryDays": "7-10 dni roboczych (AliExpress Standard Shipping do Polski)",
   "stockAvailable": 750,
@@ -248,123 +433,135 @@ Identify the exact product and format real AliExpress sourcing data as JSON:
   "features": [
     "Feature 1 in Polish",
     "Feature 2 in Polish",
-    "Feature 3 in Polish"
+    "Feature 3 in Polish",
+    "Feature 4 in Polish"
   ],
   "candidateProducts": [
     {
-      "titleEn": "Alternative variant on AliExpress",
+      "titleEn": "Alternative variant 1 on AliExpress",
       "priceUsd": 16.90,
       "supplierName": "Choice Direct Store"
+    },
+    {
+      "titleEn": "Alternative variant 2 on AliExpress",
+      "priceUsd": 12.50,
+      "supplierName": "Global Factory Supplier"
     }
   ]
 }
-Ensure priceUsd and shippingUsd are strictly numbers. Return JSON ONLY.`;
+Ensure priceUsd and shippingUsd are numbers only. Return JSON ONLY.`;
 
-    parts.push({ text: singlePrompt });
+      parts.push({ text: singlePrompt });
 
-    const aiRes = await generateWithModelFallback(ai, (model) =>
-      ai.models.generateContent({
-        model,
-        contents: { parts },
-        config: {
-          responseMimeType: 'application/json'
-        }
-      })
-    );
+      const aiRes = await generateWithModelFallback(aiClient, (model) =>
+        aiClient.models.generateContent({
+          model,
+          contents: parts,
+          config: {
+            responseMimeType: 'application/json'
+          }
+        })
+      );
 
-    const rawText = aiRes.text || '';
-    try {
-      parsedProduct = JSON.parse(rawText);
-    } catch {
-      const match = rawText.match(/\{[\s\S]*\}/);
-      if (match) parsedProduct = JSON.parse(match[0]);
-    }
-
-    if (parsedProduct && parsedProduct.detectedSearchQuery) {
-      detectedSearchTerm = parsedProduct.detectedSearchQuery;
-    }
-
-    // Sanitize numerical fields to guarantee no undefined or string crashes
-    const safePrice = typeof parsedProduct?.priceUsd === 'number' && !isNaN(parsedProduct.priceUsd)
-      ? parsedProduct.priceUsd
-      : parseFloat(String(parsedProduct?.priceUsd || '').replace(/[^0-9.]/g, '')) || 14.80;
-
-    const safeShipping = typeof parsedProduct?.shippingUsd === 'number' && !isNaN(parsedProduct.shippingUsd)
-      ? parsedProduct.shippingUsd
-      : parseFloat(String(parsedProduct?.shippingUsd || '').replace(/[^0-9.]/g, '')) || 0;
-
-    const safeCandidates = Array.isArray(parsedProduct?.candidateProducts)
-      ? parsedProduct.candidateProducts.map((cand: any) => ({
-          titleEn: String(cand?.titleEn || 'Alternatywny wariant AliExpress'),
-          priceUsd: typeof cand?.priceUsd === 'number' && !isNaN(cand.priceUsd)
-            ? cand.priceUsd
-            : parseFloat(String(cand?.priceUsd || '').replace(/[^0-9.]/g, '')) || (safePrice + 2.0),
-          supplierName: String(cand?.supplierName || 'AliExpress Choice Store')
-        }))
-      : [];
-
-    const liveDirectSearchUrl = `https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(detectedSearchTerm || parsedProduct?.titleEn || 'trending electronics')}`;
-
-    const finalProduct = {
-      id: `ali-gemini-${Date.now()}`,
-      sourceUrl: liveDirectSearchUrl,
-      directSearchUrl: liveDirectSearchUrl,
-      titleEn: parsedProduct?.titleEn || `${detectedSearchTerm} High-Performance Edition`,
-      titlePl: (parsedProduct?.titlePl || detectedSearchTerm).slice(0, 72),
-      categoryName: parsedProduct?.categoryName || 'Elektronika > Akcesoria i gadżety',
-      allegroCategoryId: parsedProduct?.allegroCategoryId || '124921',
-      priceUsd: safePrice,
-      shippingUsd: safeShipping,
-      supplierName: parsedProduct?.supplierName || 'AliExpress Global Choice Store',
-      supplierRating: typeof parsedProduct?.supplierRating === 'number' ? parsedProduct.supplierRating : 4.88,
-      deliveryDays: parsedProduct?.deliveryDays || '7-10 dni roboczych',
-      stockAvailable: typeof parsedProduct?.stockAvailable === 'number' ? parsedProduct.stockAvailable : 850,
-      primaryImage: imageBase64 ? imageBase64 : 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80',
-      specifications: {
-        brand: parsedProduct?.specifications?.brand || 'OmniImport Pro',
-        model: parsedProduct?.specifications?.model || `MOD-${Date.now().toString().slice(-5)}`,
-        ean: parsedProduct?.specifications?.ean || `590${Math.floor(1000000000 + Math.random() * 9000000000)}`,
-        condition: 'Nowy',
-        material: parsedProduct?.specifications?.material || 'Aluminium + ABS',
-        color: parsedProduct?.specifications?.color || 'Czarny mat'
-      },
-      features: Array.isArray(parsedProduct?.features) ? parsedProduct.features : [
-        'Wysoka jakość wykonania',
-        'Szybkie ładowanie USB-C',
-        'Gwarancja 24 miesiące'
-      ],
-      descriptionPl: parsedProduct?.descriptionPl || `<h2>Wysokiej jakości produkt z AliExpress</h2><p>Prezentowane urządzenie to połączenie nowoczesnego designu i niezawodności.</p>`,
-      candidateProducts: safeCandidates
-    };
-
-    return res.json({
-      success: true,
-      product: finalProduct,
-      searchMetadata: {
-        queries: [`AliExpress search for ${detectedSearchTerm}`],
-        sources: [liveDirectSearchUrl],
-        detectedQuery: detectedSearchTerm,
-        mode: 'gemini-live',
-        executedAt: new Date().toISOString()
+      const rawText = aiRes.text || '';
+      try {
+        parsedProduct = JSON.parse(rawText);
+      } catch {
+        const match = rawText.match(/\{[\s\S]*\}/);
+        if (match) parsedProduct = JSON.parse(match[0]);
       }
-    });
-  } catch (error: any) {
-    console.warn('[Gemini Quota / Fallback Triggered]:', error?.message || error);
-    // Graceful fallback: when 429 quota is reached or 503 happens, synthesize valid product without failing
-    const synthesized = buildSynthesizedProduct(searchTargetQuery || 'trending gadget', imageBase64);
-    return res.json({
-      success: true,
-      product: synthesized,
-      searchMetadata: {
-        queries: [`AliExpress search: ${searchTargetQuery || 'trending electronics'}`],
-        sources: [synthesized.sourceUrl],
-        detectedQuery: searchTargetQuery || 'smart electronics',
-        mode: 'smart-fallback',
-        quotaNotice: 'Canlı pazar eşleme motoru aktif',
-        executedAt: new Date().toISOString()
+
+      if (parsedProduct && parsedProduct.detectedSearchQuery) {
+        detectedSearchTerm = parsedProduct.detectedSearchQuery;
       }
-    });
+
+      if (parsedProduct && (parsedProduct.titleEn || parsedProduct.titlePl)) {
+        const safePrice = typeof parsedProduct?.priceUsd === 'number' && !isNaN(parsedProduct.priceUsd)
+          ? parsedProduct.priceUsd
+          : parseFloat(String(parsedProduct?.priceUsd || '').replace(/[^0-9.]/g, '')) || 14.80;
+
+        const safeShipping = typeof parsedProduct?.shippingUsd === 'number' && !isNaN(parsedProduct.shippingUsd)
+          ? parsedProduct.shippingUsd
+          : parseFloat(String(parsedProduct?.shippingUsd || '').replace(/[^0-9.]/g, '')) || 0;
+
+        const safeCandidates = Array.isArray(parsedProduct?.candidateProducts)
+          ? parsedProduct.candidateProducts.map((cand: any) => ({
+              titleEn: String(cand?.titleEn || 'Alternatywny wariant AliExpress'),
+              priceUsd: typeof cand?.priceUsd === 'number' && !isNaN(cand.priceUsd)
+                ? cand.priceUsd
+                : parseFloat(String(cand?.priceUsd || '').replace(/[^0-9.]/g, '')) || (safePrice + 2.0),
+              supplierName: String(cand?.supplierName || 'AliExpress Choice Store')
+            }))
+          : [];
+
+        const liveDirectSearchUrl = `https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(detectedSearchTerm || parsedProduct?.titleEn || 'trending electronics')}`;
+
+        const finalProduct = {
+          id: `ali-gemini-${Date.now()}`,
+          sourceUrl: liveDirectSearchUrl,
+          directSearchUrl: liveDirectSearchUrl,
+          titleEn: parsedProduct?.titleEn || `${detectedSearchTerm} High-Performance Edition`,
+          titlePl: (parsedProduct?.titlePl || detectedSearchTerm).slice(0, 72),
+          categoryName: parsedProduct?.categoryName || 'Elektronika > Akcesoria i gadżety',
+          allegroCategoryId: parsedProduct?.allegroCategoryId || '124921',
+          priceUsd: safePrice,
+          shippingUsd: safeShipping,
+          supplierName: parsedProduct?.supplierName || 'AliExpress Global Choice Store',
+          supplierRating: typeof parsedProduct?.supplierRating === 'number' ? parsedProduct.supplierRating : 4.88,
+          deliveryDays: parsedProduct?.deliveryDays || '7-10 dni roboczych',
+          stockAvailable: typeof parsedProduct?.stockAvailable === 'number' ? parsedProduct.stockAvailable : 850,
+          primaryImage: sourceImagePreview || (imageBase64 && imageBase64.startsWith('data:') ? imageBase64 : 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80'),
+          specifications: {
+            brand: parsedProduct?.specifications?.brand || 'OmniTech Pro',
+            model: parsedProduct?.specifications?.model || `MOD-${Date.now().toString().slice(-5)}`,
+            ean: parsedProduct?.specifications?.ean || `590${Math.floor(1000000000 + Math.random() * 9000000000)}`,
+            condition: 'Nowy',
+            material: parsedProduct?.specifications?.material || 'Aluminium + ABS',
+            color: parsedProduct?.specifications?.color || 'Czarny'
+          },
+          features: Array.isArray(parsedProduct?.features) ? parsedProduct.features : [
+            'Wysoka jakość wykonania',
+            'Szybkie ładowanie USB-C',
+            'Gwarancja 24 miesiące'
+          ],
+          descriptionPl: parsedProduct?.descriptionPl || `<h2>Wysokiej jakości produkt z AliExpress</h2><p>Nowoczesny design i niezawodność.</p>`,
+          candidateProducts: safeCandidates
+        };
+
+        return res.json({
+          success: true,
+          product: finalProduct,
+          aiVisionActive: true,
+          searchMetadata: {
+            queries: [`AliExpress search for ${detectedSearchTerm}`],
+            sources: [liveDirectSearchUrl],
+            detectedQuery: detectedSearchTerm,
+            mode: 'gemini-vision-live',
+            model: 'gemini-2.5-flash',
+            executedAt: new Date().toISOString()
+          }
+        });
+      }
+    } catch (error: any) {
+      console.warn('[Gemini Vision Analysis Fallback]:', error?.message || error);
+    }
   }
+
+  // Graceful smart local engine: when Gemini key is not set or quota exceeded
+  const synthesized = buildSynthesizedProduct(searchTargetQuery, imageBase64, imageUrl);
+  return res.json({
+    success: true,
+    product: synthesized,
+    aiVisionActive: false,
+    searchMetadata: {
+      queries: [`AliExpress search: ${synthesized.directSearchUrl}`],
+      sources: [synthesized.sourceUrl],
+      detectedQuery: searchTargetQuery || synthesized.titleEn,
+      mode: 'smart-local-engine',
+      quotaNotice: activeKey ? 'Gemini kota sınırına ulaşıldı, akıllı yerel eşleme motoru devrede.' : 'Gemini AI Vision API Anahtarı girilmediği için akıllı yerel eşleme motoru kullanıldı.',
+      executedAt: new Date().toISOString()
+    }
+  });
 });
 
 // ==========================================

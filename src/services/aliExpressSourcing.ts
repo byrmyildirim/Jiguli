@@ -622,12 +622,17 @@ export async function searchAliExpressWithAI(params: {
   imageUrl?: string;
   mimeType?: string;
   queryText?: string;
+  apiKey?: string;
 }): Promise<{ product: AliExpressMatchedProduct & { directSearchUrl?: string }; searchMetadata?: any }> {
+  const localKey = params.apiKey || (typeof window !== 'undefined' ? localStorage.getItem('jiguli_gemini_api_key') : '');
   try {
     const response = await fetch('/api/sourcing/aliexpress-search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params)
+      body: JSON.stringify({
+        ...params,
+        apiKey: localKey || undefined
+      })
     });
 
     if (response.ok) {
@@ -658,7 +663,10 @@ export async function searchAliExpressWithAI(params: {
             shippingUsd: safeShipping,
             candidateProducts: safeCandidates
           },
-          searchMetadata: data.searchMetadata
+          searchMetadata: {
+            ...data.searchMetadata,
+            aiVisionActive: data.aiVisionActive
+          }
         };
       }
     }
@@ -670,34 +678,27 @@ export async function searchAliExpressWithAI(params: {
   const query = (params.queryText || params.imageUrl || '').toLowerCase();
   let matched = SAMPLE_ALIEXPRESS_HOT_PRODUCTS[0];
 
-  if (query.includes('charger') || query.includes('şarj') || query.includes('magsafe')) {
+  if (query.includes('charger') || query.includes('şarj') || query.includes('magsafe') || query.includes('powerbank')) {
     matched = SAMPLE_ALIEXPRESS_HOT_PRODUCTS[1];
-  } else if (query.includes('coffee') || query.includes('kahve') || query.includes('grind')) {
+  } else if (query.includes('coffee') || query.includes('kahve') || query.includes('grind') || query.includes('młynek')) {
     matched = SAMPLE_ALIEXPRESS_HOT_PRODUCTS[2];
-  } else if (query.includes('printer') || query.includes('yazıcı') || query.includes('label')) {
+  } else if (query.includes('printer') || query.includes('yazıcı') || query.includes('label') || query.includes('termal')) {
     matched = SAMPLE_ALIEXPRESS_HOT_PRODUCTS[3];
-  } else if (params.imageBase64) {
-    matched = {
-      ...SAMPLE_ALIEXPRESS_HOT_PRODUCTS[0],
-      primaryImage: params.imageBase64
-    };
-  } else if (params.imageUrl) {
-    matched = {
-      ...SAMPLE_ALIEXPRESS_HOT_PRODUCTS[0],
-      primaryImage: params.imageUrl
-    };
   }
 
-  const directSearchUrl = `https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(matched.titleEn)}`;
+  const primaryImage = params.imageBase64 || params.imageUrl || matched.primaryImage;
+  const directSearchUrl = `https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(query || matched.titleEn)}`;
 
   return {
     product: {
       ...matched,
+      primaryImage,
       directSearchUrl
     },
     searchMetadata: {
-      queries: [`AliExpress search for ${matched.titleEn}`, 'site:aliexpress.com item'],
+      queries: [`AliExpress search for ${query || matched.titleEn}`],
       sources: [matched.sourceUrl],
+      aiVisionActive: false,
       executedAt: new Date().toISOString()
     }
   };
