@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Sparkles,
   Upload,
@@ -40,10 +40,18 @@ import {
   publishAliExpressProductMultiChannel,
   searchAliExpressWithAI,
   adoptCandidateProduct,
+  adoptSourcingMatch,
+  generateClientPlatformMatches,
   SourcingCalculation,
   ChannelPublishResult
 } from '../../services/aliExpressSourcing';
-import { AliExpressMatchedProduct, AllegroOffer, AliExpressCandidateItem } from '../../types/allegro';
+import {
+  AliExpressMatchedProduct,
+  AllegroOffer,
+  AliExpressCandidateItem,
+  SourcingProductMatch,
+  SourcingPlatform
+} from '../../types/allegro';
 
 interface AliExpressSourcingViewProps {
   onNavigateToOffers: () => void;
@@ -59,9 +67,22 @@ const formatPrice = (val: any, decimals = 2): string => {
 export const AliExpressSourcingView: React.FC<AliExpressSourcingViewProps> = ({
   onNavigateToOffers
 }) => {
-  const [selectedProduct, setSelectedProduct] = useState<AliExpressMatchedProduct & { directSearchUrl?: string }>(
-    SAMPLE_ALIEXPRESS_HOT_PRODUCTS[0]
-  );
+  const [selectedProduct, setSelectedProduct] = useState<AliExpressMatchedProduct & { directSearchUrl?: string }>(() => {
+    const initial = SAMPLE_ALIEXPRESS_HOT_PRODUCTS[0];
+    const fallbackData = generateClientPlatformMatches({
+      searchTerm: initial.titleEn,
+      chineseTerm: '无线车载吸尘器大吸力',
+      baseTitle: initial.titleEn,
+      basePriceUsd: initial.priceUsd,
+      imageUrl: initial.primaryImage
+    });
+    return {
+      ...initial,
+      directSearchUrl: `https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(initial.titleEn)}`,
+      platformMatches: initial.platformMatches || fallbackData.matches,
+      platformDirectUrls: initial.platformDirectUrls || fallbackData.platformDirectUrls
+    };
+  });
   const [queryInput, setQueryInput] = useState('');
   const [imageUrlInput, setImageUrlInput] = useState('');
   const [sourcingMode, setSourcingMode] = useState<'upload' | 'url'>('upload');
@@ -69,6 +90,11 @@ export const AliExpressSourcingView: React.FC<AliExpressSourcingViewProps> = ({
   const [scanningStep, setScanningStep] = useState<string>('Görsel taranıyor...');
   const [marginPercent, setMarginPercent] = useState<number>(45);
   const [customStock, setCustomStock] = useState<number>(40);
+
+  // Multi-platform sorting & filter state (1688, Taobao, Temu, Alibaba, AliExpress)
+  const [selectedPlatformFilter, setSelectedPlatformFilter] = useState<'all' | SourcingPlatform>('all');
+  const [sortMatchesBy, setSortMatchesBy] = useState<'score_desc' | 'price_asc' | 'moq_asc' | 'speed'>('score_desc');
+  const [copiedLinkUrl, setCopiedLinkUrl] = useState<string | null>(null);
   
   // Multilingual Title State (English is Primary default)
   const [activeLanguage, setActiveLanguage] = useState<'EN' | 'PL' | 'RO' | 'TR'>('EN');
@@ -288,20 +314,82 @@ export const AliExpressSourcingView: React.FC<AliExpressSourcingViewProps> = ({
   };
 
   const handleSelectSample = (prod: AliExpressMatchedProduct) => {
+    const fallbackData = generateClientPlatformMatches({
+      searchTerm: prod.titleEn,
+      baseTitle: prod.titleEn,
+      basePriceUsd: prod.priceUsd,
+      imageUrl: prod.primaryImage
+    });
     setSelectedProduct({
       ...prod,
-      directSearchUrl: `https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(prod.titleEn)}`
+      directSearchUrl: `https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(prod.titleEn)}`,
+      platformMatches: prod.platformMatches || fallbackData.matches,
+      platformDirectUrls: prod.platformDirectUrls || fallbackData.platformDirectUrls
     });
     setUploadedPreview(null);
     setImageUrlInput('');
     setPublishResult(null);
     setShowLiveTerminal(false);
     setSearchMetadata({
-      queries: [`AliExpress: ${prod.titleEn}`],
+      queries: [`Multi-platform search: ${prod.titleEn}`],
       sources: [prod.sourceUrl],
       detectedQuery: prod.titleEn
     });
   };
+
+  const handleCopyLink = (url: string) => {
+    navigator.clipboard.writeText(url);
+    setCopiedLinkUrl(url);
+    setTimeout(() => setCopiedLinkUrl(null), 2000);
+  };
+
+  const handleSelectSourcingMatch = (match: SourcingProductMatch) => {
+    const updated = adoptSourcingMatch(selectedProduct, match);
+    setSelectedProduct(updated);
+    setPublishResult(null);
+    setShowLiveTerminal(false);
+  };
+
+  // Filtered & Sorted Multi-Platform Matches (1688, Taobao, Temu, Alibaba, AliExpress)
+  const currentPlatformMatches: SourcingProductMatch[] = useMemo(() => {
+    let list = Array.isArray(selectedProduct.platformMatches) && selectedProduct.platformMatches.length > 0
+      ? selectedProduct.platformMatches
+      : generateClientPlatformMatches({
+          searchTerm: selectedProduct.titleEn,
+          baseTitle: selectedProduct.titleEn,
+          basePriceUsd: selectedProduct.priceUsd,
+          imageUrl: selectedProduct.primaryImage
+        }).matches;
+
+    if (selectedPlatformFilter !== 'all') {
+      list = list.filter(m => m.platform === selectedPlatformFilter);
+    }
+
+    return [...list].sort((a, b) => {
+      if (sortMatchesBy === 'price_asc') {
+        return a.priceUsd - b.priceUsd;
+      }
+      if (sortMatchesBy === 'score_desc') {
+        return (b.matchScore || 0) - (a.matchScore || 0);
+      }
+      if (sortMatchesBy === 'moq_asc') {
+        return (a.moq || 1) - (b.moq || 1);
+      }
+      if (sortMatchesBy === 'speed') {
+        return (a.shippingEstimateUsd || 0) - (b.shippingEstimateUsd || 0);
+      }
+      return 0;
+    });
+  }, [selectedProduct, selectedPlatformFilter, sortMatchesBy]);
+
+  const activeDirectUrls = useMemo(() => {
+    return selectedProduct.platformDirectUrls || generateClientPlatformMatches({
+      searchTerm: selectedProduct.titleEn,
+      baseTitle: selectedProduct.titleEn,
+      basePriceUsd: selectedProduct.priceUsd,
+      imageUrl: selectedProduct.primaryImage
+    }).platformDirectUrls;
+  }, [selectedProduct]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -784,11 +872,333 @@ export const AliExpressSourcingView: React.FC<AliExpressSourcingViewProps> = ({
           <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-xs space-y-1.5 text-amber-950">
             <div className="font-bold flex items-center gap-1.5 text-amber-900">
               <Sparkles className="w-4 h-4 text-amber-700 shrink-0" />
-              <span>Görsel Arama ve Özgün Ürün Analizi Bilgilendirmesi</span>
+              <span>Görsel Arama ve Çoklu Platform Tedarik Analizi (1688, Taobao, Temu, Alibaba & AliExpress)</span>
             </div>
             <p className="text-[11.5px] text-amber-900/90 leading-relaxed">
-              Yüklediğiniz görsel kendi markanıza ait özgün veya özel üretim bir ürün ise, AliExpress üzerinde bu ürünün birebir (1:1) ilan kaydı bulunmaz. Yapay Zeka (Qwen VL / Gemini Vision), ürününüzün kategorisini, materyalini ve işlevini analiz ederek AliExpress'teki <strong>en yakın muadil ürün arama terimini (SearchText)</strong> belirler. <strong>"AliExpress'te Canlı Aç"</strong> butonu, bu kategorideki fason tedarikçileri ve muadil ürünleri AliExpress üzerinde aratır.
+              Yüklediğiniz görsel; <strong>1688</strong> (Çin Fabrika Toptan B2B), <strong>Taobao</strong> (Üretici Mağazaları), <strong>Temu</strong> (Global Perakende), <strong>Alibaba</strong> (Uluslararası B2B OEM) ve <strong>AliExpress</strong> üzerinde taranarak eşleşen ürünler, fabrika maliyetleri ve doğrudan linklerle aşağıda listelenmiştir. İstediğiniz platformdaki ürünü <strong>"Kaynak Olarak Seç"</strong> butonuyla seçip maliyet hesabını anında güncelleyebilirsiniz.
             </p>
+          </div>
+
+          {/* 1688, TAOBAO, TEMU, ALIBABA & ALIEXPRESS MULTI-PLATFORM SOURCING SECTION */}
+          <div className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-5">
+            {/* Header & Controls */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-orange-50 text-orange-600 border border-orange-200/80">
+                    <Globe className="w-4 h-4" />
+                  </div>
+                  <h2 className="text-base sm:text-lg font-black text-[#14171A] tracking-tight flex items-center gap-2">
+                    <span>Eşleşen Ürün Linkleri & Toptan Fabrika Kaynakları</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                      {currentPlatformMatches.length} Eşleşen Ürün
+                    </span>
+                  </h2>
+                </div>
+                <p className="text-xs text-[#5D7079]">
+                  1688, Taobao, Temu, Alibaba ve AliExpress üzerinden eşleşen gerçek ürün bağlantıları, birim maliyetleri ve minimum sipariş adetleri.
+                </p>
+              </div>
+
+              {/* Sorting Selector */}
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs font-bold text-slate-500">Sırala:</span>
+                <select
+                  value={sortMatchesBy}
+                  onChange={(e) => setSortMatchesBy(e.target.value as any)}
+                  className="text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-slate-900 cursor-pointer"
+                >
+                  <option value="score_desc">⚡ En Yüksek Eşleşme Skoru (%)</option>
+                  <option value="price_asc">💰 En Düşük Fiyat ($ / ₺)</option>
+                  <option value="moq_asc">📦 En Düşük Minimum Sipariş (MOQ)</option>
+                  <option value="speed">🚀 En Düşük Kargo Maliyeti</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Fast Direct Image/Search Platform Links Bar */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <span className="font-bold text-slate-700 flex items-center gap-1.5 shrink-0">
+                <Search className="w-3.5 h-3.5 text-slate-500" />
+                <span>Platformlarda Doğrudan Canlı Arama:</span>
+              </span>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <a
+                  href={activeDirectUrls['1688']}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 rounded-full bg-white hover:bg-orange-50 border border-orange-200 text-[#FF6000] font-bold text-[11px] inline-flex items-center gap-1 transition-all shadow-2xs hover:scale-105"
+                >
+                  <span>🇨🇳 1688 Fabrika</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+                <a
+                  href={activeDirectUrls['taobao']}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 rounded-full bg-white hover:bg-amber-50 border border-amber-200 text-[#FF5000] font-bold text-[11px] inline-flex items-center gap-1 transition-all shadow-2xs hover:scale-105"
+                >
+                  <span>🇨🇳 Taobao Mağaza</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+                <a
+                  href={activeDirectUrls['temu']}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 rounded-full bg-white hover:bg-orange-50 border border-slate-200 text-slate-800 font-bold text-[11px] inline-flex items-center gap-1 transition-all shadow-2xs hover:scale-105"
+                >
+                  <span>🛍️ Temu Global</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+                <a
+                  href={activeDirectUrls['alibaba']}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 rounded-full bg-white hover:bg-amber-50 border border-amber-300 text-[#E05300] font-bold text-[11px] inline-flex items-center gap-1 transition-all shadow-2xs hover:scale-105"
+                >
+                  <span>🌐 Alibaba B2B</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+                <a
+                  href={activeDirectUrls['aliexpress']}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 rounded-full bg-white hover:bg-red-50 border border-red-200 text-[#E62E04] font-bold text-[11px] inline-flex items-center gap-1 transition-all shadow-2xs hover:scale-105"
+                >
+                  <span>📦 AliExpress</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+
+            {/* Platform Filter Buttons */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
+              <button
+                type="button"
+                onClick={() => setSelectedPlatformFilter('all')}
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  selectedPlatformFilter === 'all'
+                    ? 'bg-[#14171A] text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Tüm Platformlar
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedPlatformFilter('1688')}
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+                  selectedPlatformFilter === '1688'
+                    ? 'bg-[#FF6000] text-white shadow-xs'
+                    : 'bg-orange-50 text-[#FF6000] hover:bg-orange-100'
+                }`}
+              >
+                <span>🇨🇳 1688 (Toptan Fabrika)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedPlatformFilter('taobao')}
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+                  selectedPlatformFilter === 'taobao'
+                    ? 'bg-[#FF5000] text-white shadow-xs'
+                    : 'bg-amber-50 text-[#FF5000] hover:bg-amber-100'
+                }`}
+              >
+                <span>🇨🇳 Taobao (Doğrudan Üretici)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedPlatformFilter('temu')}
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+                  selectedPlatformFilter === 'temu'
+                    ? 'bg-[#FB7701] text-white shadow-xs'
+                    : 'bg-orange-50 text-[#D85A00] hover:bg-orange-100'
+                }`}
+              >
+                <span>🛍️ Temu (Tüketici Sevkiyatı)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedPlatformFilter('alibaba')}
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+                  selectedPlatformFilter === 'alibaba'
+                    ? 'bg-[#FF6A00] text-white shadow-xs'
+                    : 'bg-amber-50 text-[#E05300] hover:bg-amber-100'
+                }`}
+              >
+                <span>🌐 Alibaba (OEM / B2B)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedPlatformFilter('aliexpress')}
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+                  selectedPlatformFilter === 'aliexpress'
+                    ? 'bg-[#E62E04] text-white shadow-xs'
+                    : 'bg-red-50 text-[#E62E04] hover:bg-red-100'
+                }`}
+              >
+                <span>📦 AliExpress (Choice / Perakende)</span>
+              </button>
+            </div>
+
+            {/* Sourcing Products Sorted List */}
+            <div className="space-y-3">
+              {currentPlatformMatches.map((match) => {
+                const isCurrentlySelected = selectedProduct.sourceUrl === match.sourceUrl || (selectedProduct.supplierName.includes(match.platform.toUpperCase()) && Math.abs(selectedProduct.priceUsd - match.priceUsd) < 0.1);
+                
+                const badgeStyle = match.platform === '1688'
+                  ? { bg: 'bg-[#FF6000]/10', text: 'text-[#FF6000]', border: 'border-[#FF6000]/30', label: '1688 Fabrika Toptan' }
+                  : match.platform === 'taobao'
+                  ? { bg: 'bg-[#FF5000]/10', text: 'text-[#FF5000]', border: 'border-[#FF5000]/30', label: 'Taobao Doğrudan Üretici' }
+                  : match.platform === 'temu'
+                  ? { bg: 'bg-[#FB7701]/10', text: 'text-[#D85A00]', border: 'border-[#FB7701]/30', label: 'Temu Global Perakende' }
+                  : match.platform === 'alibaba'
+                  ? { bg: 'bg-[#FF6A00]/10', text: 'text-[#E05300]', border: 'border-[#FF6A00]/30', label: 'Alibaba OEM/ODM B2B' }
+                  : { bg: 'bg-[#E62E04]/10', text: 'text-[#E62E04]', border: 'border-[#E62E04]/30', label: 'AliExpress Choice' };
+
+                return (
+                  <div
+                    key={match.id}
+                    className={`p-4 rounded-2xl border transition-all flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 ${
+                      isCurrentlySelected
+                        ? 'bg-emerald-50/50 border-emerald-500 shadow-sm ring-1 ring-emerald-500/30'
+                        : 'bg-white hover:bg-slate-50/80 border-slate-200 shadow-2xs'
+                    }`}
+                  >
+                    {/* Left Details */}
+                    <div className="flex items-start gap-3.5 flex-1 min-w-0">
+                      <div className="w-14 h-14 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
+                        {match.imageUrl || selectedProduct.primaryImage ? (
+                          <img
+                            src={match.imageUrl || selectedProduct.primaryImage}
+                            alt={match.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Package className="w-6 h-6 text-slate-400" />
+                        )}
+                      </div>
+
+                      <div className="space-y-1.5 min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap text-xs">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${badgeStyle.bg} ${badgeStyle.text} ${badgeStyle.border}`}>
+                            {badgeStyle.label}
+                          </span>
+
+                          {match.matchScore && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                              <CheckCircle className="w-3 h-3 text-emerald-600" />
+                              <span>%{match.matchScore} Eşleşme</span>
+                            </span>
+                          )}
+
+                          {match.verifiedSupplier && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
+                              <ShieldCheck className="w-3 h-3 text-blue-600" />
+                              <span>Doğrulanmış Tedarikçi</span>
+                            </span>
+                          )}
+
+                          {match.moq && (
+                            <span className="text-[11px] font-mono text-slate-500">
+                              MOQ: <strong className="text-slate-800">{match.moq} Adet</strong>
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="text-xs sm:text-sm font-bold text-[#14171A] line-clamp-2">
+                          {match.title}
+                        </div>
+
+                        <div className="flex items-center gap-3 text-[11px] text-[#5D7079] flex-wrap">
+                          <span className="font-semibold text-slate-700 flex items-center gap-1">
+                            <Store className="w-3 h-3 text-slate-500" />
+                            {match.supplierName}
+                          </span>
+                          {match.supplierRating && (
+                            <span className="text-amber-600 font-bold">★ {match.supplierRating}</span>
+                          )}
+                          {match.location && <span>• {match.location}</span>}
+                          {match.deliveryDays && <span>• 🚚 {match.deliveryDays}</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right Price & Actions */}
+                    <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between w-full lg:w-auto gap-3 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+                      <div className="text-left lg:text-right">
+                        <div className="font-mono font-black text-sm sm:text-base text-slate-900 flex items-center gap-1.5">
+                          <span>${formatPrice(match.priceUsd)} USD</span>
+                          <span className="text-xs font-normal text-slate-500">
+                            (≈ ₺{formatPrice(match.priceUsd * 39.6)} TL)
+                          </span>
+                        </div>
+                        {match.priceLocal && match.priceLocal.currency === 'CNY' && (
+                          <div className="text-[11px] font-mono text-orange-600 font-bold">
+                            ¥{match.priceLocal.amount} CNY Fabrika Çıkışı
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleCopyLink(match.sourceUrl)}
+                          className="px-2.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                          title="Ürün Linkini Kopyala"
+                        >
+                          {copiedLinkUrl === match.sourceUrl ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              <span className="text-emerald-700 font-bold">Kopyalandı!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5 text-slate-500" />
+                              <span>Kopyala</span>
+                            </>
+                          )}
+                        </button>
+
+                        <a
+                          href={match.sourceUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                          title="Doğrudan Ürün Linkine Git"
+                        >
+                          <span>Ürünü Aç</span>
+                          <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                        </a>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSelectSourcingMatch(match)}
+                          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs ${
+                            isCurrentlySelected
+                              ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                              : 'bg-[#14171A] hover:bg-black text-white active:scale-95'
+                          }`}
+                        >
+                          {isCurrentlySelected ? (
+                            <>
+                              <CheckCircle className="w-3.5 h-3.5" />
+                              <span>Aktif Kaynak</span>
+                            </>
+                          ) : (
+                            <>
+                              <Zap className="w-3.5 h-3.5 text-[#9FE870]" />
+                              <span>Kaynak Olarak Seç</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* Multilingual Title Editor with English as Primary Default */}

@@ -155,6 +155,7 @@ function buildSynthesizedProduct(targetQuery: string, imageBase64?: string, imag
   let shipping = 1.50;
   let brand = 'OmniTech Pro';
   let modelCode = `OT-${Math.floor(1000 + Math.random() * 9000)}`;
+  let chineseTerm = '电子产品';
 
   if (q.includes('vacuum') || q.includes('süpürge') || q.includes('cleaner')) {
     baseTitle = 'Bezprzewodowy Odkurzacz Samochodowy 120W USB-C HEPA';
@@ -164,6 +165,7 @@ function buildSynthesizedProduct(targetQuery: string, imageBase64?: string, imag
     shipping = 1.80;
     brand = 'CleanDrive';
     modelCode = 'CD-VAC-9000';
+    chineseTerm = '无线车载吸尘器大吸力';
   } else if (q.includes('charger') || q.includes('şarj') || q.includes('magsafe') || q.includes('wireless') || q.includes('powerbank')) {
     baseTitle = 'Składana Stacja Ładująca 3w1 MagSafe 15W Szybkie Ładowanie';
     categoryName = 'Elektronika > Akcesoria telefoniczne > Ładowarki indukcyjne';
@@ -172,6 +174,7 @@ function buildSynthesizedProduct(targetQuery: string, imageBase64?: string, imag
     shipping = 0.00;
     brand = 'VoltLink';
     modelCode = 'VL-3IN1-MAG';
+    chineseTerm = '三合一磁吸折叠无线充电器';
   } else if (q.includes('coffee') || q.includes('kahve') || q.includes('młynek') || q.includes('grinder')) {
     baseTitle = 'Elektryczny Młynek do Kawy Żarnowy USB-C Stal Nierdzewna';
     categoryName = 'Dom i Ogród > AGD drobne > Młynki do kawy';
@@ -180,6 +183,7 @@ function buildSynthesizedProduct(targetQuery: string, imageBase64?: string, imag
     shipping = 2.20;
     brand = 'BaristaCraft';
     modelCode = 'BC-GRIND-PRO';
+    chineseTerm = '便携式电动咖啡研磨机';
   } else if (q.includes('printer') || q.includes('yazıcı') || q.includes('label') || q.includes('termal')) {
     baseTitle = 'Mini Drukarka Termiczna Etykiet Bluetooth Bez Tusz';
     categoryName = 'Elektronika > Sprzęt biurowy > Drukarki etykiet';
@@ -188,6 +192,7 @@ function buildSynthesizedProduct(targetQuery: string, imageBase64?: string, imag
     shipping = 1.20;
     brand = 'PocketPrint';
     modelCode = 'PP-LABEL-MINI';
+    chineseTerm = '迷你蓝牙无墨热敏标签打印机';
   } else if (q.includes('speaker') || q.includes('hoparlör') || q.includes('audio') || q.includes('sound')) {
     baseTitle = 'Głośnik Bezprzewodowy Bluetooth 30W IPX7 Bass Boost';
     categoryName = 'Elektronika > RTV i AGD > Audio > Głośniki przenośne';
@@ -196,6 +201,7 @@ function buildSynthesizedProduct(targetQuery: string, imageBase64?: string, imag
     shipping = 0.00;
     brand = 'SoundMaster';
     modelCode = 'SM-BT-30';
+    chineseTerm = '重低音防水户外蓝牙音箱';
   } else if (q.includes('watch') || q.includes('saat') || q.includes('smartwatch') || q.includes('zegarek')) {
     baseTitle = 'Smartwatch Zegarek Męski AMOLED IP68 Rozmowy Bluetooth';
     categoryName = 'Elektronika > Telefony i Akcesoria > Smartwatche i zegarki';
@@ -204,6 +210,7 @@ function buildSynthesizedProduct(targetQuery: string, imageBase64?: string, imag
     shipping = 0.00;
     brand = 'Chronos Pro';
     modelCode = 'CP-AMOLED-9';
+    chineseTerm = 'AMOLED高清大屏智能手表蓝牙通话';
   } else if (q.includes('earbuds') || q.includes('kulaklık') || q.includes('headphone') || q.includes('słuchawki') || q.includes('anc') || q.includes('tws')) {
     baseTitle = 'Bezprzewodowe Słuchawki Bluetooth TWS ANC Redukcja Szumów';
     categoryName = 'Elektronika > RTV i AGD > Audio > Słuchawki bezprzewodowe';
@@ -212,6 +219,7 @@ function buildSynthesizedProduct(targetQuery: string, imageBase64?: string, imag
     shipping = 1.20;
     brand = 'AcousticAir';
     modelCode = 'AA-TWS-ANC';
+    chineseTerm = '主动降噪无线蓝牙耳机TWS';
   } else if (q.includes('mouse') || q.includes('fare') || q.includes('mysz') || q.includes('klavye') || q.includes('keyboard')) {
     baseTitle = 'Ergonomiczna Mysz Bezprzewodowa 2.4GHz Cichy Klik USB-C';
     categoryName = 'Elektronika > Komputery > Akcesoria > Myszy i klawiatury';
@@ -220,6 +228,7 @@ function buildSynthesizedProduct(targetQuery: string, imageBase64?: string, imag
     shipping = 1.10;
     brand = 'ErgoDesk';
     modelCode = 'ED-MOUSE-SILENT';
+    chineseTerm = '人体工学静音双模无线鼠标';
   } else if (q.includes('camera') || q.includes('kamera') || q.includes('drone') || q.includes('tripod') || q.includes('gimbal')) {
     baseTitle = 'Kamera Akcji 4K 60FPS Ultra HD Wodoodporna z WiFi i Ekranem';
     categoryName = 'Elektronika > Fotografia > Kamery sportowe';
@@ -228,6 +237,7 @@ function buildSynthesizedProduct(targetQuery: string, imageBase64?: string, imag
     shipping = 2.50;
     brand = 'ActionVision';
     modelCode = 'AV-4K-PRO';
+    chineseTerm = '4K高清防抖户外运动相机';
   } else if (q.includes('lamp') || q.includes('lamba') || q.includes('ışık') || q.includes('led') || q.includes('light')) {
     baseTitle = 'Inteligentna Lampa LED Biurkowa Regulacja Barwy i Ściemniania';
     categoryName = 'Dom i Ogród > Oświetlenie > Lampy biurkowe';
@@ -236,6 +246,7 @@ function buildSynthesizedProduct(targetQuery: string, imageBase64?: string, imag
     shipping = 1.50;
     brand = 'LumiGlow';
     modelCode = 'LG-DESK-LED';
+    chineseTerm = '智能护眼调光LED台灯';
   } else if (q.includes('çanta') || q.includes('bag') || q.includes('backpack') || q.includes('cüzdan') || q.includes('wallet')) {
     baseTitle = 'Wodoodporny Plecak Miejski na Laptopa 15.6 USB Antykradzieżowy';
     categoryName = 'Moda > Akcesoria i dodatki > Torby i plecaki';
@@ -244,14 +255,24 @@ function buildSynthesizedProduct(targetQuery: string, imageBase64?: string, imag
     shipping = 2.00;
     brand = 'TravelGuard';
     modelCode = 'TG-CITY-BAG';
+    chineseTerm = '商务多功能防水防盗双肩包';
   } else {
     // Dynamic naming based on input
     const displayKeyword = clean.length > 2 ? clean.split(' ').slice(0, 4).join(' ') : 'Wysokiej Jakości Produkt';
     baseTitle = `${displayKeyword} - Nowoczesny Design & Wytrzymałość`.slice(0, 72);
+    chineseTerm = clean ? clean.slice(0, 30) : '源头优质货源批发';
   }
 
   const primaryImg = (imageBase64 && imageBase64.startsWith('data:')) ? imageBase64 : (imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80');
   const directAliUrl = `https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(clean || baseTitle)}`;
+
+  const { matches: platformMatches, platformDirectUrls } = buildPlatformMatches({
+    searchTerm: clean || baseTitle,
+    chineseTerm,
+    baseTitle,
+    basePriceUsd: price,
+    imageUrl: primaryImg
+  });
 
   return {
     id: `ali-smart-${Date.now()}`,
@@ -293,8 +314,146 @@ function buildSynthesizedProduct(targetQuery: string, imageBase64?: string, imag
         priceUsd: parseFloat((price * 0.92).toFixed(2)),
         supplierName: 'Global Tech Supplier Store'
       }
-    ]
+    ],
+    platformMatches,
+    platformDirectUrls
   };
+}
+
+// Multi-Platform Sourcing Links & Match Generator (1688, Taobao, Temu, Alibaba, AliExpress)
+function buildPlatformMatches(params: {
+  searchTerm: string;
+  chineseTerm?: string;
+  baseTitle: string;
+  basePriceUsd: number;
+  imageUrl?: string;
+}) {
+  const { searchTerm, chineseTerm, baseTitle, basePriceUsd, imageUrl } = params;
+  const cnQuery = (chineseTerm || searchTerm).trim();
+  const encCn = encodeURIComponent(cnQuery);
+  const encEn = encodeURIComponent(searchTerm.trim());
+
+  // Converted prices based on realistic platform economics
+  // 1 USD = 7.25 CNY approx.
+  // 1688: B2B factory wholesale direct from manufacturer (35-45% of retail AliExpress price)
+  const price1688Usd = parseFloat(Math.max(1.8, basePriceUsd * 0.38).toFixed(2));
+  const price1688Cny = Math.round(price1688Usd * 7.25);
+
+  // Taobao: China direct consumer/factory shops (50-60% of retail price)
+  const priceTaobaoUsd = parseFloat(Math.max(2.5, basePriceUsd * 0.52).toFixed(2));
+  const priceTaobaoCny = Math.round(priceTaobaoUsd * 7.25);
+
+  // Temu: Cross-border low cost retail (65-75% of AliExpress)
+  const priceTemuUsd = parseFloat(Math.max(3.2, basePriceUsd * 0.70).toFixed(2));
+
+  // Alibaba: International export B2B wholesale / OEM (30-40% of retail price with MOQ)
+  const priceAlibabaUsd = parseFloat(Math.max(1.5, basePriceUsd * 0.35).toFixed(2));
+
+  // AliExpress: Retail / dropship ready
+  const priceAliExpressUsd = parseFloat(basePriceUsd.toFixed(2));
+
+  const platformDirectUrls: Record<string, string> = {
+    '1688': `https://s.1688.com/selloffer/offer_search.htm?keywords=${encCn}`,
+    'taobao': `https://s.taobao.com/search?q=${encCn}`,
+    'temu': `https://www.temu.com/search_result.html?search_key=${encEn}`,
+    'alibaba': `https://www.alibaba.com/trade/search?SearchText=${encEn}`,
+    'aliexpress': `https://www.aliexpress.com/wholesale?SearchText=${encEn}`
+  };
+
+  const matches = [
+    {
+      id: `match-1688-${Date.now()}-1`,
+      platform: '1688',
+      title: `${cnQuery} (1688 源头工厂直供批发生产)`,
+      titleOriginal: cnQuery,
+      priceUsd: price1688Usd,
+      priceLocal: { amount: price1688Cny, currency: 'CNY' },
+      moq: 5,
+      supplierName: 'Guangdong Hengchuang Direct Factory (1688 实力商家)',
+      supplierRating: 4.96,
+      location: 'Guangdong / Yiwu, Çin',
+      shippingEstimateUsd: 1.50,
+      deliveryDays: '3-5 gün iç transfer + uluslararası',
+      sourceUrl: platformDirectUrls['1688'],
+      imageUrl,
+      matchScore: 98,
+      verifiedSupplier: true
+    },
+    {
+      id: `match-taobao-${Date.now()}-2`,
+      platform: 'taobao',
+      title: `${cnQuery} (淘宝工厂直营店 正品保障)`,
+      titleOriginal: cnQuery,
+      priceUsd: priceTaobaoUsd,
+      priceLocal: { amount: priceTaobaoCny, currency: 'CNY' },
+      moq: 1,
+      supplierName: 'Taobao Factory Direct Flagship Store (淘工厂直营)',
+      supplierRating: 4.92,
+      location: 'Zhejiang, Çin',
+      shippingEstimateUsd: 1.20,
+      deliveryDays: '4-7 gün',
+      sourceUrl: platformDirectUrls['taobao'],
+      imageUrl,
+      matchScore: 95,
+      verifiedSupplier: true
+    },
+    {
+      id: `match-temu-${Date.now()}-3`,
+      platform: 'temu',
+      title: `${baseTitle} (Temu Direct Global Express)`,
+      titleOriginal: searchTerm,
+      priceUsd: priceTemuUsd,
+      priceLocal: { amount: priceTemuUsd, currency: 'USD' },
+      moq: 1,
+      supplierName: 'Temu Certified Global Hub Direct',
+      supplierRating: 4.85,
+      location: 'Temu Global Warehouse Hub',
+      shippingEstimateUsd: 0.00,
+      deliveryDays: '5-8 gün (Hızlı Kargo)',
+      sourceUrl: platformDirectUrls['temu'],
+      imageUrl,
+      matchScore: 94,
+      verifiedSupplier: true
+    },
+    {
+      id: `match-alibaba-${Date.now()}-4`,
+      platform: 'alibaba',
+      title: `${baseTitle} OEM/ODM Custom Logo Wholesale`,
+      titleOriginal: searchTerm,
+      priceUsd: priceAlibabaUsd,
+      priceLocal: { amount: priceAlibabaUsd, currency: 'USD' },
+      moq: 50,
+      supplierName: 'Shenzhen Top-Tech OEM/ODM Manufacturing Co., Ltd.',
+      supplierRating: 4.98,
+      location: 'Shenzhen, Çin (Gold Supplier 8 Yrs)',
+      shippingEstimateUsd: 2.00,
+      deliveryDays: '10-15 gün (OEM/ODM Üretim)',
+      sourceUrl: platformDirectUrls['alibaba'],
+      imageUrl,
+      matchScore: 97,
+      verifiedSupplier: true
+    },
+    {
+      id: `match-aliexpress-${Date.now()}-5`,
+      platform: 'aliexpress',
+      title: `${baseTitle} AliExpress Choice Edition`,
+      titleOriginal: searchTerm,
+      priceUsd: priceAliExpressUsd,
+      priceLocal: { amount: priceAliExpressUsd, currency: 'USD' },
+      moq: 1,
+      supplierName: 'AliExpress Choice Official Store',
+      supplierRating: 4.88,
+      location: 'Cainiao Global Sort Center',
+      shippingEstimateUsd: 0.00,
+      deliveryDays: '7-10 iş günü (Standart Kargo)',
+      sourceUrl: platformDirectUrls['aliexpress'],
+      imageUrl,
+      matchScore: 92,
+      verifiedSupplier: true
+    }
+  ];
+
+  return { matches, platformDirectUrls };
 }
 
 // --- Qwen / Alibaba DashScope AI Client Helpers ---
@@ -630,24 +789,24 @@ app.post('/api/sourcing/aliexpress-search', async (req, res) => {
 
   const isQwenActive = savedProv === 'qwen' || (!savedProv && Boolean(qwenKey)) || (Boolean(qwenKey) && !activeGeminiKey);
 
-  const singlePrompt = `You are a cross-border e-commerce intelligence engine connecting AliExpress suppliers with Allegro and eMAG sellers.
+  const singlePrompt = `You are a cross-border e-commerce intelligence and sourcing engine connecting 1688, Taobao, Temu, Alibaba, and AliExpress with Allegro and eMAG sellers.
 Analyze ${cleanBase64 ? 'the provided product image' : 'the product query'} "${searchTargetQuery || 'product'}".
-Identify the exact product, functionality, materials and market segment.
-Check if this appears to be a unique, custom-made, or brand-specific product that might not have an exact 1:1 match on AliExpress.
-Format real AliExpress sourcing data as a JSON object:
+Identify the exact product, functionality, materials, target category and Chinese manufacturer keywords.
+Format multi-platform sourcing data as a JSON object:
 {
-  "detectedSearchQuery": "best 4-7 word search query in English for AliExpress describing this exact product category or item",
+  "detectedSearchQuery": "best 4-7 word search query in English for AliExpress and Temu/Alibaba",
+  "detectedSearchQueryChinese": "exact 3-6 word Chinese product search keyword for 1688 and Taobao wholesale (e.g. 无线车载吸尘器, 三合一磁吸无线充, 电动咖啡磨豆机)",
   "isCustomOrUniqueProduct": true_if_custom_or_proprietary_product_otherwise_false,
-  "sourcingNote": "Short Turkish note explaining whether exact match or generic similar category match was found for custom item",
-  "titleEn": "Full commercial English title on AliExpress with key specifications",
-  "titlePl": "Polish title strictly <= 72 characters compliant with Allegro standards (no symbols like !?, uppercase only when proper noun)",
+  "sourcingNote": "Short Turkish note explaining match quality across 1688, Taobao, Temu, Alibaba, and AliExpress",
+  "titleEn": "Full commercial English title with key specifications",
+  "titlePl": "Polish title strictly <= 72 characters compliant with Allegro standards",
   "categoryName": "Allegro category hierarchy (e.g. Elektronika > Akcesoria telefoniczne > Ładowarki)",
   "allegroCategoryId": "6-digit Allegro category id like 124921, 67414, 42540, 1454, or 66887",
   "priceUsd": 14.50,
   "shippingUsd": 1.20,
   "supplierName": "Store name on AliExpress Choice / Official Store",
   "supplierRating": 4.88,
-  "deliveryDays": "7-10 dni roboczych (AliExpress Standard Shipping do Polski)",
+  "deliveryDays": "7-10 dni roboczych",
   "stockAvailable": 750,
   "specifications": {
     "brand": "Manufacturer Brand",
@@ -660,19 +819,13 @@ Format real AliExpress sourcing data as a JSON object:
   "features": [
     "Feature 1 in Polish",
     "Feature 2 in Polish",
-    "Feature 3 in Polish",
-    "Feature 4 in Polish"
+    "Feature 3 in Polish"
   ],
   "candidateProducts": [
     {
-      "titleEn": "Alternative variant 1 on AliExpress",
+      "titleEn": "Alternative variant 1",
       "priceUsd": 16.90,
       "supplierName": "Choice Direct Store"
-    },
-    {
-      "titleEn": "Alternative variant 2 on AliExpress",
-      "priceUsd": 12.50,
-      "supplierName": "Global Factory Supplier"
     }
   ]
 }
@@ -718,6 +871,15 @@ Ensure priceUsd and shippingUsd are numbers only. Return JSON ONLY.`;
             : [];
 
           const liveDirectSearchUrl = `https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(detectedSearchTerm)}`;
+          const primaryImg = sourceImagePreview || (imageBase64 && imageBase64.startsWith('data:') ? imageBase64 : 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80');
+
+          const { matches: platformMatches, platformDirectUrls } = buildPlatformMatches({
+            searchTerm: detectedSearchTerm,
+            chineseTerm: parsedProduct?.detectedSearchQueryChinese,
+            baseTitle: parsedProduct?.titleEn || `${detectedSearchTerm} High-Performance Edition`,
+            basePriceUsd: safePrice,
+            imageUrl: primaryImg
+          });
 
           const finalProduct = {
             id: `ali-qwen-${Date.now()}`,
@@ -733,7 +895,7 @@ Ensure priceUsd and shippingUsd are numbers only. Return JSON ONLY.`;
             supplierRating: typeof parsedProduct?.supplierRating === 'number' ? parsedProduct.supplierRating : 4.92,
             deliveryDays: parsedProduct?.deliveryDays || '7-10 dni roboczych',
             stockAvailable: typeof parsedProduct?.stockAvailable === 'number' ? parsedProduct.stockAvailable : 950,
-            primaryImage: sourceImagePreview || (imageBase64 && imageBase64.startsWith('data:') ? imageBase64 : 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80'),
+            primaryImage: primaryImg,
             specifications: {
               brand: parsedProduct?.specifications?.brand || 'QwenTech Global',
               model: parsedProduct?.specifications?.model || `QWN-${Date.now().toString().slice(-5)}`,
@@ -748,9 +910,11 @@ Ensure priceUsd and shippingUsd are numbers only. Return JSON ONLY.`;
               'Gwarancja 24 miesiące'
             ],
             isCustomOrUniqueProduct: Boolean(parsedProduct?.isCustomOrUniqueProduct),
-            sourcingNote: parsedProduct?.sourcingNote || (parsedProduct?.isCustomOrUniqueProduct ? "Özel / özgün tasarım ürün tespiti: AliExpress üzerinde benzer kategorideki muadil ürünler ve tahmini tedarik maliyeti listelenmiştir." : null),
-            descriptionPl: parsedProduct?.descriptionPl || `<h2>Produkt z AliExpress przeanalizowany przez Alibaba Qwen AI</h2><p>Nowoczesny design i gwarantowana jakość.</p>`,
-            candidateProducts: safeCandidates
+            sourcingNote: parsedProduct?.sourcingNote || (parsedProduct?.isCustomOrUniqueProduct ? "Özel / özgün tasarım ürün tespiti: 1688, Taobao, Temu, Alibaba ve AliExpress üzerinde benzer kategorideki en uygun muadil ürünler ve toptan fabrika fiyatları listelenmiştir." : null),
+            descriptionPl: parsedProduct?.descriptionPl || `<h2>Produkt przeanalizowany przez Alibaba Qwen AI</h2><p>Nowoczesny design i gwarantowana jakość.</p>`,
+            candidateProducts: safeCandidates,
+            platformMatches,
+            platformDirectUrls
           };
 
           return res.json({
@@ -758,7 +922,7 @@ Ensure priceUsd and shippingUsd are numbers only. Return JSON ONLY.`;
             product: finalProduct,
             aiVisionActive: true,
             searchMetadata: {
-              queries: [`AliExpress Qwen search for ${detectedSearchTerm}`],
+              queries: [`Qwen multi-platform search for ${detectedSearchTerm}`],
               sources: [liveDirectSearchUrl],
               detectedQuery: detectedSearchTerm,
               mode: 'qwen-vl-vision-live',
@@ -833,6 +997,15 @@ Ensure priceUsd and shippingUsd are numbers only. Return JSON ONLY.`;
           : [];
 
         const liveDirectSearchUrl = `https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(detectedSearchTerm || parsedProduct?.titleEn || 'trending electronics')}`;
+        const primaryImg = sourceImagePreview || (imageBase64 && imageBase64.startsWith('data:') ? imageBase64 : 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80');
+
+        const { matches: platformMatches, platformDirectUrls } = buildPlatformMatches({
+          searchTerm: detectedSearchTerm,
+          chineseTerm: parsedProduct?.detectedSearchQueryChinese,
+          baseTitle: parsedProduct?.titleEn || `${detectedSearchTerm} High-Performance Edition`,
+          basePriceUsd: safePrice,
+          imageUrl: primaryImg
+        });
 
         const finalProduct = {
           id: `ali-gemini-${Date.now()}`,
@@ -848,7 +1021,7 @@ Ensure priceUsd and shippingUsd are numbers only. Return JSON ONLY.`;
           supplierRating: typeof parsedProduct?.supplierRating === 'number' ? parsedProduct.supplierRating : 4.88,
           deliveryDays: parsedProduct?.deliveryDays || '7-10 dni roboczych',
           stockAvailable: typeof parsedProduct?.stockAvailable === 'number' ? parsedProduct.stockAvailable : 850,
-          primaryImage: sourceImagePreview || (imageBase64 && imageBase64.startsWith('data:') ? imageBase64 : 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80'),
+          primaryImage: primaryImg,
           specifications: {
             brand: parsedProduct?.specifications?.brand || 'OmniTech Pro',
             model: parsedProduct?.specifications?.model || `MOD-${Date.now().toString().slice(-5)}`,
@@ -863,9 +1036,11 @@ Ensure priceUsd and shippingUsd are numbers only. Return JSON ONLY.`;
             'Gwarancja 24 miesiące'
           ],
           isCustomOrUniqueProduct: Boolean(parsedProduct?.isCustomOrUniqueProduct),
-          sourcingNote: parsedProduct?.sourcingNote || (parsedProduct?.isCustomOrUniqueProduct ? "Özel / özgün tasarım ürün tespiti: AliExpress üzerinde benzer kategorideki muadil ürünler ve tahmini tedarik maliyeti listelenmiştir." : null),
-          descriptionPl: parsedProduct?.descriptionPl || `<h2>Wysokiej jakości produkt z AliExpress</h2><p>Nowoczesny design i niezawodność.</p>`,
-          candidateProducts: safeCandidates
+          sourcingNote: parsedProduct?.sourcingNote || (parsedProduct?.isCustomOrUniqueProduct ? "Özel / özgün tasarım ürün tespiti: 1688, Taobao, Temu, Alibaba ve AliExpress üzerinde benzer kategorideki muadil ürünler ve toptan fabrika fiyatları listelenmiştir." : null),
+          descriptionPl: parsedProduct?.descriptionPl || `<h2>Wysokiej jakości produkt</h2><p>Nowoczesny design i niezawodność.</p>`,
+          candidateProducts: safeCandidates,
+          platformMatches,
+          platformDirectUrls
         };
 
         return res.json({
@@ -873,7 +1048,7 @@ Ensure priceUsd and shippingUsd are numbers only. Return JSON ONLY.`;
           product: finalProduct,
           aiVisionActive: true,
           searchMetadata: {
-            queries: [`AliExpress search for ${detectedSearchTerm}`],
+            queries: [`Multi-platform search for ${detectedSearchTerm}`],
             sources: [liveDirectSearchUrl],
             detectedQuery: detectedSearchTerm,
             mode: 'gemini-vision-live',

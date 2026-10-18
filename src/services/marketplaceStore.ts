@@ -600,7 +600,7 @@ export class MarketplaceStore {
     this.listeners.forEach((cb) => cb());
   }
 
-  // Brand Name, Slogan & Logo
+  // Brand Name & Slogan
   public getBrandName(): string {
     return this.brandName || 'Jiguli';
   }
@@ -612,7 +612,7 @@ export class MarketplaceStore {
     fetch('/api/db/branding', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ brandName, slogan: this.slogan, logoUrl: this.logoUrl })
+      body: JSON.stringify({ brandName, slogan: this.slogan })
     }).catch(() => {});
   }
 
@@ -1002,22 +1002,6 @@ export class MarketplaceStore {
 
     this.offers = [...createdList, ...this.offers];
     this.saveToStorage(STORAGE_KEYS.OFFERS, this.offers);
-
-    if (createdList.length > 0) {
-      Promise.allSettled([
-        fetch('/api/db/offers/bulk', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ offers: createdList })
-        }),
-        fetch('/api/db/products/bulk', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ products: createdList })
-        })
-      ]).catch(() => {});
-    }
-
     this.notify();
     return { count: createdList.length, offers: createdList };
   }
@@ -2042,14 +2026,6 @@ export class MarketplaceStore {
 
     this.saveToStorage(STORAGE_KEYS.OFFERS, this.offers);
 
-    if (updatedOffer) {
-      fetch('/api/db/offers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedOffer)
-      }).catch(() => {});
-    }
-
     // Update repricing item if exists
     const priceVal = parseFloat(updates.sellingMode.price.amount) || 100;
     this.repricingItems = this.repricingItems.map((rep) => {
@@ -2084,28 +2060,6 @@ export class MarketplaceStore {
 
     this.notify();
     return updatedOffer;
-  }
-
-  public async syncAllOffersToDb(): Promise<{ success: boolean; count: number }> {
-    if (this.offers.length === 0) return { success: true, count: 0 };
-    try {
-      const [offRes, prodRes] = await Promise.all([
-        fetch('/api/db/offers/bulk', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ offers: this.offers })
-        }).then(r => r.json().catch(() => null)),
-        fetch('/api/db/products/bulk', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ products: this.offers })
-        }).then(r => r.json().catch(() => null))
-      ]);
-      const count = offRes?.count || prodRes?.count || this.offers.length;
-      return { success: true, count };
-    } catch {
-      return { success: false, count: 0 };
-    }
   }
   public bulkUpdatePrices(offerIds: string[], type: 'PERCENT_INCREASE' | 'PERCENT_DECREASE' | 'FIXED_ADD', value: number) {
     this.offers = this.offers.map((offer) => {
@@ -2292,104 +2246,7 @@ export class MarketplaceStore {
   }
 
   // REPRICING & BUYBOX
-  public syncOffersToRepricingPool(): RepricingItem[] {
-    const existingOfferIds = new Set(this.repricingItems.map(r => r.offerId));
-    let added = false;
-    for (const offer of this.offers) {
-      if (!existingOfferIds.has(offer.id)) {
-        const priceVal = parseFloat(offer.sellingMode?.price?.amount || '100') || 100;
-        const isEmag = offer.id.startsWith('emag_') || offer.publication?.marketplaces?.base?.id?.startsWith('emag') || offer.channelSync?.emag === 'synced';
-        const isBl = offer.id.startsWith('bl-') || offer.channelSync?.baselinker === 'synced';
-
-        const newItem: RepricingItem = {
-          id: `rep-${offer.id}`,
-          offerId: offer.id,
-          offerName: offer.name,
-          currentPrice: priceVal,
-          minPrice: parseFloat((priceVal * 0.85).toFixed(2)),
-          maxPrice: parseFloat((priceVal * 1.25).toFixed(2)),
-          targetCompetitorPrice: parseFloat((priceVal * 0.97).toFixed(2)),
-          competitorSellerName: isEmag ? 'eMAG_TopSeller' : isBl ? 'BaseLinker_Merchant' : 'ElectroStore_PL',
-          buyBoxStatus: 'LOSING',
-          strategy: 'BEAT_BY_0_10',
-          currency: (offer.sellingMode?.price?.currency as SupportedCurrency) || 'PLN',
-          platform: isEmag ? 'emag' : isBl ? 'baselinker' : 'allegro',
-          autoEnabled: true,
-          lastRepricedAt: new Date().toISOString()
-        };
-        this.repricingItems.push(newItem);
-        existingOfferIds.add(offer.id);
-        added = true;
-      }
-    }
-    if (added) {
-      this.saveToStorage(STORAGE_KEYS.REPRICING_ITEMS, this.repricingItems);
-    }
-    return this.repricingItems;
-  }
-
-  public loadSampleRepricingItems(): RepricingItem[] {
-    const sampleItems: RepricingItem[] = [
-      {
-        id: 'rep-sample-1',
-        offerId: 'sample-101',
-        offerName: 'Baseus Wireless CarPlay Adapter for iOS & Android',
-        currentPrice: 189.90,
-        minPrice: 150.00,
-        maxPrice: 240.00,
-        targetCompetitorPrice: 185.00,
-        competitorSellerName: 'ElectroPoland_Store',
-        buyBoxStatus: 'LOSING',
-        strategy: 'BEAT_BY_0_10',
-        currency: 'PLN',
-        platform: 'allegro',
-        autoEnabled: true,
-        lastRepricedAt: new Date().toISOString()
-      },
-      {
-        id: 'rep-sample-2',
-        offerId: 'sample-102',
-        offerName: 'Tuya Smart Video Doorbell 1080P WiFi with Chime',
-        currentPrice: 219.00,
-        minPrice: 180.00,
-        maxPrice: 280.00,
-        targetCompetitorPrice: 219.00,
-        competitorSellerName: 'eMAG_DirectSupplier',
-        buyBoxStatus: 'WINNING',
-        strategy: 'BEAT_BY_0_10',
-        currency: 'RON',
-        platform: 'emag',
-        autoEnabled: true,
-        lastRepricedAt: new Date().toISOString()
-      },
-      {
-        id: 'rep-sample-3',
-        offerId: 'sample-103',
-        offerName: 'Solar Alarm 120dB Pan PIR Motion Sensor IP67',
-        currentPrice: 145.50,
-        minPrice: 120.00,
-        maxPrice: 195.00,
-        targetCompetitorPrice: 142.00,
-        competitorSellerName: 'GlobalTech_EU',
-        buyBoxStatus: 'LOSING',
-        strategy: 'BEAT_BY_0_10',
-        currency: 'PLN',
-        platform: 'allegro',
-        autoEnabled: true,
-        lastRepricedAt: new Date().toISOString()
-      }
-    ];
-
-    this.repricingItems = sampleItems;
-    this.saveToStorage(STORAGE_KEYS.REPRICING_ITEMS, this.repricingItems);
-    this.notify();
-    return this.repricingItems;
-  }
-
   public getRepricingItems(): RepricingItem[] {
-    if (this.repricingItems.length === 0 && this.offers.length > 0) {
-      this.syncOffersToRepricingPool();
-    }
     return this.repricingItems;
   }
 

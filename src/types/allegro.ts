@@ -339,12 +339,39 @@ export interface InventorySyncRule {
   multiChannelDeduction: boolean;
 }
 
+export type SourcingPlatform = '1688' | 'taobao' | 'temu' | 'alibaba' | 'aliexpress';
+
+export interface SourcingProductMatch {
+  id: string;
+  platform: SourcingPlatform;
+  title: string;
+  titleOriginal?: string;
+  priceUsd: number;
+  priceLocal?: {
+    amount: number;
+    currency: 'CNY' | 'USD';
+  };
+  moq?: number;
+  supplierName: string;
+  supplierRating?: number;
+  location?: string;
+  shippingEstimateUsd?: number;
+  deliveryDays?: string;
+  sourceUrl: string;
+  imageUrl?: string;
+  matchScore?: number; // 0-100 percentage
+  verifiedSupplier?: boolean;
+}
+
 export interface AliExpressCandidateItem {
   titleEn: string;
   priceUsd: number;
   supplierName?: string;
   shippingUsd?: number;
   directUrl?: string;
+  platform?: SourcingPlatform;
+  moq?: number;
+  matchScore?: number;
 }
 
 export interface AliExpressMatchedProduct {
@@ -376,7 +403,11 @@ export interface AliExpressMatchedProduct {
   };
   features: string[];
   candidateProducts?: AliExpressCandidateItem[];
+  platformMatches?: SourcingProductMatch[];
+  platformDirectUrls?: Record<SourcingPlatform, string>;
   visualSummary?: string;
+  isCustomOrUniqueProduct?: boolean;
+  sourcingNote?: string | null;
 }
 
 // -------------------------------------------------------------

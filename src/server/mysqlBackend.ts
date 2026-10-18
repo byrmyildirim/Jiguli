@@ -2,9 +2,6 @@ import mysql from 'mysql2/promise';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import dotenv from 'dotenv';
-
-dotenv.config({ override: true });
 
 export interface MySQLConfigPayload {
   host: string;
@@ -30,149 +27,56 @@ export function setDetectedPrefix(prefix: string) {
   detectedPrefix = prefix;
 }
 
-export function parseDatabaseUrl(rawUrl: string): Partial<MySQLConfigPayload> | null {
-  try {
-    if (!rawUrl || typeof rawUrl !== 'string') return null;
-    const trimmed = rawUrl.trim();
-    if (!trimmed.startsWith('mysql://') && !trimmed.startsWith('mysql2://')) return null;
-    const parsed = new URL(trimmed);
-    const dbName = parsed.pathname.replace(/^\//, '');
-    const isSsl = parsed.searchParams.get('ssl') === 'true' ||
-                  parsed.searchParams.get('sslmode') === 'require' ||
-                  parsed.searchParams.get('ssl-mode') === 'REQUIRED';
-    return {
-      host: parsed.hostname,
-      port: Number(parsed.port) || 3306,
-      database: dbName,
-      user: decodeURIComponent(parsed.username || ''),
-      password: decodeURIComponent(parsed.password || ''),
-      ssl: isSsl,
-      charset: parsed.searchParams.get('charset') || 'utf8mb4'
-    };
-  } catch (err: any) {
-    console.log('[Parse Database URL Note]:', err?.message || err);
-    return null;
-  }
-}
-
 export function getSavedMySQLConfig(): MySQLConfigPayload {
-  // 1. Check local persistent data/db_config.json first (user explicit configuration)
+  // 1. Prioritize environment variables
+  if (process.env.DB_HOST && process.env.DB_USER && process.env.DB_NAME) {
+    return {
+      host: process.env.DB_HOST,
+      port: Number(process.env.DB_PORT) || 3306,
+      database: process.env.DB_NAME,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD || '',
+      ssl: process.env.DB_SSL === 'true',
+      prefix: detectedPrefix || process.env.DB_PREFIX || 'cnt_',
+      charset: process.env.DB_CHARSET || 'utf8mb4'
+    };
+  }
+
+  // 2. Check local data/db_config.json
   try {
     if (fs.existsSync(CONFIG_FILE_PATH)) {
       const raw = fs.readFileSync(CONFIG_FILE_PATH, 'utf-8');
       const parsed = JSON.parse(raw);
       if (parsed && parsed.host && parsed.database && parsed.user) {
-        const resolved: MySQLConfigPayload = {
-          host: parsed.host,
-          port: Number(parsed.port) || 3306,
-          database: parsed.database,
-          user: parsed.user,
-          password: parsed.password || '',
-          ssl: parsed.ssl !== undefined ? Boolean(parsed.ssl) : true,
-          prefix: detectedPrefix || parsed.prefix || 'cnt_',
-          charset: parsed.charset || 'utf8mb4'
+        return {
+          ...parsed,
+          prefix: detectedPrefix || parsed.prefix || 'cnt_'
         };
-        // Keep runtime process.env aligned
-        process.env.DB_HOST = resolved.host;
-        process.env.DB_PORT = String(resolved.port || 3306);
-        process.env.DB_NAME = resolved.database;
-        process.env.DB_USER = resolved.user;
-        if (resolved.password) process.env.DB_PASSWORD = resolved.password;
-        process.env.DB_PREFIX = resolved.prefix;
-        process.env.DB_SSL = resolved.ssl ? 'true' : 'false';
-        return resolved;
       }
     }
-  } catch (err: any) {
-    console.log('[DB Config Load Note]:', err?.message || err);
+  } catch (err) {
+    console.warn('[DB Config Load Warning]:', err);
   }
 
-  // 2. Check DATABASE_URL / MYSQL_URL if set in environment (e.g. AI Studio Secrets)
-  const envUrl = process.env.DATABASE_URL || process.env.MYSQL_URL;
-  if (envUrl) {
-    const parsedFromUrl = parseDatabaseUrl(envUrl);
-    if (parsedFromUrl && parsedFromUrl.host && parsedFromUrl.database && parsedFromUrl.user) {
-      return {
-        host: parsedFromUrl.host,
-        port: parsedFromUrl.port || 3306,
-        database: parsedFromUrl.database,
-        user: parsedFromUrl.user,
-        password: parsedFromUrl.password || '',
-        ssl: Boolean(parsedFromUrl.ssl),
-        prefix: detectedPrefix || process.env.DB_PREFIX || process.env.MYSQL_PREFIX || 'cnt_',
-        charset: parsedFromUrl.charset || 'utf8mb4'
-      };
-    }
-  }
-
-  // 3. Individual environment variables (AI Studio Secrets / Cloud Env)
-  const envHost = process.env.DB_HOST || process.env.MYSQL_HOST;
-  const envUser = process.env.DB_USER || process.env.MYSQL_USER;
-  const envName = process.env.DB_NAME || process.env.MYSQL_DATABASE || process.env.MYSQL_DB;
-  if (envHost && envUser && envName && envHost !== '127.0.0.1' && envHost !== 'localhost') {
-    return {
-      host: envHost,
-      port: Number(process.env.DB_PORT || process.env.MYSQL_PORT) || 3306,
-      database: envName,
-      user: envUser,
-      password: process.env.DB_PASSWORD || process.env.MYSQL_PASSWORD || process.env.DB_PASS || '',
-      ssl: process.env.DB_SSL === 'true' || process.env.MYSQL_SSL === 'true',
-      prefix: detectedPrefix || process.env.DB_PREFIX || process.env.MYSQL_PREFIX || 'cnt_',
-      charset: process.env.DB_CHARSET || process.env.MYSQL_CHARSET || 'utf8mb4'
-    };
-  }
-
-  // 4. Default fallback to live remote database
   return {
-    host: '194.59.164.74',
+    host: '127.0.0.1',
     port: 3306,
     database: 'u162532946_connect',
     user: 'u162532946_connect',
     password: '782536Cnt.',
-    ssl: true,
+    ssl: false,
     prefix: detectedPrefix || 'cnt_',
     charset: 'utf8mb4'
   };
 }
 
-// Global connection cache
-const activePools = new Map<string, mysql.Pool>();
-
-export function resetPools(): void {
-  for (const pool of activePools.values()) {
-    try {
-      pool.end().catch(() => {});
-    } catch {
-      // ignore
-    }
-  }
-  activePools.clear();
-}
-
-export function getPoolKey(cfg: MySQLConfigPayload): string {
-  return `${cfg.host}:${cfg.port || 3306}:${cfg.database}:${cfg.user}`;
-}
-
 export function saveMySQLConfig(cfg: MySQLConfigPayload): void {
   try {
-    // Reset any cached pools so new settings take effect immediately
-    resetPools();
-
     const dir = path.dirname(CONFIG_FILE_PATH);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
     fs.writeFileSync(CONFIG_FILE_PATH, JSON.stringify(cfg, null, 2), 'utf-8');
-
-    // Update in-memory process.env so anything reading process.env gets the new config immediately
-    process.env.DB_HOST = cfg.host || '194.59.164.74';
-    process.env.DB_PORT = String(cfg.port || 3306);
-    process.env.DB_NAME = cfg.database || 'u162532946_connect';
-    process.env.DB_USER = cfg.user || 'u162532946_connect';
-    process.env.DB_PASSWORD = cfg.password || '';
-    process.env.DB_PREFIX = getActivePrefix(cfg);
-    process.env.DB_SSL = cfg.ssl ? 'true' : 'false';
-    process.env.DB_CHARSET = cfg.charset || 'utf8mb4';
 
     // Also persist or update .env file
     const envPath = path.resolve(process.cwd(), '.env');
@@ -190,61 +94,26 @@ export function saveMySQLConfig(cfg: MySQLConfigPayload): void {
       }
     };
 
-    updateEnvVar('DB_HOST', cfg.host || '194.59.164.74');
+    updateEnvVar('DB_HOST', cfg.host || '127.0.0.1');
     updateEnvVar('DB_PORT', String(cfg.port || 3306));
-    updateEnvVar('DB_NAME', cfg.database || 'u162532946_connect');
-    updateEnvVar('DB_USER', cfg.user || 'u162532946_connect');
+    updateEnvVar('DB_NAME', cfg.database || 'jiguli_db');
+    updateEnvVar('DB_USER', cfg.user || 'root');
     updateEnvVar('DB_PASSWORD', cfg.password || '');
     updateEnvVar('DB_PREFIX', getActivePrefix(cfg));
     updateEnvVar('DB_SSL', cfg.ssl ? 'true' : 'false');
     updateEnvVar('DB_CHARSET', cfg.charset || 'utf8mb4');
 
     fs.writeFileSync(envPath, envContent.trim() + '\n', 'utf-8');
-  } catch (err: any) {
-    console.log('[DB Config Save Note]:', err?.message || err);
+  } catch (err) {
+    console.warn('[DB Config Save Warning]:', err);
   }
 }
 
-export function getMySQLConfigInfo() {
-  const cfg = getSavedMySQLConfig();
-  let source = 'file';
-  if (process.env.DATABASE_URL || process.env.MYSQL_URL) {
-    source = 'env_database_url';
-  } else if ((process.env.DB_HOST || process.env.MYSQL_HOST) && (process.env.DB_USER || process.env.MYSQL_USER) && (process.env.DB_NAME || process.env.MYSQL_DATABASE)) {
-    source = 'env';
-  } else if (fs.existsSync(CONFIG_FILE_PATH)) {
-    source = 'file';
-  } else {
-    source = 'default';
-  }
+// Global connection cache
+const activePools = new Map<string, mysql.Pool>();
 
-  const rawPass = cfg.password || '';
-  const maskedPassword = rawPass.length > 4
-    ? `${rawPass.slice(0, 2)}••••${rawPass.slice(-2)}`
-    : (rawPass.length > 0 ? '••••' : '');
-
-  return {
-    host: cfg.host,
-    port: cfg.port || 3306,
-    database: cfg.database,
-    user: cfg.user,
-    prefix: cfg.prefix || 'cnt_',
-    ssl: Boolean(cfg.ssl),
-    charset: cfg.charset || 'utf8mb4',
-    hasPassword: Boolean(rawPass.length > 0),
-    maskedPassword,
-    source,
-    supportedSecrets: [
-      { name: 'DB_HOST', desc: 'MySQL Sunucu IP veya Host adı (örn: 127.0.0.1 veya Hostinger IP)' },
-      { name: 'DB_PORT', desc: 'MySQL Port (varsayılan: 3306)' },
-      { name: 'DB_NAME', desc: 'Veritabanı Adı (örn: u162532946_connect)' },
-      { name: 'DB_USER', desc: 'Veritabanı Kullanıcısı (örn: u162532946_connect)' },
-      { name: 'DB_PASSWORD', desc: 'Veritabanı Şifresi' },
-      { name: 'DB_PREFIX', desc: 'Tablo Öneki (örn: cnt_)' },
-      { name: 'DB_SSL', desc: 'SSL Bağlantısı (true veya false)' },
-      { name: 'DATABASE_URL', desc: 'Tek Satır Bağlantı URL (mysql://user:pass@host:3306/dbname)' }
-    ]
-  };
+export function getPoolKey(cfg: MySQLConfigPayload): string {
+  return `${cfg.host}:${cfg.port || 3306}:${cfg.database}:${cfg.user}`;
 }
 
 export function createOrGetPool(cfg?: MySQLConfigPayload): mysql.Pool {
@@ -275,6 +144,7 @@ export function createOrGetPool(cfg?: MySQLConfigPayload): mysql.Pool {
 // Offline-Safe Local Entity Persistence & Circuit Breaker
 // ==========================================
 const LOCAL_ENTITIES_PATH = path.resolve(process.cwd(), 'data', 'local_entities.json');
+const LOCAL_CONFIGS_PATH = path.resolve(process.cwd(), 'data', 'app_configs.json');
 
 function loadLocalEntities(): Record<string, any[]> {
   try {
@@ -296,10 +166,30 @@ function saveLocalEntities(tableName: string, data: any[]): void {
   } catch {}
 }
 
+function loadLocalConfigs(): Record<string, any> {
+  try {
+    if (fs.existsSync(LOCAL_CONFIGS_PATH)) {
+      const raw = fs.readFileSync(LOCAL_CONFIGS_PATH, 'utf-8');
+      return JSON.parse(raw) || {};
+    }
+  } catch {}
+  return {};
+}
+
+function saveLocalConfig(key: string, value: any): void {
+  try {
+    const dir = path.dirname(LOCAL_CONFIGS_PATH);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const current = loadLocalConfigs();
+    current[key] = value;
+    fs.writeFileSync(LOCAL_CONFIGS_PATH, JSON.stringify(current, null, 2), 'utf-8');
+  } catch {}
+}
+
 const inMemoryTables = new Map<string, any[]>();
 const inMemoryConfigs = new Map<string, string>();
 
-// Initialize in-memory defaults and load persisted entities
+// Initialize in-memory defaults
 inMemoryConfigs.set('system_name', 'Jiguli Cross-Border E-Commerce Suite');
 inMemoryConfigs.set('database_version', '1.0.0');
 inMemoryConfigs.set('status', 'installed');
@@ -364,19 +254,9 @@ export async function getSafeDbConnection(force = false): Promise<{ conn: mysql.
   }
 }
 
-export async function testMySQLConnection(cfg?: Partial<MySQLConfigPayload>) {
+export async function testMySQLConnection(cfg: MySQLConfigPayload) {
   const startTime = Date.now();
-  const saved = getSavedMySQLConfig();
-  const target: MySQLConfigPayload = {
-    ...saved,
-    ...(cfg || {})
-  };
-  // If password was omitted or empty in partial cfg, retain saved password if available
-  if (cfg && (cfg.password === undefined || cfg.password === '')) {
-    target.password = saved.password;
-  }
-
-  if (!target.host || !target.database || !target.user) {
+  if (!cfg.host || !cfg.database || !cfg.user) {
     return {
       success: false,
       message: 'Sunucu Adresi (Host), Veritabanı Adı (Database) ve Kullanıcı Adı (User) zorunludur.'
@@ -384,26 +264,9 @@ export async function testMySQLConnection(cfg?: Partial<MySQLConfigPayload>) {
   }
 
   try {
-    const pool = createOrGetPool(target);
+    const pool = createOrGetPool(cfg);
     const conn = await pool.getConnection();
     const [rows]: any = await conn.query('SELECT VERSION() as version, DATABASE() as db, USER() as user, NOW() as server_time');
-    
-    // Check tables in the database
-    let totalTablesCount = 0;
-    let matchingPrefixCount = 0;
-    let tablesList: string[] = [];
-    try {
-      const [tableRows]: any = await conn.query('SHOW TABLES');
-      if (Array.isArray(tableRows)) {
-        totalTablesCount = tableRows.length;
-        tablesList = tableRows.map((r: any) => Object.values(r)[0] as string);
-        const prefix = getActivePrefix(target);
-        matchingPrefixCount = tablesList.filter(t => t.startsWith(prefix)).length;
-      }
-    } catch {
-      // ignore table listing errors
-    }
-
     conn.release();
 
     const latencyMs = Date.now() - startTime;
@@ -414,35 +277,18 @@ export async function testMySQLConnection(cfg?: Partial<MySQLConfigPayload>) {
       status: 200,
       latencyMs,
       serverVersion: version,
-      database: rows?.[0]?.db || target.database,
-      user: rows?.[0]?.user || target.user,
+      database: rows?.[0]?.db || cfg.database,
+      user: rows?.[0]?.user || cfg.user,
       serverTime: rows?.[0]?.server_time,
-      totalTablesCount,
-      matchingPrefixCount,
-      detectedPrefix: getActivePrefix(target),
-      message: `MySQL Sunucusuna Başarıyla Bağlanıldı! (${version} · ${latencyMs}ms · ${matchingPrefixCount > 0 ? `${matchingPrefixCount} adet ${getActivePrefix(target)} tablosu aktif` : `${totalTablesCount} tablo bulundu`})`
+      message: `MySQL Sunucusuna Başarıyla Bağlanıldı! (${version} · ${latencyMs}ms · UTF8MB4 Aktif)`
     };
   } catch (err: any) {
     const latencyMs = Date.now() - startTime;
-    const errCode = err?.code || '';
-    let detailedHelp = '';
-
-    if (errCode === 'ETIMEDOUT') {
-      detailedHelp = ' (Zaman Aşımı: MySQL sunucunuza ulaşılamadı. cPanel/Hostinger Remote MySQL ayarlarında bu sunucu IP adresine veya "%" erişim izni verildiğinden ve 3306 portunun açık olduğundan emin olun.)';
-    } else if (errCode === 'ER_ACCESS_DENIED_ERROR') {
-      detailedHelp = ' (Erişim Reddedildi: Veritabanı kullanıcı adı veya şifresi hatalı ya da bu kullanıcının uzaktan bağlanma yetkisi yok.)';
-    } else if (errCode === 'ER_BAD_DB_ERROR') {
-      detailedHelp = ' (Veritabanı Bulunamadı: Belirtilen veritabanı adı sunucuda mevcut değil.)';
-    } else if (errCode === 'ENOTFOUND' || errCode === 'EAI_AGAIN') {
-      detailedHelp = ' (Host Bulunamadı: Sunucu adresi veya IP çözümlenemedi.)';
-    }
-
     return {
       success: false,
       latencyMs,
-      message: `MySQL Bağlantı Hatası: ${err?.message || err}${detailedHelp}`,
-      error: err?.code || err?.message,
-      errorCode: errCode
+      message: `MySQL Bağlantı Hatası: ${err?.message || err}. Host, Port, Kullanıcı ve Şifre parametrelerini kontrol ediniz.`,
+      error: err?.code || err?.message
     };
   }
 }
@@ -878,12 +724,8 @@ export async function installMySQLDatabase(cfg: MySQLConfigPayload, customSql?: 
   };
 }
 
-export async function getMySQLDatabaseStatus(cfg?: Partial<MySQLConfigPayload>) {
-  const resolved: MySQLConfigPayload = {
-    ...getSavedMySQLConfig(),
-    ...(cfg || {})
-  };
-  const prefix = getActivePrefix(resolved);
+export async function getMySQLDatabaseStatus(cfg: MySQLConfigPayload) {
+  const prefix = getActivePrefix(cfg);
   const tableList = [
     { name: `${prefix}db_config`, display: 'Sistem Yapılandırması', desc: 'Genel ayarlar ve sürüm bilgisi', pk: 'id' },
     { name: `${prefix}users`, display: 'Kullanıcılar & Yetkiler', desc: 'Yönetici ve personel hesapları', pk: 'id' },
@@ -905,7 +747,7 @@ export async function getMySQLDatabaseStatus(cfg?: Partial<MySQLConfigPayload>) 
   let totalRecords = 0;
 
   try {
-    const pool = createOrGetPool(resolved);
+    const pool = createOrGetPool(cfg);
     const startTime = Date.now();
     const conn = await pool.getConnection();
     const [vRows]: any = await conn.query('SELECT VERSION() as v');
@@ -957,13 +799,12 @@ export async function getMySQLDatabaseStatus(cfg?: Partial<MySQLConfigPayload>) 
   }
 
   return {
-    isConfigured: !!resolved.host && !!resolved.database,
+    isConfigured: !!cfg.host && !!cfg.database,
     isConnected,
     isInstalled: tableStatuses.some(t => t.status === 'ready'),
     serverVersion,
     latencyMs,
     tables: tableStatuses,
-    tableStatuses,
     totalRecords,
     lastTestedAt: new Date().toISOString()
   };
@@ -1312,17 +1153,16 @@ export async function loginDatabaseUser(username: string, password: string) {
 
 // --- Master Products Catalog (cnt_products) ---
 export async function dbGetProducts(limit = 500): Promise<any[]> {
-  const { conn, prefix } = await getSafeDbConnection();
-  if (!conn) {
-    return inMemoryTables.get(`${prefix}products`) || [];
-  }
+  const cfg = getSavedMySQLConfig();
+  const prefix = getActivePrefix(cfg);
   try {
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
     const [rows]: any = await conn.query(`SELECT * FROM \`${prefix}products\` ORDER BY \`id\` DESC LIMIT ?`, [Number(limit) || 500]);
     conn.release();
     return Array.isArray(rows) ? rows : [];
   } catch (err: any) {
-    try { conn.release(); } catch {}
-    console.log('[dbGetProducts fallback]:', err?.message || 'offline');
+    console.warn('[dbGetProducts fallback]:', err?.message || err);
     return inMemoryTables.get(`${prefix}products`) || [];
   }
 }
@@ -1415,15 +1255,11 @@ export async function dbSaveProduct(item: any): Promise<boolean> {
   }
   inMemoryTables.set(inMemKey, currentInMem);
 
-  let dbConn: mysql.PoolConnection | null = null;
   try {
-    const { conn, prefix: activePrefix } = await getSafeDbConnection();
-    if (!conn) {
-      return true;
-    }
-    dbConn = conn;
-    await dbConn.query(`
-      INSERT INTO \`${activePrefix}products\`
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
+    await conn.query(`
+      INSERT INTO \`${prefix}products\`
       (\`sku\`, \`ean\`, \`title_tr\`, \`title_pl\`, \`title_en\`, \`brand\`, \`model\`, \`category_code\`, \`category_name\`, \`cost_usd\`, \`cost_try\`, \`cost_eur\`, \`stock_quantity\`, \`primary_image\`, \`gallery_images_json\`, \`specifications_json\`, \`features_json\`, \`description_html\`, \`source_platform\`, \`source_url\`, \`status\`)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
@@ -1450,31 +1286,68 @@ export async function dbSaveProduct(item: any): Promise<boolean> {
       specifications_json, features_json, description_html,
       source_platform, source_url, status
     ]);
+    conn.release();
     return true;
   } catch (err: any) {
-    console.log(`[dbSaveProduct note for ${sku}]:`, err?.message || 'offline');
-    return true;
-  } finally {
-    if (dbConn) {
-      try { dbConn.release(); } catch {}
+    console.warn(`[dbSaveProduct warn for ${sku}]:`, err?.message || err);
+    if (err?.code === 'ER_NO_SUCH_TABLE') {
+      try {
+        await ensureMySQLTablesInitialized();
+        const activePrefix = getActivePrefix(cfg);
+        const pool = createOrGetPool(cfg);
+        const conn = await pool.getConnection();
+        await conn.query(`
+          INSERT INTO \`${activePrefix}products\`
+          (\`sku\`, \`ean\`, \`title_tr\`, \`title_pl\`, \`title_en\`, \`brand\`, \`model\`, \`category_code\`, \`category_name\`, \`cost_usd\`, \`cost_try\`, \`cost_eur\`, \`stock_quantity\`, \`primary_image\`, \`gallery_images_json\`, \`specifications_json\`, \`features_json\`, \`description_html\`, \`source_platform\`, \`source_url\`, \`status\`)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE
+            \`ean\` = COALESCE(VALUES(\`ean\`), \`ean\`),
+            \`title_tr\` = VALUES(\`title_tr\`),
+            \`title_pl\` = COALESCE(VALUES(\`title_pl\`), \`title_pl\`),
+            \`title_en\` = COALESCE(VALUES(\`title_en\`), \`title_en\`),
+            \`brand\` = COALESCE(VALUES(\`brand\`), \`brand\`),
+            \`model\` = COALESCE(VALUES(\`model\`), \`model\`),
+            \`category_code\` = COALESCE(VALUES(\`category_code\`), \`category_code\`),
+            \`category_name\` = COALESCE(VALUES(\`category_name\`), \`category_name\`),
+            \`cost_usd\` = VALUES(\`cost_usd\`),
+            \`cost_try\` = VALUES(\`cost_try\`),
+            \`cost_eur\` = VALUES(\`cost_eur\`),
+            \`stock_quantity\` = VALUES(\`stock_quantity\`),
+            \`primary_image\` = COALESCE(VALUES(\`primary_image\`), \`primary_image\`),
+            \`source_platform\` = VALUES(\`source_platform\`),
+            \`status\` = VALUES(\`status\`),
+            \`updated_at\` = NOW();
+        `, [
+          sku, ean, title_tr, title_pl, title_en, brand, model,
+          category_code, category_name, cost_usd, cost_try, cost_eur,
+          stock_quantity, primary_image, gallery_images_json,
+          specifications_json, features_json, description_html,
+          source_platform, source_url, status
+        ]);
+        conn.release();
+        return true;
+      } catch (retryErr) {
+        console.warn('[dbSaveProduct retry failed]:', retryErr);
+      }
     }
+    return false;
   }
 }
 
 export async function dbSaveProductsBulk(products: any[]): Promise<{ success: boolean; count: number }> {
+  let count = 0;
   if (!Array.isArray(products) || products.length === 0) {
     return { success: true, count: 0 };
   }
-  let savedCount = 0;
-  const chunkSize = 10;
-  for (let i = 0; i < products.length; i += chunkSize) {
-    const chunk = products.slice(i, i + chunkSize);
-    const results = await Promise.allSettled(chunk.map(p => dbSaveProduct(p)));
-    for (const r of results) {
-      if (r.status === 'fulfilled' && r.value) savedCount++;
+  for (const p of products) {
+    try {
+      const ok = await dbSaveProduct(p);
+      if (ok) count++;
+    } catch (e) {
+      console.warn('[dbSaveProductsBulk item error]:', e);
     }
   }
-  return { success: savedCount > 0, count: savedCount };
+  return { success: count > 0, count };
 }
 
 export async function dbDeleteProduct(idOrSku: string | number): Promise<boolean> {
@@ -1494,11 +1367,11 @@ export async function dbDeleteProduct(idOrSku: string | number): Promise<boolean
 
 // --- Offers ---
 export async function dbGetOffers(): Promise<any[]> {
-  const { conn, prefix } = await getSafeDbConnection();
-  if (!conn) {
-    return inMemoryTables.get(`${prefix}offers`) || [];
-  }
+  const cfg = getSavedMySQLConfig();
+  const prefix = getActivePrefix(cfg);
   try {
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
     const [rows]: any = await conn.query(`SELECT * FROM \`${prefix}offers\` ORDER BY \`updated_at\` DESC`);
     conn.release();
     if (!rows || rows.length === 0) return [];
@@ -1537,9 +1410,8 @@ export async function dbGetOffers(): Promise<any[]> {
         }
       };
     });
-  } catch (err: any) {
-    try { conn.release(); } catch {}
-    console.log('[dbGetOffers fallback]:', err?.message || 'offline');
+  } catch (err) {
+    console.warn('[dbGetOffers fallback]:', err);
     return inMemoryTables.get(`${prefix}offers`) || [];
   }
 }
@@ -1586,49 +1458,85 @@ export async function dbSaveOffer(offer: any): Promise<boolean> {
   }
   inMemoryTables.set(inMemKey, currentInMem);
 
-  let dbConn: mysql.PoolConnection | null = null;
   try {
-    const { conn, prefix: activePrefix } = await getSafeDbConnection();
-    if (conn) {
-      dbConn = conn;
-      await dbConn.query(`
-        INSERT INTO \`${activePrefix}offers\`
-        (\`id\`, \`platform_id\`, \`marketplace_offer_id\`, \`name\`, \`sku\`, \`ean\`, \`category_id\`, \`category_name\`, \`price_amount\`, \`price_currency\`, \`stock_available\`, \`publication_status\`, \`smart_eligible\`, \`primary_image\`, \`sync_allegro\`, \`sync_emag\`, \`sync_baselinker\`, \`raw_payload_json\`)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE
-          \`name\` = VALUES(\`name\`),
-          \`sku\` = VALUES(\`sku\`),
-          \`ean\` = VALUES(\`ean\`),
-          \`category_id\` = VALUES(\`category_id\`),
-          \`category_name\` = VALUES(\`category_name\`),
-          \`price_amount\` = VALUES(\`price_amount\`),
-          \`price_currency\` = VALUES(\`price_currency\`),
-          \`stock_available\` = VALUES(\`stock_available\`),
-          \`publication_status\` = VALUES(\`publication_status\`),
-          \`smart_eligible\` = VALUES(\`smart_eligible\`),
-          \`primary_image\` = VALUES(\`primary_image\`),
-          \`sync_allegro\` = VALUES(\`sync_allegro\`),
-          \`sync_emag\` = VALUES(\`sync_emag\`),
-          \`sync_baselinker\` = VALUES(\`sync_baselinker\`),
-          \`raw_payload_json\` = VALUES(\`raw_payload_json\`),
-          \`last_synced_at\` = NOW(),
-          \`updated_at\` = NOW();
-      `, [id, platformId, marketplaceOfferId, name, sku, ean, catId, catName, price, currency, stock, status, smart, image, syncAllegro, syncEmag, syncBaselinker, rawJson]);
-    }
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
+    await conn.query(`
+      INSERT INTO \`${prefix}offers\`
+      (\`id\`, \`platform_id\`, \`marketplace_offer_id\`, \`name\`, \`sku\`, \`ean\`, \`category_id\`, \`category_name\`, \`price_amount\`, \`price_currency\`, \`stock_available\`, \`publication_status\`, \`smart_eligible\`, \`primary_image\`, \`sync_allegro\`, \`sync_emag\`, \`sync_baselinker\`, \`raw_payload_json\`)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        \`name\` = VALUES(\`name\`),
+        \`sku\` = VALUES(\`sku\`),
+        \`ean\` = VALUES(\`ean\`),
+        \`category_id\` = VALUES(\`category_id\`),
+        \`category_name\` = VALUES(\`category_name\`),
+        \`price_amount\` = VALUES(\`price_amount\`),
+        \`price_currency\` = VALUES(\`price_currency\`),
+        \`stock_available\` = VALUES(\`stock_available\`),
+        \`publication_status\` = VALUES(\`publication_status\`),
+        \`smart_eligible\` = VALUES(\`smart_eligible\`),
+        \`primary_image\` = VALUES(\`primary_image\`),
+        \`sync_allegro\` = VALUES(\`sync_allegro\`),
+        \`sync_emag\` = VALUES(\`sync_emag\`),
+        \`sync_baselinker\` = VALUES(\`sync_baselinker\`),
+        \`raw_payload_json\` = VALUES(\`raw_payload_json\`),
+        \`last_synced_at\` = NOW(),
+        \`updated_at\` = NOW();
+    `, [id, platformId, marketplaceOfferId, name, sku, ean, catId, catName, price, currency, stock, status, smart, image, syncAllegro, syncEmag, syncBaselinker, rawJson]);
+    conn.release();
 
     // Automatically persist master product into cnt_products
     try {
       await dbSaveProduct(offer);
-    } catch {}
+    } catch (prodErr) {
+      console.warn('[dbSaveOffer -> dbSaveProduct warn]:', prodErr);
+    }
 
     return true;
   } catch (err: any) {
-    console.log(`[dbSaveOffer note for ${id}]:`, err?.message || 'offline');
-    return true;
-  } finally {
-    if (dbConn) {
-      try { dbConn.release(); } catch {}
+    console.warn(`[dbSaveOffer warn for ${id}]:`, err?.message || err);
+    if (err?.code === 'ER_NO_SUCH_TABLE') {
+      try {
+        await ensureMySQLTablesInitialized();
+        const activePrefix = getActivePrefix(cfg);
+        const pool = createOrGetPool(cfg);
+        const conn = await pool.getConnection();
+        await conn.query(`
+          INSERT INTO \`${activePrefix}offers\`
+          (\`id\`, \`platform_id\`, \`marketplace_offer_id\`, \`name\`, \`sku\`, \`ean\`, \`category_id\`, \`category_name\`, \`price_amount\`, \`price_currency\`, \`stock_available\`, \`publication_status\`, \`smart_eligible\`, \`primary_image\`, \`sync_allegro\`, \`sync_emag\`, \`sync_baselinker\`, \`raw_payload_json\`)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE
+            \`name\` = VALUES(\`name\`),
+            \`sku\` = VALUES(\`sku\`),
+            \`ean\` = VALUES(\`ean\`),
+            \`category_id\` = VALUES(\`category_id\`),
+            \`category_name\` = VALUES(\`category_name\`),
+            \`price_amount\` = VALUES(\`price_amount\`),
+            \`price_currency\` = VALUES(\`price_currency\`),
+            \`stock_available\` = VALUES(\`stock_available\`),
+            \`publication_status\` = VALUES(\`publication_status\`),
+            \`smart_eligible\` = VALUES(\`smart_eligible\`),
+            \`primary_image\` = VALUES(\`primary_image\`),
+            \`sync_allegro\` = VALUES(\`sync_allegro\`),
+            \`sync_emag\` = VALUES(\`sync_emag\`),
+            \`sync_baselinker\` = VALUES(\`sync_baselinker\`),
+            \`raw_payload_json\` = VALUES(\`raw_payload_json\`),
+            \`last_synced_at\` = NOW(),
+            \`updated_at\` = NOW();
+        `, [id, platformId, marketplaceOfferId, name, sku, ean, catId, catName, price, currency, stock, status, smart, image, syncAllegro, syncEmag, syncBaselinker, rawJson]);
+        conn.release();
+
+        try {
+          await dbSaveProduct(offer);
+        } catch {}
+
+        return true;
+      } catch (retryErr) {
+        console.warn('[dbSaveOffer retry failed]:', retryErr);
+      }
     }
+    return false;
   }
 }
 
@@ -1649,11 +1557,11 @@ export async function dbDeleteOffer(id: string): Promise<boolean> {
 
 // --- Orders ---
 export async function dbGetOrders(): Promise<any[]> {
-  const { conn, prefix } = await getSafeDbConnection();
-  if (!conn) {
-    return inMemoryTables.get(`${prefix}orders`) || [];
-  }
+  const cfg = getSavedMySQLConfig();
+  const prefix = getActivePrefix(cfg);
   try {
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
     const [rows]: any = await conn.query(`SELECT * FROM \`${prefix}orders\` ORDER BY \`order_date\` DESC LIMIT 500`);
     conn.release();
     if (!rows || rows.length === 0) return [];
@@ -1695,9 +1603,8 @@ export async function dbGetOrders(): Promise<any[]> {
       },
       createdAt: r.order_date
     }));
-  } catch (err: any) {
-    try { conn.release(); } catch {}
-    console.log('[dbGetOrders fallback]:', err?.message || 'offline');
+  } catch (err) {
+    console.warn('[dbGetOrders fallback]:', err);
     return inMemoryTables.get(`${prefix}orders`) || [];
   }
 }
@@ -1744,15 +1651,11 @@ export async function dbSaveOrder(order: any): Promise<boolean> {
   }
   inMemoryTables.set(inMemKey, currentInMem);
 
-  let dbConn: mysql.PoolConnection | null = null;
   try {
-    const { conn, prefix: activePrefix } = await getSafeDbConnection();
-    if (!conn) {
-      return true;
-    }
-    dbConn = conn;
-    await dbConn.query(`
-      INSERT INTO \`${activePrefix}orders\`
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
+    await conn.query(`
+      INSERT INTO \`${prefix}orders\`
       (\`id\`, \`platform_id\`, \`marketplace_order_id\`, \`buyer_name\`, \`buyer_email\`, \`buyer_phone\`, \`shipping_street\`, \`shipping_city\`, \`shipping_zip\`, \`shipping_country\`, \`shipping_method\`, \`shipping_cost\`, \`payment_status\`, \`total_amount\`, \`currency\`, \`fulfillment_status\`, \`tracking_number\`, \`order_date\`, \`raw_payload_json\`)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
@@ -1765,29 +1668,27 @@ export async function dbSaveOrder(order: any): Promise<boolean> {
         \`raw_payload_json\` = VALUES(\`raw_payload_json\`),
         \`updated_at\` = NOW();
     `, [id, platform, marketplaceOrderId, buyerName, buyerEmail, buyerPhone, street, city, zip, country, method, shippingCost, paymentStatus, totalAmount, currency, fulfillmentStatus, trackingNumber, orderDate, rawPayload]);
+    conn.release();
     return true;
   } catch (err: any) {
-    console.log(`[dbSaveOrder note for ${id}]:`, err?.message || 'offline');
+    console.warn(`[dbSaveOrder warn for ${id}]:`, err?.message || err);
     if (err?.code === 'ER_NO_SUCH_TABLE') {
       try {
         await ensureMySQLTablesInitialized();
       } catch {}
     }
-    return true;
-  } finally {
-    if (dbConn) {
-      try { dbConn.release(); } catch {}
-    }
+    return false;
   }
 }
 
 // --- Credentials ---
 export async function dbGetCredentials(): Promise<any> {
-  const { conn, prefix } = await getSafeDbConnection();
-  if (!conn) {
-    return {};
-  }
+  const cfg = getSavedMySQLConfig();
+  const prefix = getActivePrefix(cfg);
   try {
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
+    
     // First, check if platform_credentials exists in db_config
     let fromConfigJson: any = {};
     try {
@@ -1831,9 +1732,8 @@ export async function dbGetCredentials(): Promise<any> {
       }
     }
     return result;
-  } catch (err: any) {
-    try { conn.release(); } catch {}
-    console.log('[dbGetCredentials fallback]:', err?.message || 'offline');
+  } catch (err) {
+    console.warn('[dbGetCredentials fallback]:', err);
     return {};
   }
 }
@@ -1907,17 +1807,16 @@ export async function dbSaveCredentials(platformId: string, data: any): Promise<
 
 // --- Categories ---
 export async function dbGetCategories(): Promise<any[]> {
-  const { conn, prefix } = await getSafeDbConnection();
-  if (!conn) {
-    return [];
-  }
+  const cfg = getSavedMySQLConfig();
+  const prefix = getActivePrefix(cfg);
   try {
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
     const [rows]: any = await conn.query(`SELECT * FROM \`${prefix}categories\` ORDER BY \`name\` ASC`);
     conn.release();
     return rows || [];
-  } catch (err: any) {
-    try { conn.release(); } catch {}
-    console.log('[dbGetCategories fallback]:', err?.message || 'offline');
+  } catch (err) {
+    console.warn('[dbGetCategories fallback]:', err);
     return [];
   }
 }
@@ -1939,8 +1838,8 @@ export async function dbSaveCategory(cat: any): Promise<boolean> {
     `, [cat.code || cat.category_code || cat.id, cat.name, cat.parent_code || null, cat.allegro_id || null, cat.emag_id || null]);
     conn.release();
     return true;
-  } catch (err: any) {
-    console.log('[dbSaveCategory fallback]:', err?.message || 'offline');
+  } catch (err) {
+    console.warn('[dbSaveCategory fallback]:', err);
     return false;
   }
 }
@@ -1954,25 +1853,24 @@ export async function dbDeleteCategory(code: string): Promise<boolean> {
     await conn.query(`DELETE FROM \`${prefix}categories\` WHERE \`category_code\` = ?`, [code]);
     conn.release();
     return true;
-  } catch (err: any) {
-    console.log('[dbDeleteCategory fallback]:', err?.message || 'offline');
+  } catch (err) {
+    console.warn('[dbDeleteCategory fallback]:', err);
     return false;
   }
 }
 
 // --- Repricer Rules ---
 export async function dbGetRepricerRules(): Promise<any[]> {
-  const { conn, prefix } = await getSafeDbConnection();
-  if (!conn) {
-    return [];
-  }
+  const cfg = getSavedMySQLConfig();
+  const prefix = getActivePrefix(cfg);
   try {
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
     const [rows]: any = await conn.query(`SELECT * FROM \`${prefix}repricer_rules\` ORDER BY \`created_at\` DESC`);
     conn.release();
     return rows || [];
-  } catch (err: any) {
-    try { conn.release(); } catch {}
-    console.log('[dbGetRepricerRules fallback]:', err?.message || 'offline');
+  } catch (err) {
+    console.warn('[dbGetRepricerRules fallback]:', err);
     return [];
   }
 }
@@ -2000,8 +1898,8 @@ export async function dbSaveRepricerRule(rule: any): Promise<boolean> {
     `, [id, rule.name || 'BuyBox Kuralı', rule.platform_id || 'allegro', rule.offer_id || null, rule.sku || null, rule.target_position || 'buybox', Number(rule.min_price || 0), Number(rule.max_price || 0), Number(rule.current_price || 0), rule.currency || 'PLN', Number(rule.step_amount || 0.10), rule.status || 'active', rule.auto_apply ? 1 : 0]);
     conn.release();
     return true;
-  } catch (err: any) {
-    console.log('[dbSaveRepricerRule fallback]:', err?.message || 'offline');
+  } catch (err) {
+    console.warn('[dbSaveRepricerRule fallback]:', err);
     return false;
   }
 }
@@ -2015,8 +1913,8 @@ export async function dbDeleteRepricerRule(id: string): Promise<boolean> {
     await conn.query(`DELETE FROM \`${prefix}repricer_rules\` WHERE \`id\` = ?`, [id]);
     conn.release();
     return true;
-  } catch (err: any) {
-    console.log('[dbDeleteRepricerRule fallback]:', err?.message || 'offline');
+  } catch (err) {
+    console.warn('[dbDeleteRepricerRule fallback]:', err);
     return false;
   }
 }
@@ -2025,26 +1923,19 @@ export async function dbDeleteRepricerRule(id: string): Promise<boolean> {
 export async function dbGetAutomations(): Promise<any[]> {
   const cfg = getSavedMySQLConfig();
   const prefix = getActivePrefix(cfg);
-  let connToRelease: mysql.PoolConnection | null = null;
   try {
-    const { conn, prefix: activePrefix } = await getSafeDbConnection();
-    if (!conn) {
-      return [];
-    }
-    connToRelease = conn;
-    const [rows]: any = await connToRelease.query(`SELECT * FROM \`${activePrefix}automations\` ORDER BY \`created_at\` DESC`);
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
+    const [rows]: any = await conn.query(`SELECT * FROM \`${prefix}automations\` ORDER BY \`created_at\` DESC`);
+    conn.release();
     return (rows || []).map((r: any) => ({
       ...r,
       conditions: r.conditions_json ? JSON.parse(r.conditions_json) : [],
       actions: r.actions_json ? JSON.parse(r.actions_json) : []
     }));
-  } catch (err: any) {
-    console.log('[dbGetAutomations fallback]:', err?.message || 'offline');
+  } catch (err) {
+    console.warn('[dbGetAutomations fallback]:', err);
     return [];
-  } finally {
-    if (connToRelease) {
-      try { connToRelease.release(); } catch {}
-    }
   }
 }
 
@@ -2070,8 +1961,8 @@ export async function dbSaveAutomation(rule: any): Promise<boolean> {
     `, [id, rule.name || 'Otomasyon', rule.description || '', rule.trigger || rule.trigger_event || 'ORDER_CREATED', rule.action || rule.action_type || 'NOTIFY', JSON.stringify(rule.conditions || []), JSON.stringify(rule.actions || []), rule.is_enabled !== false ? 1 : 0]);
     conn.release();
     return true;
-  } catch (err: any) {
-    console.log('[dbSaveAutomation fallback]:', err?.message || 'offline');
+  } catch (err) {
+    console.warn('[dbSaveAutomation fallback]:', err);
     return false;
   }
 }
@@ -2085,30 +1976,25 @@ export async function dbDeleteAutomation(id: string): Promise<boolean> {
     await conn.query(`DELETE FROM \`${prefix}automations\` WHERE \`id\` = ?`, [id]);
     conn.release();
     return true;
-  } catch (err: any) {
-    console.log('[dbDeleteAutomation fallback]:', err?.message || 'offline');
+  } catch (err) {
+    console.warn('[dbDeleteAutomation fallback]:', err);
     return false;
   }
 }
 
 // --- Sync Logs ---
 export async function dbGetLogs(limit = 100): Promise<any[]> {
-  let connToRelease: mysql.PoolConnection | null = null;
+  const cfg = getSavedMySQLConfig();
+  const prefix = getActivePrefix(cfg);
   try {
-    const { conn, prefix } = await getSafeDbConnection();
-    if (!conn) {
-      return [];
-    }
-    connToRelease = conn;
-    const [rows]: any = await connToRelease.query(`SELECT * FROM \`${prefix}sync_logs\` ORDER BY \`created_at\` DESC LIMIT ?`, [limit]);
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
+    const [rows]: any = await conn.query(`SELECT * FROM \`${prefix}sync_logs\` ORDER BY \`created_at\` DESC LIMIT ?`, [limit]);
+    conn.release();
     return rows || [];
-  } catch (err: any) {
-    console.log('[dbGetLogs fallback]:', err?.message || 'offline');
+  } catch (err) {
+    console.warn('[dbGetLogs fallback]:', err);
     return [];
-  } finally {
-    if (connToRelease) {
-      try { connToRelease.release(); } catch {}
-    }
   }
 }
 
@@ -2141,133 +2027,50 @@ export async function dbSaveLog(log: any): Promise<boolean> {
 }
 
 // --- System Configuration & Branding & Tax Info ---
-const LOCAL_CONFIGS_PATH = path.resolve(process.cwd(), 'data', 'app_configs.json');
-
-function loadLocalConfigs(): Record<string, any> {
-  try {
-    if (fs.existsSync(LOCAL_CONFIGS_PATH)) {
-      const raw = fs.readFileSync(LOCAL_CONFIGS_PATH, 'utf-8');
-      return JSON.parse(raw) || {};
-    }
-  } catch (e) {
-    console.warn('[Load Local Configs Warning]:', e);
-  }
-  return {};
-}
-
-function saveLocalConfig(key: string, value: any): void {
-  try {
-    const dir = path.dirname(LOCAL_CONFIGS_PATH);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    const current = loadLocalConfigs();
-    current[key] = value;
-    fs.writeFileSync(LOCAL_CONFIGS_PATH, JSON.stringify(current, null, 2), 'utf-8');
-  } catch (e) {
-    console.warn('[Save Local Config Warning]:', e);
-  }
-}
-
 export async function dbGetConfig(key: string, defaultValue: any = null): Promise<any> {
-  // 1. First try live MySQL database
-  let dbConn: mysql.PoolConnection | null = null;
+  const cfg = getSavedMySQLConfig();
+  const prefix = getActivePrefix(cfg);
   try {
-    const { conn, prefix } = await getSafeDbConnection();
-    if (conn) {
-      dbConn = conn;
-      const [rows]: any = await dbConn.query(
-        `SELECT \`config_value\` FROM \`${prefix}db_config\` WHERE \`config_key\` = ? LIMIT 1`,
-        [key]
-      );
-      if (rows && rows.length > 0 && rows[0].config_value) {
-        try {
-          const parsed = JSON.parse(rows[0].config_value);
-          saveLocalConfig(key, parsed);
-          inMemoryConfigs.set(key, rows[0].config_value);
-          return parsed;
-        } catch {
-          saveLocalConfig(key, rows[0].config_value);
-          inMemoryConfigs.set(key, rows[0].config_value);
-          return rows[0].config_value;
-        }
-      }
-    }
-  } catch {
-    // MySQL not reachable or offline; proceed to local fallbacks
-  } finally {
-    if (dbConn) {
-      try { dbConn.release(); } catch {}
-    }
-  }
-
-  // 2. Check in-memory database store
-  if (inMemoryConfigs.has(key)) {
-    const memVal = inMemoryConfigs.get(key)!;
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
+    const [rows]: any = await conn.query(
+      `SELECT \`config_value\` FROM \`${prefix}db_config\` WHERE \`config_key\` = ? LIMIT 1`,
+      [key]
+    );
+    conn.release();
+    if (!rows || rows.length === 0) return defaultValue;
     try {
-      return JSON.parse(memVal);
+      return JSON.parse(rows[0].config_value);
     } catch {
-      return memVal;
+      return rows[0].config_value;
     }
+  } catch (err) {
+    console.warn(`[dbGetConfig(${key}) fallback]:`, err);
+    return defaultValue;
   }
-
-  // 3. Check persistent disk file (data/app_configs.json)
-  const localConfigs = loadLocalConfigs();
-  if (localConfigs[key] !== undefined) {
-    return localConfigs[key];
-  }
-
-  return defaultValue;
 }
 
 export async function dbSaveConfig(key: string, value: any, description?: string): Promise<boolean> {
+  const cfg = getSavedMySQLConfig();
+  const prefix = getActivePrefix(cfg);
   const strVal = typeof value === 'string' ? value : JSON.stringify(value);
-
-  // 1. Immediately store in-memory and local disk so configuration is NEVER lost
-  inMemoryConfigs.set(key, strVal);
-  saveLocalConfig(key, value);
-
-  // 2. Persist to live MySQL database
-  let dbConn: mysql.PoolConnection | null = null;
   try {
-    const { conn, prefix } = await getSafeDbConnection();
-    if (!conn) {
-      return true;
-    }
-    dbConn = conn;
-
-    const insertSql = `INSERT INTO \`${prefix}db_config\` (\`config_key\`, \`config_value\`, \`description\`)
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
+    await conn.query(
+      `INSERT INTO \`${prefix}db_config\` (\`config_key\`, \`config_value\`, \`description\`)
        VALUES (?, ?, ?)
        ON DUPLICATE KEY UPDATE
          \`config_value\` = VALUES(\`config_value\`),
          \`description\` = COALESCE(VALUES(\`description\`), \`description\`),
-         \`updated_at\` = NOW();`;
-
-    try {
-      await dbConn.query(insertSql, [key, strVal, description || null]);
-    } catch (tblErr: any) {
-      // Auto-create table if missing
-      if (tblErr?.code === 'ER_NO_SUCH_TABLE' || String(tblErr).includes("doesn't exist")) {
-        await dbConn.query(`CREATE TABLE IF NOT EXISTS \`${prefix}db_config\` (
-          \`id\` INT AUTO_INCREMENT PRIMARY KEY,
-          \`config_key\` VARCHAR(100) NOT NULL UNIQUE,
-          \`config_value\` LONGTEXT NOT NULL,
-          \`description\` VARCHAR(255) NULL,
-          \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`);
-
-        await dbConn.query(insertSql, [key, strVal, description || null]);
-      } else {
-        throw tblErr;
-      }
-    }
-
+         \`updated_at\` = NOW();`,
+      [key, strVal, description || null]
+    );
+    conn.release();
     return true;
-  } catch (err: any) {
-    console.log(`[dbSaveConfig(${key}) notice]:`, err?.message || 'offline');
-    return true;
-  } finally {
-    if (dbConn) {
-      try { dbConn.release(); } catch {}
-    }
+  } catch (err) {
+    console.warn(`[dbSaveConfig(${key}) fallback]:`, err);
+    return false;
   }
 }
 
@@ -2276,15 +2079,11 @@ export async function dbSaveOffersBulk(offers: any[]): Promise<{ success: boolea
     return { success: true, count: 0 };
   }
   let savedCount = 0;
-  const chunkSize = 10;
-  for (let i = 0; i < offers.length; i += chunkSize) {
-    const chunk = offers.slice(i, i + chunkSize);
-    const results = await Promise.allSettled(chunk.map(o => dbSaveOffer(o)));
-    for (const r of results) {
-      if (r.status === 'fulfilled' && r.value) savedCount++;
-    }
+  for (const offer of offers) {
+    const ok = await dbSaveOffer(offer);
+    if (ok) savedCount++;
   }
-  return { success: savedCount > 0, count: savedCount };
+  return { success: true, count: savedCount };
 }
 
 export async function dbSaveOrdersBulk(orders: any[]): Promise<{ success: boolean; count: number }> {
