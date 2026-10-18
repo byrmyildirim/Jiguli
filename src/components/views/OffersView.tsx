@@ -31,7 +31,8 @@ import {
   ChevronDown,
   FileCheck,
   AlertTriangle,
-  FolderTree
+  FolderTree,
+  Maximize2
 } from 'lucide-react';
 import { store, resolveProductImage } from '../../services/marketplaceStore';
 import { AllegroOffer, MarketplaceId, SupportedCurrency } from '../../types/allegro';
@@ -155,6 +156,7 @@ export const OffersView: React.FC<OffersViewProps> = ({
 
   // Full Edit / Revise State
   const [editingOffer, setEditingOffer] = useState<AllegroOffer | null>(null);
+  const [modalEditingOffer, setModalEditingOffer] = useState<AllegroOffer | null>(null);
 
   // Multi-select state for Bulk Operations
   const [selectedOfferIds, setSelectedOfferIds] = useState<string[]>([]);
@@ -1965,9 +1967,19 @@ export const OffersView: React.FC<OffersViewProps> = ({
                           <button
                             onClick={() => setEditingOffer(offer)}
                             className="text-xs font-semibold text-slate-700 dark:text-zinc-200 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-slate-200 dark:border-zinc-700 px-2.5 py-1 rounded-xl flex items-center gap-1 cursor-pointer transition-colors"
+                            title="Sayfa olarak düzenle (Tüm pazaryeri sekmeleri)"
                           >
                             <Edit2 className="w-3 h-3 text-slate-500" />
                             <span>Revize Et</span>
+                          </button>
+
+                          <button
+                            onClick={() => setModalEditingOffer(offer)}
+                            className="text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-2 py-1 rounded-xl flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                            title="Modal ile Düzenle (eMAG, Allegro, BaseLinker sekmeleri)"
+                          >
+                            <Maximize2 className="w-3 h-3 text-indigo-600" />
+                            <span>Modal</span>
                           </button>
 
                           <button
@@ -2424,10 +2436,19 @@ export const OffersView: React.FC<OffersViewProps> = ({
                             <button
                               onClick={() => setEditingOffer(offer)}
                               className="px-2.5 py-1 rounded-lg border text-slate-700 dark:text-zinc-200 bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800 dark:hover:bg-zinc-700 border-slate-200 dark:border-zinc-700 font-semibold text-xs flex items-center gap-1 transition-colors cursor-pointer"
-                              title="Ürün Bilgilerini Revize Et"
+                              title="Ürün Bilgilerini Sayfada Revize Et"
                             >
                               <Edit2 className="w-3 h-3 text-slate-500" />
                               <span>Revize Et</span>
+                            </button>
+
+                            <button
+                              onClick={() => setModalEditingOffer(offer)}
+                              className="px-2 py-1 rounded-lg border text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border-indigo-200 font-semibold text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                              title="Hızlı Modal ile Düzenle (eMAG, Allegro, BaseLinker)"
+                            >
+                              <Maximize2 className="w-3 h-3 text-indigo-600" />
+                              <span>Modal</span>
                             </button>
 
                             <button
@@ -2633,6 +2654,19 @@ export const OffersView: React.FC<OffersViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Edit Offer Modal */}
+      {modalEditingOffer && (
+        <CreateOfferModal
+          isOpen={Boolean(modalEditingOffer)}
+          onClose={() => {
+            setModalEditingOffer(null);
+            setOffers(store.getOffers());
+          }}
+          offerToEdit={modalEditingOffer}
+          theme={theme}
+        />
       )}
     </div>
   );

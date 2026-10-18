@@ -366,8 +366,8 @@ export function parseExcelProductData(fileBuffer: ArrayBuffer): {
       }
 
       // Title selection priority
-      const title = (marketplaceTitleRaw || productNameRaw || productGroupRaw || `Ürün #${index + 1}`).trim();
-      const sku = (skuRaw || parcelNumberRaw || `SKU-${Date.now()}-${index + 1}`).trim();
+      const title = String(marketplaceTitleRaw || productNameRaw || productGroupRaw || `Ürün #${index + 1}`).trim();
+      const sku = String(skuRaw || parcelNumberRaw || `SKU-${Date.now()}-${index + 1}`).trim();
       let ean = cleanEanString(eanRaw || eanAllegroRaw);
       if (!ean) {
         // Fallback: check if any cell looks like 12-14 digit EAN
