@@ -58,6 +58,7 @@ import { ProductEditView } from './ProductEditView';
 interface OffersViewProps {
   onOpenCreateOffer: () => void;
   onNavigateToSourcing?: () => void;
+  onNavigateToSettings?: () => void;
   theme?: 'light' | 'dark';
 }
 
@@ -138,7 +139,12 @@ const getOfferOrigin = (offer: AllegroOffer) => {
   };
 };
 
-export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNavigateToSourcing, theme = 'light' }) => {
+export const OffersView: React.FC<OffersViewProps> = ({
+  onOpenCreateOffer,
+  onNavigateToSourcing,
+  onNavigateToSettings,
+  theme = 'light'
+}) => {
   const isDark = theme === 'dark';
   const [offers, setOffers] = useState<AllegroOffer[]>(store.getOffers());
   const [activeCurrency, setActiveCurrency] = useState<SupportedCurrency>(store.getActiveCurrency());
@@ -377,6 +383,10 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
   const [missingCharsValidation, setMissingCharsValidation] = useState<ValidationResult | null>(null);
   const [pendingPublishOffer, setPendingPublishOffer] = useState<AllegroOffer | null>(null);
 
+  // Allegro OAuth Access Token / AccessDeniedException Modal State
+  const [allegroAuthErrorOffer, setAllegroAuthErrorOffer] = useState<AllegroOffer | null>(null);
+  const [allegroAuthErrorMessage, setAllegroAuthErrorMessage] = useState<string>('');
+
   const handlePublishSingleOfferToAllegro = async (offer: AllegroOffer) => {
     setPublishingAllegroOfferId(offer.id);
     setBulkNotice(`⏳ "${offer.name.slice(0, 30)}..." ürünü Allegro'ya yükleniyor...`);
@@ -386,13 +396,18 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
       if (res.success) {
         setBulkNotice(`🟢 "${offer.name.slice(0, 30)}..." ürünü Allegro üzerinde başarıyla yayına alındı! İlan No: ${res.offerId || ''}`);
       } else {
-        setBulkNotice(`⚠️ Allegro Yayına Alma Hatası: ${res.message}`);
+        const cleanMsg = res.message.replace(/^Allegro Yayına Alma Hatası:\s*/i, '');
+        setBulkNotice(`⚠️ Allegro Yayına Alma: ${cleanMsg}`);
+        if (res.isAuthError || res.message.includes('AccessDeniedException') || res.message.includes('Unauthorized') || res.message.includes('invalid_token')) {
+          setAllegroAuthErrorOffer(offer);
+          setAllegroAuthErrorMessage(cleanMsg);
+        }
       }
     } catch (e: any) {
       setBulkNotice(`⚠️ Allegro Bağlantı Hatası: ${e?.message || e}`);
     } finally {
       setPublishingAllegroOfferId(null);
-      setTimeout(() => setBulkNotice(null), 7000);
+      setTimeout(() => setBulkNotice(null), 8000);
     }
   };
 
@@ -2537,6 +2552,88 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
           setTimeout(() => setBulkNotice(null), 8000);
         }}
       />
+
+      {/* ALLEGRO AUTH / ACCESS DENIED / EXPIRED TOKEN RESOLUTION MODAL */}
+      {allegroAuthErrorOffer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-2xl">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-600 dark:text-orange-400 shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                  Allegro Oturum Yetkisi Gerekiyor
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  AccessDeniedException · Token Süresi Doldu veya Geçersiz
+                </p>
+              </div>
+              <button
+                onClick={() => setAllegroAuthErrorOffer(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mt-4 p-3.5 rounded-xl bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/50 text-xs text-orange-900 dark:text-orange-300 leading-relaxed">
+              {allegroAuthErrorMessage || 'Allegro API oturum anahtarınızın (OAuth Access Token) süresi dolmuş veya mağaza yetkilendirmesi reddedildi.'}
+            </div>
+
+            <div className="mt-4 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs space-y-1.5">
+              <div className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                İşlem Yapılan Ürün: {allegroAuthErrorOffer.name}
+              </div>
+              <div className="text-slate-500 dark:text-slate-400 flex items-center gap-3">
+                <span>SKU: {allegroAuthErrorOffer.sku || 'N/A'}</span>
+                <span>Fiyat: {allegroAuthErrorOffer.sellingMode?.price?.amount || '49.99'} PLN</span>
+                <span>Kategori: {allegroAuthErrorOffer.category?.id || '124921'}</span>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-2.5">
+              <button
+                onClick={() => {
+                  window.open('/api/allegro/authorize', 'allegro_oauth', 'width=640,height=720');
+                  setBulkNotice('🔑 Allegro yetkilendirme penceresi açıldı. Giriş yaptıktan sonra tek tıkla canlıya alabilirsiniz.');
+                  setAllegroAuthErrorOffer(null);
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-medium text-sm transition-colors shadow-sm cursor-pointer"
+              >
+                <Rocket className="w-4 h-4" />
+                Allegro ile Giriş Yap &amp; Yetkilendir (OAuth 2.0)
+              </button>
+
+              <button
+                onClick={() => {
+                  const target = allegroAuthErrorOffer;
+                  if (target) {
+                    const simRes = store.saveSimulatedAllegroDraft(target.id);
+                    setOffers(store.getOffers());
+                    setBulkNotice(`📋 ${simRes.message}`);
+                    setAllegroAuthErrorOffer(null);
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-medium text-sm transition-colors cursor-pointer"
+              >
+                <Check className="w-4 h-4" />
+                Taslak Olarak Sisteme Kaydet (Simülasyon Modu)
+              </button>
+
+              <button
+                onClick={() => {
+                  setAllegroAuthErrorOffer(null);
+                  onNavigateToSettings?.();
+                }}
+                className="w-full text-center text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 py-1 cursor-pointer"
+              >
+                Ayarlar &gt; Allegro Sekmesine Git (Manuel Token Gir)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

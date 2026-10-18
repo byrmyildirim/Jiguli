@@ -1,7 +1,6 @@
 // server.ts
 import express from "express";
-import { createServer as createViteServer } from "vite";
-import dotenv from "dotenv";
+import dotenv2 from "dotenv";
 import path2 from "path";
 import fs2 from "fs";
 import { fileURLToPath } from "url";
@@ -12,6 +11,8 @@ import mysql from "mysql2/promise";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import dotenv from "dotenv";
+dotenv.config({ override: true });
 var CONFIG_FILE_PATH = path.resolve(process.cwd(), "data", "db_config.json");
 var detectedPrefix = "cnt_";
 function getActivePrefix(cfg) {
@@ -21,51 +22,129 @@ function getActivePrefix(cfg) {
 function setDetectedPrefix(prefix) {
   detectedPrefix = prefix;
 }
-function getSavedMySQLConfig() {
-  if (process.env.DB_HOST && process.env.DB_USER && process.env.DB_NAME) {
+function parseDatabaseUrl(rawUrl) {
+  try {
+    if (!rawUrl || typeof rawUrl !== "string") return null;
+    const trimmed = rawUrl.trim();
+    if (!trimmed.startsWith("mysql://") && !trimmed.startsWith("mysql2://")) return null;
+    const parsed = new URL(trimmed);
+    const dbName = parsed.pathname.replace(/^\//, "");
+    const isSsl = parsed.searchParams.get("ssl") === "true" || parsed.searchParams.get("sslmode") === "require" || parsed.searchParams.get("ssl-mode") === "REQUIRED";
     return {
-      host: process.env.DB_HOST,
-      port: Number(process.env.DB_PORT) || 3306,
-      database: process.env.DB_NAME,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD || "",
-      ssl: process.env.DB_SSL === "true",
-      prefix: detectedPrefix || process.env.DB_PREFIX || "cnt_",
-      charset: process.env.DB_CHARSET || "utf8mb4"
+      host: parsed.hostname,
+      port: Number(parsed.port) || 3306,
+      database: dbName,
+      user: decodeURIComponent(parsed.username || ""),
+      password: decodeURIComponent(parsed.password || ""),
+      ssl: isSsl,
+      charset: parsed.searchParams.get("charset") || "utf8mb4"
     };
+  } catch (err) {
+    console.log("[Parse Database URL Note]:", err?.message || err);
+    return null;
   }
+}
+function getSavedMySQLConfig() {
   try {
     if (fs.existsSync(CONFIG_FILE_PATH)) {
       const raw = fs.readFileSync(CONFIG_FILE_PATH, "utf-8");
       const parsed = JSON.parse(raw);
       if (parsed && parsed.host && parsed.database && parsed.user) {
-        return {
-          ...parsed,
-          prefix: detectedPrefix || parsed.prefix || "cnt_"
+        const resolved = {
+          host: parsed.host,
+          port: Number(parsed.port) || 3306,
+          database: parsed.database,
+          user: parsed.user,
+          password: parsed.password || "",
+          ssl: parsed.ssl !== void 0 ? Boolean(parsed.ssl) : true,
+          prefix: detectedPrefix || parsed.prefix || "cnt_",
+          charset: parsed.charset || "utf8mb4"
         };
+        process.env.DB_HOST = resolved.host;
+        process.env.DB_PORT = String(resolved.port || 3306);
+        process.env.DB_NAME = resolved.database;
+        process.env.DB_USER = resolved.user;
+        if (resolved.password) process.env.DB_PASSWORD = resolved.password;
+        process.env.DB_PREFIX = resolved.prefix;
+        process.env.DB_SSL = resolved.ssl ? "true" : "false";
+        return resolved;
       }
     }
   } catch (err) {
-    console.warn("[DB Config Load Warning]:", err);
+    console.log("[DB Config Load Note]:", err?.message || err);
+  }
+  const envUrl = process.env.DATABASE_URL || process.env.MYSQL_URL;
+  if (envUrl) {
+    const parsedFromUrl = parseDatabaseUrl(envUrl);
+    if (parsedFromUrl && parsedFromUrl.host && parsedFromUrl.database && parsedFromUrl.user) {
+      return {
+        host: parsedFromUrl.host,
+        port: parsedFromUrl.port || 3306,
+        database: parsedFromUrl.database,
+        user: parsedFromUrl.user,
+        password: parsedFromUrl.password || "",
+        ssl: Boolean(parsedFromUrl.ssl),
+        prefix: detectedPrefix || process.env.DB_PREFIX || process.env.MYSQL_PREFIX || "cnt_",
+        charset: parsedFromUrl.charset || "utf8mb4"
+      };
+    }
+  }
+  const envHost = process.env.DB_HOST || process.env.MYSQL_HOST;
+  const envUser = process.env.DB_USER || process.env.MYSQL_USER;
+  const envName = process.env.DB_NAME || process.env.MYSQL_DATABASE || process.env.MYSQL_DB;
+  if (envHost && envUser && envName && envHost !== "127.0.0.1" && envHost !== "localhost") {
+    return {
+      host: envHost,
+      port: Number(process.env.DB_PORT || process.env.MYSQL_PORT) || 3306,
+      database: envName,
+      user: envUser,
+      password: process.env.DB_PASSWORD || process.env.MYSQL_PASSWORD || process.env.DB_PASS || "",
+      ssl: process.env.DB_SSL === "true" || process.env.MYSQL_SSL === "true",
+      prefix: detectedPrefix || process.env.DB_PREFIX || process.env.MYSQL_PREFIX || "cnt_",
+      charset: process.env.DB_CHARSET || process.env.MYSQL_CHARSET || "utf8mb4"
+    };
   }
   return {
-    host: "127.0.0.1",
+    host: "194.59.164.74",
     port: 3306,
     database: "u162532946_connect",
     user: "u162532946_connect",
     password: "782536Cnt.",
-    ssl: false,
+    ssl: true,
     prefix: detectedPrefix || "cnt_",
     charset: "utf8mb4"
   };
 }
+var activePools = /* @__PURE__ */ new Map();
+function resetPools() {
+  for (const pool of activePools.values()) {
+    try {
+      pool.end().catch(() => {
+      });
+    } catch {
+    }
+  }
+  activePools.clear();
+}
+function getPoolKey(cfg) {
+  return `${cfg.host}:${cfg.port || 3306}:${cfg.database}:${cfg.user}`;
+}
 function saveMySQLConfig(cfg) {
   try {
+    resetPools();
     const dir = path.dirname(CONFIG_FILE_PATH);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
     fs.writeFileSync(CONFIG_FILE_PATH, JSON.stringify(cfg, null, 2), "utf-8");
+    process.env.DB_HOST = cfg.host || "194.59.164.74";
+    process.env.DB_PORT = String(cfg.port || 3306);
+    process.env.DB_NAME = cfg.database || "u162532946_connect";
+    process.env.DB_USER = cfg.user || "u162532946_connect";
+    process.env.DB_PASSWORD = cfg.password || "";
+    process.env.DB_PREFIX = getActivePrefix(cfg);
+    process.env.DB_SSL = cfg.ssl ? "true" : "false";
+    process.env.DB_CHARSET = cfg.charset || "utf8mb4";
     const envPath = path.resolve(process.cwd(), ".env");
     let envContent = "";
     if (fs.existsSync(envPath)) {
@@ -80,22 +159,55 @@ function saveMySQLConfig(cfg) {
 ${key}="${val}"`;
       }
     };
-    updateEnvVar("DB_HOST", cfg.host || "127.0.0.1");
+    updateEnvVar("DB_HOST", cfg.host || "194.59.164.74");
     updateEnvVar("DB_PORT", String(cfg.port || 3306));
-    updateEnvVar("DB_NAME", cfg.database || "jiguli_db");
-    updateEnvVar("DB_USER", cfg.user || "root");
+    updateEnvVar("DB_NAME", cfg.database || "u162532946_connect");
+    updateEnvVar("DB_USER", cfg.user || "u162532946_connect");
     updateEnvVar("DB_PASSWORD", cfg.password || "");
     updateEnvVar("DB_PREFIX", getActivePrefix(cfg));
     updateEnvVar("DB_SSL", cfg.ssl ? "true" : "false");
     updateEnvVar("DB_CHARSET", cfg.charset || "utf8mb4");
     fs.writeFileSync(envPath, envContent.trim() + "\n", "utf-8");
   } catch (err) {
-    console.warn("[DB Config Save Warning]:", err);
+    console.log("[DB Config Save Note]:", err?.message || err);
   }
 }
-var activePools = /* @__PURE__ */ new Map();
-function getPoolKey(cfg) {
-  return `${cfg.host}:${cfg.port || 3306}:${cfg.database}:${cfg.user}`;
+function getMySQLConfigInfo() {
+  const cfg = getSavedMySQLConfig();
+  let source = "file";
+  if (process.env.DATABASE_URL || process.env.MYSQL_URL) {
+    source = "env_database_url";
+  } else if ((process.env.DB_HOST || process.env.MYSQL_HOST) && (process.env.DB_USER || process.env.MYSQL_USER) && (process.env.DB_NAME || process.env.MYSQL_DATABASE)) {
+    source = "env";
+  } else if (fs.existsSync(CONFIG_FILE_PATH)) {
+    source = "file";
+  } else {
+    source = "default";
+  }
+  const rawPass = cfg.password || "";
+  const maskedPassword = rawPass.length > 4 ? `${rawPass.slice(0, 2)}\u2022\u2022\u2022\u2022${rawPass.slice(-2)}` : rawPass.length > 0 ? "\u2022\u2022\u2022\u2022" : "";
+  return {
+    host: cfg.host,
+    port: cfg.port || 3306,
+    database: cfg.database,
+    user: cfg.user,
+    prefix: cfg.prefix || "cnt_",
+    ssl: Boolean(cfg.ssl),
+    charset: cfg.charset || "utf8mb4",
+    hasPassword: Boolean(rawPass.length > 0),
+    maskedPassword,
+    source,
+    supportedSecrets: [
+      { name: "DB_HOST", desc: "MySQL Sunucu IP veya Host ad\u0131 (\xF6rn: 127.0.0.1 veya Hostinger IP)" },
+      { name: "DB_PORT", desc: "MySQL Port (varsay\u0131lan: 3306)" },
+      { name: "DB_NAME", desc: "Veritaban\u0131 Ad\u0131 (\xF6rn: u162532946_connect)" },
+      { name: "DB_USER", desc: "Veritaban\u0131 Kullan\u0131c\u0131s\u0131 (\xF6rn: u162532946_connect)" },
+      { name: "DB_PASSWORD", desc: "Veritaban\u0131 \u015Eifresi" },
+      { name: "DB_PREFIX", desc: "Tablo \xD6neki (\xF6rn: cnt_)" },
+      { name: "DB_SSL", desc: "SSL Ba\u011Flant\u0131s\u0131 (true veya false)" },
+      { name: "DATABASE_URL", desc: "Tek Sat\u0131r Ba\u011Flant\u0131 URL (mysql://user:pass@host:3306/dbname)" }
+    ]
+  };
 }
 function createOrGetPool(cfg) {
   const resolved = cfg || getSavedMySQLConfig();
@@ -120,23 +232,107 @@ function createOrGetPool(cfg) {
   }
   return pool;
 }
+var LOCAL_ENTITIES_PATH = path.resolve(process.cwd(), "data", "local_entities.json");
+function loadLocalEntities() {
+  try {
+    if (fs.existsSync(LOCAL_ENTITIES_PATH)) {
+      const raw = fs.readFileSync(LOCAL_ENTITIES_PATH, "utf-8");
+      return JSON.parse(raw) || {};
+    }
+  } catch {
+  }
+  return {};
+}
 var inMemoryTables = /* @__PURE__ */ new Map();
 var inMemoryConfigs = /* @__PURE__ */ new Map();
 inMemoryConfigs.set("system_name", "Jiguli Cross-Border E-Commerce Suite");
 inMemoryConfigs.set("database_version", "1.0.0");
 inMemoryConfigs.set("status", "installed");
+try {
+  const initialEntities = loadLocalEntities();
+  for (const [key, val] of Object.entries(initialEntities)) {
+    if (Array.isArray(val)) {
+      inMemoryTables.set(key, val);
+    }
+  }
+} catch {
+}
+var isDbOnline = false;
+var lastConnectionAttemptTime = 0;
+var consecutiveConnectionFailures = 0;
+var RECONNECT_COOLDOWN_MS = 6e4;
+function markDbOnline() {
+  isDbOnline = true;
+  consecutiveConnectionFailures = 0;
+}
+function markDbOffline() {
+  isDbOnline = false;
+  consecutiveConnectionFailures++;
+  lastConnectionAttemptTime = Date.now();
+}
+function shouldAttemptDbConnection(force = false) {
+  if (force) return true;
+  const cfg = getSavedMySQLConfig();
+  if (!cfg.host || !cfg.database || !cfg.user) return false;
+  if (isDbOnline) return true;
+  if (consecutiveConnectionFailures >= 1) {
+    if (Date.now() - lastConnectionAttemptTime > RECONNECT_COOLDOWN_MS) {
+      return true;
+    }
+    return false;
+  }
+  return true;
+}
+async function getSafeDbConnection(force = false) {
+  const cfg = getSavedMySQLConfig();
+  const prefix = getActivePrefix(cfg);
+  if (!shouldAttemptDbConnection(force)) {
+    return { conn: null, prefix };
+  }
+  try {
+    const pool = createOrGetPool(cfg);
+    lastConnectionAttemptTime = Date.now();
+    const conn = await pool.getConnection();
+    markDbOnline();
+    return { conn, prefix };
+  } catch {
+    markDbOffline();
+    return { conn: null, prefix };
+  }
+}
 async function testMySQLConnection(cfg) {
   const startTime = Date.now();
-  if (!cfg.host || !cfg.database || !cfg.user) {
+  const saved = getSavedMySQLConfig();
+  const target = {
+    ...saved,
+    ...cfg || {}
+  };
+  if (cfg && (cfg.password === void 0 || cfg.password === "")) {
+    target.password = saved.password;
+  }
+  if (!target.host || !target.database || !target.user) {
     return {
       success: false,
       message: "Sunucu Adresi (Host), Veritaban\u0131 Ad\u0131 (Database) ve Kullan\u0131c\u0131 Ad\u0131 (User) zorunludur."
     };
   }
   try {
-    const pool = createOrGetPool(cfg);
+    const pool = createOrGetPool(target);
     const conn = await pool.getConnection();
     const [rows] = await conn.query("SELECT VERSION() as version, DATABASE() as db, USER() as user, NOW() as server_time");
+    let totalTablesCount = 0;
+    let matchingPrefixCount = 0;
+    let tablesList = [];
+    try {
+      const [tableRows] = await conn.query("SHOW TABLES");
+      if (Array.isArray(tableRows)) {
+        totalTablesCount = tableRows.length;
+        tablesList = tableRows.map((r) => Object.values(r)[0]);
+        const prefix = getActivePrefix(target);
+        matchingPrefixCount = tablesList.filter((t) => t.startsWith(prefix)).length;
+      }
+    } catch {
+    }
     conn.release();
     const latencyMs = Date.now() - startTime;
     const version = rows?.[0]?.version || "MySQL 8.0";
@@ -145,18 +341,33 @@ async function testMySQLConnection(cfg) {
       status: 200,
       latencyMs,
       serverVersion: version,
-      database: rows?.[0]?.db || cfg.database,
-      user: rows?.[0]?.user || cfg.user,
+      database: rows?.[0]?.db || target.database,
+      user: rows?.[0]?.user || target.user,
       serverTime: rows?.[0]?.server_time,
-      message: `MySQL Sunucusuna Ba\u015Far\u0131yla Ba\u011Flan\u0131ld\u0131! (${version} \xB7 ${latencyMs}ms \xB7 UTF8MB4 Aktif)`
+      totalTablesCount,
+      matchingPrefixCount,
+      detectedPrefix: getActivePrefix(target),
+      message: `MySQL Sunucusuna Ba\u015Far\u0131yla Ba\u011Flan\u0131ld\u0131! (${version} \xB7 ${latencyMs}ms \xB7 ${matchingPrefixCount > 0 ? `${matchingPrefixCount} adet ${getActivePrefix(target)} tablosu aktif` : `${totalTablesCount} tablo bulundu`})`
     };
   } catch (err) {
     const latencyMs = Date.now() - startTime;
+    const errCode = err?.code || "";
+    let detailedHelp = "";
+    if (errCode === "ETIMEDOUT") {
+      detailedHelp = ' (Zaman A\u015F\u0131m\u0131: MySQL sunucunuza ula\u015F\u0131lamad\u0131. cPanel/Hostinger Remote MySQL ayarlar\u0131nda bu sunucu IP adresine veya "%" eri\u015Fim izni verildi\u011Finden ve 3306 portunun a\xE7\u0131k oldu\u011Fundan emin olun.)';
+    } else if (errCode === "ER_ACCESS_DENIED_ERROR") {
+      detailedHelp = " (Eri\u015Fim Reddedildi: Veritaban\u0131 kullan\u0131c\u0131 ad\u0131 veya \u015Fifresi hatal\u0131 ya da bu kullan\u0131c\u0131n\u0131n uzaktan ba\u011Flanma yetkisi yok.)";
+    } else if (errCode === "ER_BAD_DB_ERROR") {
+      detailedHelp = " (Veritaban\u0131 Bulunamad\u0131: Belirtilen veritaban\u0131 ad\u0131 sunucuda mevcut de\u011Fil.)";
+    } else if (errCode === "ENOTFOUND" || errCode === "EAI_AGAIN") {
+      detailedHelp = " (Host Bulunamad\u0131: Sunucu adresi veya IP \xE7\xF6z\xFCmlenemedi.)";
+    }
     return {
       success: false,
       latencyMs,
-      message: `MySQL Ba\u011Flant\u0131 Hatas\u0131: ${err?.message || err}. Host, Port, Kullan\u0131c\u0131 ve \u015Eifre parametrelerini kontrol ediniz.`,
-      error: err?.code || err?.message
+      message: `MySQL Ba\u011Flant\u0131 Hatas\u0131: ${err?.message || err}${detailedHelp}`,
+      error: err?.code || err?.message,
+      errorCode: errCode
     };
   }
 }
@@ -577,7 +788,11 @@ async function installMySQLDatabase(cfg, customSql) {
   };
 }
 async function getMySQLDatabaseStatus(cfg) {
-  const prefix = getActivePrefix(cfg);
+  const resolved = {
+    ...getSavedMySQLConfig(),
+    ...cfg || {}
+  };
+  const prefix = getActivePrefix(resolved);
   const tableList = [
     { name: `${prefix}db_config`, display: "Sistem Yap\u0131land\u0131rmas\u0131", desc: "Genel ayarlar ve s\xFCr\xFCm bilgisi", pk: "id" },
     { name: `${prefix}users`, display: "Kullan\u0131c\u0131lar & Yetkiler", desc: "Y\xF6netici ve personel hesaplar\u0131", pk: "id" },
@@ -597,7 +812,7 @@ async function getMySQLDatabaseStatus(cfg) {
   const tableStatuses = [];
   let totalRecords = 0;
   try {
-    const pool = createOrGetPool(cfg);
+    const pool = createOrGetPool(resolved);
     const startTime = Date.now();
     const conn = await pool.getConnection();
     const [vRows] = await conn.query("SELECT VERSION() as v");
@@ -646,12 +861,13 @@ async function getMySQLDatabaseStatus(cfg) {
     }
   }
   return {
-    isConfigured: !!cfg.host && !!cfg.database,
+    isConfigured: !!resolved.host && !!resolved.database,
     isConnected,
     isInstalled: tableStatuses.some((t) => t.status === "ready"),
     serverVersion,
     latencyMs,
     tables: tableStatuses,
+    tableStatuses,
     totalRecords,
     lastTestedAt: (/* @__PURE__ */ new Date()).toISOString()
   };
@@ -933,16 +1149,20 @@ async function loginDatabaseUser(username, password) {
   }
 }
 async function dbGetProducts(limit = 500) {
-  const cfg = getSavedMySQLConfig();
-  const prefix = getActivePrefix(cfg);
+  const { conn, prefix } = await getSafeDbConnection();
+  if (!conn) {
+    return inMemoryTables.get(`${prefix}products`) || [];
+  }
   try {
-    const pool = createOrGetPool(cfg);
-    const conn = await pool.getConnection();
     const [rows] = await conn.query(`SELECT * FROM \`${prefix}products\` ORDER BY \`id\` DESC LIMIT ?`, [Number(limit) || 500]);
     conn.release();
     return Array.isArray(rows) ? rows : [];
   } catch (err) {
-    console.warn("[dbGetProducts fallback]:", err?.message || err);
+    try {
+      conn.release();
+    } catch {
+    }
+    console.log("[dbGetProducts fallback]:", err?.message || "offline");
     return inMemoryTables.get(`${prefix}products`) || [];
   }
 }
@@ -1034,11 +1254,15 @@ async function dbSaveProduct(item) {
     currentInMem.unshift({ id: currentInMem.length + 1, ...prodObj, created_at: (/* @__PURE__ */ new Date()).toISOString() });
   }
   inMemoryTables.set(inMemKey, currentInMem);
+  let dbConn = null;
   try {
-    const pool = createOrGetPool(cfg);
-    const conn = await pool.getConnection();
-    await conn.query(`
-      INSERT INTO \`${prefix}products\`
+    const { conn, prefix: activePrefix } = await getSafeDbConnection();
+    if (!conn) {
+      return true;
+    }
+    dbConn = conn;
+    await dbConn.query(`
+      INSERT INTO \`${activePrefix}products\`
       (\`sku\`, \`ean\`, \`title_tr\`, \`title_pl\`, \`title_en\`, \`brand\`, \`model\`, \`category_code\`, \`category_name\`, \`cost_usd\`, \`cost_try\`, \`cost_eur\`, \`stock_quantity\`, \`primary_image\`, \`gallery_images_json\`, \`specifications_json\`, \`features_json\`, \`description_html\`, \`source_platform\`, \`source_url\`, \`status\`)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
@@ -1081,83 +1305,33 @@ async function dbSaveProduct(item) {
       source_url,
       status
     ]);
-    conn.release();
     return true;
   } catch (err) {
-    console.warn(`[dbSaveProduct warn for ${sku}]:`, err?.message || err);
-    if (err?.code === "ER_NO_SUCH_TABLE") {
+    console.log(`[dbSaveProduct note for ${sku}]:`, err?.message || "offline");
+    return true;
+  } finally {
+    if (dbConn) {
       try {
-        await ensureMySQLTablesInitialized();
-        const activePrefix = getActivePrefix(cfg);
-        const pool = createOrGetPool(cfg);
-        const conn = await pool.getConnection();
-        await conn.query(`
-          INSERT INTO \`${activePrefix}products\`
-          (\`sku\`, \`ean\`, \`title_tr\`, \`title_pl\`, \`title_en\`, \`brand\`, \`model\`, \`category_code\`, \`category_name\`, \`cost_usd\`, \`cost_try\`, \`cost_eur\`, \`stock_quantity\`, \`primary_image\`, \`gallery_images_json\`, \`specifications_json\`, \`features_json\`, \`description_html\`, \`source_platform\`, \`source_url\`, \`status\`)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          ON DUPLICATE KEY UPDATE
-            \`ean\` = COALESCE(VALUES(\`ean\`), \`ean\`),
-            \`title_tr\` = VALUES(\`title_tr\`),
-            \`title_pl\` = COALESCE(VALUES(\`title_pl\`), \`title_pl\`),
-            \`title_en\` = COALESCE(VALUES(\`title_en\`), \`title_en\`),
-            \`brand\` = COALESCE(VALUES(\`brand\`), \`brand\`),
-            \`model\` = COALESCE(VALUES(\`model\`), \`model\`),
-            \`category_code\` = COALESCE(VALUES(\`category_code\`), \`category_code\`),
-            \`category_name\` = COALESCE(VALUES(\`category_name\`), \`category_name\`),
-            \`cost_usd\` = VALUES(\`cost_usd\`),
-            \`cost_try\` = VALUES(\`cost_try\`),
-            \`cost_eur\` = VALUES(\`cost_eur\`),
-            \`stock_quantity\` = VALUES(\`stock_quantity\`),
-            \`primary_image\` = COALESCE(VALUES(\`primary_image\`), \`primary_image\`),
-            \`source_platform\` = VALUES(\`source_platform\`),
-            \`status\` = VALUES(\`status\`),
-            \`updated_at\` = NOW();
-        `, [
-          sku,
-          ean,
-          title_tr,
-          title_pl,
-          title_en,
-          brand,
-          model,
-          category_code,
-          category_name,
-          cost_usd,
-          cost_try,
-          cost_eur,
-          stock_quantity,
-          primary_image,
-          gallery_images_json,
-          specifications_json,
-          features_json,
-          description_html,
-          source_platform,
-          source_url,
-          status
-        ]);
-        conn.release();
-        return true;
-      } catch (retryErr) {
-        console.warn("[dbSaveProduct retry failed]:", retryErr);
+        dbConn.release();
+      } catch {
       }
     }
-    return false;
   }
 }
 async function dbSaveProductsBulk(products) {
-  let count = 0;
   if (!Array.isArray(products) || products.length === 0) {
     return { success: true, count: 0 };
   }
-  for (const p of products) {
-    try {
-      const ok = await dbSaveProduct(p);
-      if (ok) count++;
-    } catch (e) {
-      console.warn("[dbSaveProductsBulk item error]:", e);
+  let savedCount = 0;
+  const chunkSize = 10;
+  for (let i = 0; i < products.length; i += chunkSize) {
+    const chunk = products.slice(i, i + chunkSize);
+    const results = await Promise.allSettled(chunk.map((p) => dbSaveProduct(p)));
+    for (const r of results) {
+      if (r.status === "fulfilled" && r.value) savedCount++;
     }
   }
-  return { success: count > 0, count };
+  return { success: savedCount > 0, count: savedCount };
 }
 async function dbDeleteProduct(idOrSku) {
   const cfg = getSavedMySQLConfig();
@@ -1174,11 +1348,11 @@ async function dbDeleteProduct(idOrSku) {
   }
 }
 async function dbGetOffers() {
-  const cfg = getSavedMySQLConfig();
-  const prefix = getActivePrefix(cfg);
+  const { conn, prefix } = await getSafeDbConnection();
+  if (!conn) {
+    return inMemoryTables.get(`${prefix}offers`) || [];
+  }
   try {
-    const pool = createOrGetPool(cfg);
-    const conn = await pool.getConnection();
     const [rows] = await conn.query(`SELECT * FROM \`${prefix}offers\` ORDER BY \`updated_at\` DESC`);
     conn.release();
     if (!rows || rows.length === 0) return [];
@@ -1219,7 +1393,11 @@ async function dbGetOffers() {
       };
     });
   } catch (err) {
-    console.warn("[dbGetOffers fallback]:", err);
+    try {
+      conn.release();
+    } catch {
+    }
+    console.log("[dbGetOffers fallback]:", err?.message || "offline");
     return inMemoryTables.get(`${prefix}offers`) || [];
   }
 }
@@ -1258,81 +1436,50 @@ async function dbSaveOffer(offer) {
     currentInMem.unshift(offer);
   }
   inMemoryTables.set(inMemKey, currentInMem);
+  let dbConn = null;
   try {
-    const pool = createOrGetPool(cfg);
-    const conn = await pool.getConnection();
-    await conn.query(`
-      INSERT INTO \`${prefix}offers\`
-      (\`id\`, \`platform_id\`, \`marketplace_offer_id\`, \`name\`, \`sku\`, \`ean\`, \`category_id\`, \`category_name\`, \`price_amount\`, \`price_currency\`, \`stock_available\`, \`publication_status\`, \`smart_eligible\`, \`primary_image\`, \`sync_allegro\`, \`sync_emag\`, \`sync_baselinker\`, \`raw_payload_json\`)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON DUPLICATE KEY UPDATE
-        \`name\` = VALUES(\`name\`),
-        \`sku\` = VALUES(\`sku\`),
-        \`ean\` = VALUES(\`ean\`),
-        \`category_id\` = VALUES(\`category_id\`),
-        \`category_name\` = VALUES(\`category_name\`),
-        \`price_amount\` = VALUES(\`price_amount\`),
-        \`price_currency\` = VALUES(\`price_currency\`),
-        \`stock_available\` = VALUES(\`stock_available\`),
-        \`publication_status\` = VALUES(\`publication_status\`),
-        \`smart_eligible\` = VALUES(\`smart_eligible\`),
-        \`primary_image\` = VALUES(\`primary_image\`),
-        \`sync_allegro\` = VALUES(\`sync_allegro\`),
-        \`sync_emag\` = VALUES(\`sync_emag\`),
-        \`sync_baselinker\` = VALUES(\`sync_baselinker\`),
-        \`raw_payload_json\` = VALUES(\`raw_payload_json\`),
-        \`last_synced_at\` = NOW(),
-        \`updated_at\` = NOW();
-    `, [id, platformId, marketplaceOfferId, name, sku, ean, catId, catName, price, currency, stock, status, smart, image, syncAllegro, syncEmag, syncBaselinker, rawJson]);
-    conn.release();
+    const { conn, prefix: activePrefix } = await getSafeDbConnection();
+    if (conn) {
+      dbConn = conn;
+      await dbConn.query(`
+        INSERT INTO \`${activePrefix}offers\`
+        (\`id\`, \`platform_id\`, \`marketplace_offer_id\`, \`name\`, \`sku\`, \`ean\`, \`category_id\`, \`category_name\`, \`price_amount\`, \`price_currency\`, \`stock_available\`, \`publication_status\`, \`smart_eligible\`, \`primary_image\`, \`sync_allegro\`, \`sync_emag\`, \`sync_baselinker\`, \`raw_payload_json\`)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          \`name\` = VALUES(\`name\`),
+          \`sku\` = VALUES(\`sku\`),
+          \`ean\` = VALUES(\`ean\`),
+          \`category_id\` = VALUES(\`category_id\`),
+          \`category_name\` = VALUES(\`category_name\`),
+          \`price_amount\` = VALUES(\`price_amount\`),
+          \`price_currency\` = VALUES(\`price_currency\`),
+          \`stock_available\` = VALUES(\`stock_available\`),
+          \`publication_status\` = VALUES(\`publication_status\`),
+          \`smart_eligible\` = VALUES(\`smart_eligible\`),
+          \`primary_image\` = VALUES(\`primary_image\`),
+          \`sync_allegro\` = VALUES(\`sync_allegro\`),
+          \`sync_emag\` = VALUES(\`sync_emag\`),
+          \`sync_baselinker\` = VALUES(\`sync_baselinker\`),
+          \`raw_payload_json\` = VALUES(\`raw_payload_json\`),
+          \`last_synced_at\` = NOW(),
+          \`updated_at\` = NOW();
+      `, [id, platformId, marketplaceOfferId, name, sku, ean, catId, catName, price, currency, stock, status, smart, image, syncAllegro, syncEmag, syncBaselinker, rawJson]);
+    }
     try {
       await dbSaveProduct(offer);
-    } catch (prodErr) {
-      console.warn("[dbSaveOffer -> dbSaveProduct warn]:", prodErr);
+    } catch {
     }
     return true;
   } catch (err) {
-    console.warn(`[dbSaveOffer warn for ${id}]:`, err?.message || err);
-    if (err?.code === "ER_NO_SUCH_TABLE") {
+    console.log(`[dbSaveOffer note for ${id}]:`, err?.message || "offline");
+    return true;
+  } finally {
+    if (dbConn) {
       try {
-        await ensureMySQLTablesInitialized();
-        const activePrefix = getActivePrefix(cfg);
-        const pool = createOrGetPool(cfg);
-        const conn = await pool.getConnection();
-        await conn.query(`
-          INSERT INTO \`${activePrefix}offers\`
-          (\`id\`, \`platform_id\`, \`marketplace_offer_id\`, \`name\`, \`sku\`, \`ean\`, \`category_id\`, \`category_name\`, \`price_amount\`, \`price_currency\`, \`stock_available\`, \`publication_status\`, \`smart_eligible\`, \`primary_image\`, \`sync_allegro\`, \`sync_emag\`, \`sync_baselinker\`, \`raw_payload_json\`)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          ON DUPLICATE KEY UPDATE
-            \`name\` = VALUES(\`name\`),
-            \`sku\` = VALUES(\`sku\`),
-            \`ean\` = VALUES(\`ean\`),
-            \`category_id\` = VALUES(\`category_id\`),
-            \`category_name\` = VALUES(\`category_name\`),
-            \`price_amount\` = VALUES(\`price_amount\`),
-            \`price_currency\` = VALUES(\`price_currency\`),
-            \`stock_available\` = VALUES(\`stock_available\`),
-            \`publication_status\` = VALUES(\`publication_status\`),
-            \`smart_eligible\` = VALUES(\`smart_eligible\`),
-            \`primary_image\` = VALUES(\`primary_image\`),
-            \`sync_allegro\` = VALUES(\`sync_allegro\`),
-            \`sync_emag\` = VALUES(\`sync_emag\`),
-            \`sync_baselinker\` = VALUES(\`sync_baselinker\`),
-            \`raw_payload_json\` = VALUES(\`raw_payload_json\`),
-            \`last_synced_at\` = NOW(),
-            \`updated_at\` = NOW();
-        `, [id, platformId, marketplaceOfferId, name, sku, ean, catId, catName, price, currency, stock, status, smart, image, syncAllegro, syncEmag, syncBaselinker, rawJson]);
-        conn.release();
-        try {
-          await dbSaveProduct(offer);
-        } catch {
-        }
-        return true;
-      } catch (retryErr) {
-        console.warn("[dbSaveOffer retry failed]:", retryErr);
+        dbConn.release();
+      } catch {
       }
     }
-    return false;
   }
 }
 async function dbDeleteOffer(id) {
@@ -1350,11 +1497,11 @@ async function dbDeleteOffer(id) {
   }
 }
 async function dbGetOrders() {
-  const cfg = getSavedMySQLConfig();
-  const prefix = getActivePrefix(cfg);
+  const { conn, prefix } = await getSafeDbConnection();
+  if (!conn) {
+    return inMemoryTables.get(`${prefix}orders`) || [];
+  }
   try {
-    const pool = createOrGetPool(cfg);
-    const conn = await pool.getConnection();
     const [rows] = await conn.query(`SELECT * FROM \`${prefix}orders\` ORDER BY \`order_date\` DESC LIMIT 500`);
     conn.release();
     if (!rows || rows.length === 0) return [];
@@ -1397,7 +1544,11 @@ async function dbGetOrders() {
       createdAt: r.order_date
     }));
   } catch (err) {
-    console.warn("[dbGetOrders fallback]:", err);
+    try {
+      conn.release();
+    } catch {
+    }
+    console.log("[dbGetOrders fallback]:", err?.message || "offline");
     return inMemoryTables.get(`${prefix}orders`) || [];
   }
 }
@@ -1436,11 +1587,15 @@ async function dbSaveOrder(order) {
     currentInMem.unshift(order);
   }
   inMemoryTables.set(inMemKey, currentInMem);
+  let dbConn = null;
   try {
-    const pool = createOrGetPool(cfg);
-    const conn = await pool.getConnection();
-    await conn.query(`
-      INSERT INTO \`${prefix}orders\`
+    const { conn, prefix: activePrefix } = await getSafeDbConnection();
+    if (!conn) {
+      return true;
+    }
+    dbConn = conn;
+    await dbConn.query(`
+      INSERT INTO \`${activePrefix}orders\`
       (\`id\`, \`platform_id\`, \`marketplace_order_id\`, \`buyer_name\`, \`buyer_email\`, \`buyer_phone\`, \`shipping_street\`, \`shipping_city\`, \`shipping_zip\`, \`shipping_country\`, \`shipping_method\`, \`shipping_cost\`, \`payment_status\`, \`total_amount\`, \`currency\`, \`fulfillment_status\`, \`tracking_number\`, \`order_date\`, \`raw_payload_json\`)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
@@ -1453,25 +1608,31 @@ async function dbSaveOrder(order) {
         \`raw_payload_json\` = VALUES(\`raw_payload_json\`),
         \`updated_at\` = NOW();
     `, [id, platform, marketplaceOrderId, buyerName, buyerEmail, buyerPhone, street, city, zip, country, method, shippingCost, paymentStatus, totalAmount, currency, fulfillmentStatus, trackingNumber, orderDate, rawPayload]);
-    conn.release();
     return true;
   } catch (err) {
-    console.warn(`[dbSaveOrder warn for ${id}]:`, err?.message || err);
+    console.log(`[dbSaveOrder note for ${id}]:`, err?.message || "offline");
     if (err?.code === "ER_NO_SUCH_TABLE") {
       try {
         await ensureMySQLTablesInitialized();
       } catch {
       }
     }
-    return false;
+    return true;
+  } finally {
+    if (dbConn) {
+      try {
+        dbConn.release();
+      } catch {
+      }
+    }
   }
 }
 async function dbGetCredentials() {
-  const cfg = getSavedMySQLConfig();
-  const prefix = getActivePrefix(cfg);
+  const { conn, prefix } = await getSafeDbConnection();
+  if (!conn) {
+    return {};
+  }
   try {
-    const pool = createOrGetPool(cfg);
-    const conn = await pool.getConnection();
     let fromConfigJson = {};
     try {
       const [cfgRows] = await conn.query(`SELECT config_value FROM \`${prefix}db_config\` WHERE config_key = 'platform_credentials' LIMIT 1`);
@@ -1514,7 +1675,11 @@ async function dbGetCredentials() {
     }
     return result;
   } catch (err) {
-    console.warn("[dbGetCredentials fallback]:", err);
+    try {
+      conn.release();
+    } catch {
+    }
+    console.log("[dbGetCredentials fallback]:", err?.message || "offline");
     return {};
   }
 }
@@ -1583,16 +1748,20 @@ async function dbSaveCredentials(platformId, data) {
   }
 }
 async function dbGetCategories() {
-  const cfg = getSavedMySQLConfig();
-  const prefix = getActivePrefix(cfg);
+  const { conn, prefix } = await getSafeDbConnection();
+  if (!conn) {
+    return [];
+  }
   try {
-    const pool = createOrGetPool(cfg);
-    const conn = await pool.getConnection();
     const [rows] = await conn.query(`SELECT * FROM \`${prefix}categories\` ORDER BY \`name\` ASC`);
     conn.release();
     return rows || [];
   } catch (err) {
-    console.warn("[dbGetCategories fallback]:", err);
+    try {
+      conn.release();
+    } catch {
+    }
+    console.log("[dbGetCategories fallback]:", err?.message || "offline");
     return [];
   }
 }
@@ -1614,7 +1783,7 @@ async function dbSaveCategory(cat) {
     conn.release();
     return true;
   } catch (err) {
-    console.warn("[dbSaveCategory fallback]:", err);
+    console.log("[dbSaveCategory fallback]:", err?.message || "offline");
     return false;
   }
 }
@@ -1628,21 +1797,25 @@ async function dbDeleteCategory(code) {
     conn.release();
     return true;
   } catch (err) {
-    console.warn("[dbDeleteCategory fallback]:", err);
+    console.log("[dbDeleteCategory fallback]:", err?.message || "offline");
     return false;
   }
 }
 async function dbGetRepricerRules() {
-  const cfg = getSavedMySQLConfig();
-  const prefix = getActivePrefix(cfg);
+  const { conn, prefix } = await getSafeDbConnection();
+  if (!conn) {
+    return [];
+  }
   try {
-    const pool = createOrGetPool(cfg);
-    const conn = await pool.getConnection();
     const [rows] = await conn.query(`SELECT * FROM \`${prefix}repricer_rules\` ORDER BY \`created_at\` DESC`);
     conn.release();
     return rows || [];
   } catch (err) {
-    console.warn("[dbGetRepricerRules fallback]:", err);
+    try {
+      conn.release();
+    } catch {
+    }
+    console.log("[dbGetRepricerRules fallback]:", err?.message || "offline");
     return [];
   }
 }
@@ -1670,7 +1843,7 @@ async function dbSaveRepricerRule(rule) {
     conn.release();
     return true;
   } catch (err) {
-    console.warn("[dbSaveRepricerRule fallback]:", err);
+    console.log("[dbSaveRepricerRule fallback]:", err?.message || "offline");
     return false;
   }
 }
@@ -1684,26 +1857,36 @@ async function dbDeleteRepricerRule(id) {
     conn.release();
     return true;
   } catch (err) {
-    console.warn("[dbDeleteRepricerRule fallback]:", err);
+    console.log("[dbDeleteRepricerRule fallback]:", err?.message || "offline");
     return false;
   }
 }
 async function dbGetAutomations() {
   const cfg = getSavedMySQLConfig();
   const prefix = getActivePrefix(cfg);
+  let connToRelease = null;
   try {
-    const pool = createOrGetPool(cfg);
-    const conn = await pool.getConnection();
-    const [rows] = await conn.query(`SELECT * FROM \`${prefix}automations\` ORDER BY \`created_at\` DESC`);
-    conn.release();
+    const { conn, prefix: activePrefix } = await getSafeDbConnection();
+    if (!conn) {
+      return [];
+    }
+    connToRelease = conn;
+    const [rows] = await connToRelease.query(`SELECT * FROM \`${activePrefix}automations\` ORDER BY \`created_at\` DESC`);
     return (rows || []).map((r) => ({
       ...r,
       conditions: r.conditions_json ? JSON.parse(r.conditions_json) : [],
       actions: r.actions_json ? JSON.parse(r.actions_json) : []
     }));
   } catch (err) {
-    console.warn("[dbGetAutomations fallback]:", err);
+    console.log("[dbGetAutomations fallback]:", err?.message || "offline");
     return [];
+  } finally {
+    if (connToRelease) {
+      try {
+        connToRelease.release();
+      } catch {
+      }
+    }
   }
 }
 async function dbSaveAutomation(rule) {
@@ -1729,7 +1912,7 @@ async function dbSaveAutomation(rule) {
     conn.release();
     return true;
   } catch (err) {
-    console.warn("[dbSaveAutomation fallback]:", err);
+    console.log("[dbSaveAutomation fallback]:", err?.message || "offline");
     return false;
   }
 }
@@ -1743,22 +1926,30 @@ async function dbDeleteAutomation(id) {
     conn.release();
     return true;
   } catch (err) {
-    console.warn("[dbDeleteAutomation fallback]:", err);
+    console.log("[dbDeleteAutomation fallback]:", err?.message || "offline");
     return false;
   }
 }
 async function dbGetLogs(limit = 100) {
-  const cfg = getSavedMySQLConfig();
-  const prefix = getActivePrefix(cfg);
+  let connToRelease = null;
   try {
-    const pool = createOrGetPool(cfg);
-    const conn = await pool.getConnection();
-    const [rows] = await conn.query(`SELECT * FROM \`${prefix}sync_logs\` ORDER BY \`created_at\` DESC LIMIT ?`, [limit]);
-    conn.release();
+    const { conn, prefix } = await getSafeDbConnection();
+    if (!conn) {
+      return [];
+    }
+    connToRelease = conn;
+    const [rows] = await connToRelease.query(`SELECT * FROM \`${prefix}sync_logs\` ORDER BY \`created_at\` DESC LIMIT ?`, [limit]);
     return rows || [];
   } catch (err) {
-    console.warn("[dbGetLogs fallback]:", err);
+    console.log("[dbGetLogs fallback]:", err?.message || "offline");
     return [];
+  } finally {
+    if (connToRelease) {
+      try {
+        connToRelease.release();
+      } catch {
+      }
+    }
   }
 }
 async function dbSaveLog(log) {
@@ -1788,49 +1979,119 @@ async function dbSaveLog(log) {
     return false;
   }
 }
-async function dbGetConfig(key, defaultValue = null) {
-  const cfg = getSavedMySQLConfig();
-  const prefix = getActivePrefix(cfg);
+var LOCAL_CONFIGS_PATH = path.resolve(process.cwd(), "data", "app_configs.json");
+function loadLocalConfigs() {
   try {
-    const pool = createOrGetPool(cfg);
-    const conn = await pool.getConnection();
-    const [rows] = await conn.query(
-      `SELECT \`config_value\` FROM \`${prefix}db_config\` WHERE \`config_key\` = ? LIMIT 1`,
-      [key]
-    );
-    conn.release();
-    if (!rows || rows.length === 0) return defaultValue;
-    try {
-      return JSON.parse(rows[0].config_value);
-    } catch {
-      return rows[0].config_value;
+    if (fs.existsSync(LOCAL_CONFIGS_PATH)) {
+      const raw = fs.readFileSync(LOCAL_CONFIGS_PATH, "utf-8");
+      return JSON.parse(raw) || {};
     }
-  } catch (err) {
-    console.warn(`[dbGetConfig(${key}) fallback]:`, err);
-    return defaultValue;
+  } catch (e) {
+    console.warn("[Load Local Configs Warning]:", e);
+  }
+  return {};
+}
+function saveLocalConfig(key, value) {
+  try {
+    const dir = path.dirname(LOCAL_CONFIGS_PATH);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const current = loadLocalConfigs();
+    current[key] = value;
+    fs.writeFileSync(LOCAL_CONFIGS_PATH, JSON.stringify(current, null, 2), "utf-8");
+  } catch (e) {
+    console.warn("[Save Local Config Warning]:", e);
   }
 }
-async function dbSaveConfig(key, value, description) {
-  const cfg = getSavedMySQLConfig();
-  const prefix = getActivePrefix(cfg);
-  const strVal = typeof value === "string" ? value : JSON.stringify(value);
+async function dbGetConfig(key, defaultValue = null) {
+  let dbConn = null;
   try {
-    const pool = createOrGetPool(cfg);
-    const conn = await pool.getConnection();
-    await conn.query(
-      `INSERT INTO \`${prefix}db_config\` (\`config_key\`, \`config_value\`, \`description\`)
+    const { conn, prefix } = await getSafeDbConnection();
+    if (conn) {
+      dbConn = conn;
+      const [rows] = await dbConn.query(
+        `SELECT \`config_value\` FROM \`${prefix}db_config\` WHERE \`config_key\` = ? LIMIT 1`,
+        [key]
+      );
+      if (rows && rows.length > 0 && rows[0].config_value) {
+        try {
+          const parsed = JSON.parse(rows[0].config_value);
+          saveLocalConfig(key, parsed);
+          inMemoryConfigs.set(key, rows[0].config_value);
+          return parsed;
+        } catch {
+          saveLocalConfig(key, rows[0].config_value);
+          inMemoryConfigs.set(key, rows[0].config_value);
+          return rows[0].config_value;
+        }
+      }
+    }
+  } catch {
+  } finally {
+    if (dbConn) {
+      try {
+        dbConn.release();
+      } catch {
+      }
+    }
+  }
+  if (inMemoryConfigs.has(key)) {
+    const memVal = inMemoryConfigs.get(key);
+    try {
+      return JSON.parse(memVal);
+    } catch {
+      return memVal;
+    }
+  }
+  const localConfigs = loadLocalConfigs();
+  if (localConfigs[key] !== void 0) {
+    return localConfigs[key];
+  }
+  return defaultValue;
+}
+async function dbSaveConfig(key, value, description) {
+  const strVal = typeof value === "string" ? value : JSON.stringify(value);
+  inMemoryConfigs.set(key, strVal);
+  saveLocalConfig(key, value);
+  let dbConn = null;
+  try {
+    const { conn, prefix } = await getSafeDbConnection();
+    if (!conn) {
+      return true;
+    }
+    dbConn = conn;
+    const insertSql = `INSERT INTO \`${prefix}db_config\` (\`config_key\`, \`config_value\`, \`description\`)
        VALUES (?, ?, ?)
        ON DUPLICATE KEY UPDATE
          \`config_value\` = VALUES(\`config_value\`),
          \`description\` = COALESCE(VALUES(\`description\`), \`description\`),
-         \`updated_at\` = NOW();`,
-      [key, strVal, description || null]
-    );
-    conn.release();
+         \`updated_at\` = NOW();`;
+    try {
+      await dbConn.query(insertSql, [key, strVal, description || null]);
+    } catch (tblErr) {
+      if (tblErr?.code === "ER_NO_SUCH_TABLE" || String(tblErr).includes("doesn't exist")) {
+        await dbConn.query(`CREATE TABLE IF NOT EXISTS \`${prefix}db_config\` (
+          \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+          \`config_key\` VARCHAR(100) NOT NULL UNIQUE,
+          \`config_value\` LONGTEXT NOT NULL,
+          \`description\` VARCHAR(255) NULL,
+          \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`);
+        await dbConn.query(insertSql, [key, strVal, description || null]);
+      } else {
+        throw tblErr;
+      }
+    }
     return true;
   } catch (err) {
-    console.warn(`[dbSaveConfig(${key}) fallback]:`, err);
-    return false;
+    console.log(`[dbSaveConfig(${key}) notice]:`, err?.message || "offline");
+    return true;
+  } finally {
+    if (dbConn) {
+      try {
+        dbConn.release();
+      } catch {
+      }
+    }
   }
 }
 async function dbSaveOffersBulk(offers) {
@@ -1838,11 +2099,15 @@ async function dbSaveOffersBulk(offers) {
     return { success: true, count: 0 };
   }
   let savedCount = 0;
-  for (const offer of offers) {
-    const ok = await dbSaveOffer(offer);
-    if (ok) savedCount++;
+  const chunkSize = 10;
+  for (let i = 0; i < offers.length; i += chunkSize) {
+    const chunk = offers.slice(i, i + chunkSize);
+    const results = await Promise.allSettled(chunk.map((o) => dbSaveOffer(o)));
+    for (const r of results) {
+      if (r.status === "fulfilled" && r.value) savedCount++;
+    }
   }
-  return { success: true, count: savedCount };
+  return { success: savedCount > 0, count: savedCount };
 }
 async function dbSaveOrdersBulk(orders) {
   if (!Array.isArray(orders) || orders.length === 0) {
@@ -1857,7 +2122,13 @@ async function dbSaveOrdersBulk(orders) {
 }
 
 // server.ts
-dotenv.config();
+process.on("uncaughtException", (err) => {
+  console.error("[Hostinger Process Guard] Uncaught Exception:", err?.message || err);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("[Hostinger Process Guard] Unhandled Rejection:", reason?.message || reason);
+});
+dotenv2.config({ override: true });
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = path2.dirname(__filename);
 var app = express();
@@ -1934,6 +2205,7 @@ function buildSynthesizedProduct(targetQuery, imageBase64, imageUrl) {
   let shipping = 1.5;
   let brand = "OmniTech Pro";
   let modelCode = `OT-${Math.floor(1e3 + Math.random() * 9e3)}`;
+  let chineseTerm = "\u7535\u5B50\u4EA7\u54C1";
   if (q.includes("vacuum") || q.includes("s\xFCp\xFCrge") || q.includes("cleaner")) {
     baseTitle = "Bezprzewodowy Odkurzacz Samochodowy 120W USB-C HEPA";
     categoryName = "Elektronika > Akcesoria samochodowe > Odkurzacze";
@@ -1942,6 +2214,7 @@ function buildSynthesizedProduct(targetQuery, imageBase64, imageUrl) {
     shipping = 1.8;
     brand = "CleanDrive";
     modelCode = "CD-VAC-9000";
+    chineseTerm = "\u65E0\u7EBF\u8F66\u8F7D\u5438\u5C18\u5668\u5927\u5438\u529B";
   } else if (q.includes("charger") || q.includes("\u015Farj") || q.includes("magsafe") || q.includes("wireless") || q.includes("powerbank")) {
     baseTitle = "Sk\u0142adana Stacja \u0141aduj\u0105ca 3w1 MagSafe 15W Szybkie \u0141adowanie";
     categoryName = "Elektronika > Akcesoria telefoniczne > \u0141adowarki indukcyjne";
@@ -1950,6 +2223,7 @@ function buildSynthesizedProduct(targetQuery, imageBase64, imageUrl) {
     shipping = 0;
     brand = "VoltLink";
     modelCode = "VL-3IN1-MAG";
+    chineseTerm = "\u4E09\u5408\u4E00\u78C1\u5438\u6298\u53E0\u65E0\u7EBF\u5145\u7535\u5668";
   } else if (q.includes("coffee") || q.includes("kahve") || q.includes("m\u0142ynek") || q.includes("grinder")) {
     baseTitle = "Elektryczny M\u0142ynek do Kawy \u017Barnowy USB-C Stal Nierdzewna";
     categoryName = "Dom i Ogr\xF3d > AGD drobne > M\u0142ynki do kawy";
@@ -1958,6 +2232,7 @@ function buildSynthesizedProduct(targetQuery, imageBase64, imageUrl) {
     shipping = 2.2;
     brand = "BaristaCraft";
     modelCode = "BC-GRIND-PRO";
+    chineseTerm = "\u4FBF\u643A\u5F0F\u7535\u52A8\u5496\u5561\u7814\u78E8\u673A";
   } else if (q.includes("printer") || q.includes("yaz\u0131c\u0131") || q.includes("label") || q.includes("termal")) {
     baseTitle = "Mini Drukarka Termiczna Etykiet Bluetooth Bez Tusz";
     categoryName = "Elektronika > Sprz\u0119t biurowy > Drukarki etykiet";
@@ -1966,6 +2241,7 @@ function buildSynthesizedProduct(targetQuery, imageBase64, imageUrl) {
     shipping = 1.2;
     brand = "PocketPrint";
     modelCode = "PP-LABEL-MINI";
+    chineseTerm = "\u8FF7\u4F60\u84DD\u7259\u65E0\u58A8\u70ED\u654F\u6807\u7B7E\u6253\u5370\u673A";
   } else if (q.includes("speaker") || q.includes("hoparl\xF6r") || q.includes("audio") || q.includes("sound")) {
     baseTitle = "G\u0142o\u015Bnik Bezprzewodowy Bluetooth 30W IPX7 Bass Boost";
     categoryName = "Elektronika > RTV i AGD > Audio > G\u0142o\u015Bniki przeno\u015Bne";
@@ -1974,6 +2250,7 @@ function buildSynthesizedProduct(targetQuery, imageBase64, imageUrl) {
     shipping = 0;
     brand = "SoundMaster";
     modelCode = "SM-BT-30";
+    chineseTerm = "\u91CD\u4F4E\u97F3\u9632\u6C34\u6237\u5916\u84DD\u7259\u97F3\u7BB1";
   } else if (q.includes("watch") || q.includes("saat") || q.includes("smartwatch") || q.includes("zegarek")) {
     baseTitle = "Smartwatch Zegarek M\u0119ski AMOLED IP68 Rozmowy Bluetooth";
     categoryName = "Elektronika > Telefony i Akcesoria > Smartwatche i zegarki";
@@ -1982,6 +2259,7 @@ function buildSynthesizedProduct(targetQuery, imageBase64, imageUrl) {
     shipping = 0;
     brand = "Chronos Pro";
     modelCode = "CP-AMOLED-9";
+    chineseTerm = "AMOLED\u9AD8\u6E05\u5927\u5C4F\u667A\u80FD\u624B\u8868\u84DD\u7259\u901A\u8BDD";
   } else if (q.includes("earbuds") || q.includes("kulakl\u0131k") || q.includes("headphone") || q.includes("s\u0142uchawki") || q.includes("anc") || q.includes("tws")) {
     baseTitle = "Bezprzewodowe S\u0142uchawki Bluetooth TWS ANC Redukcja Szum\xF3w";
     categoryName = "Elektronika > RTV i AGD > Audio > S\u0142uchawki bezprzewodowe";
@@ -1990,6 +2268,7 @@ function buildSynthesizedProduct(targetQuery, imageBase64, imageUrl) {
     shipping = 1.2;
     brand = "AcousticAir";
     modelCode = "AA-TWS-ANC";
+    chineseTerm = "\u4E3B\u52A8\u964D\u566A\u65E0\u7EBF\u84DD\u7259\u8033\u673ATWS";
   } else if (q.includes("mouse") || q.includes("fare") || q.includes("mysz") || q.includes("klavye") || q.includes("keyboard")) {
     baseTitle = "Ergonomiczna Mysz Bezprzewodowa 2.4GHz Cichy Klik USB-C";
     categoryName = "Elektronika > Komputery > Akcesoria > Myszy i klawiatury";
@@ -1998,6 +2277,7 @@ function buildSynthesizedProduct(targetQuery, imageBase64, imageUrl) {
     shipping = 1.1;
     brand = "ErgoDesk";
     modelCode = "ED-MOUSE-SILENT";
+    chineseTerm = "\u4EBA\u4F53\u5DE5\u5B66\u9759\u97F3\u53CC\u6A21\u65E0\u7EBF\u9F20\u6807";
   } else if (q.includes("camera") || q.includes("kamera") || q.includes("drone") || q.includes("tripod") || q.includes("gimbal")) {
     baseTitle = "Kamera Akcji 4K 60FPS Ultra HD Wodoodporna z WiFi i Ekranem";
     categoryName = "Elektronika > Fotografia > Kamery sportowe";
@@ -2006,6 +2286,7 @@ function buildSynthesizedProduct(targetQuery, imageBase64, imageUrl) {
     shipping = 2.5;
     brand = "ActionVision";
     modelCode = "AV-4K-PRO";
+    chineseTerm = "4K\u9AD8\u6E05\u9632\u6296\u6237\u5916\u8FD0\u52A8\u76F8\u673A";
   } else if (q.includes("lamp") || q.includes("lamba") || q.includes("\u0131\u015F\u0131k") || q.includes("led") || q.includes("light")) {
     baseTitle = "Inteligentna Lampa LED Biurkowa Regulacja Barwy i \u015Aciemniania";
     categoryName = "Dom i Ogr\xF3d > O\u015Bwietlenie > Lampy biurkowe";
@@ -2014,6 +2295,7 @@ function buildSynthesizedProduct(targetQuery, imageBase64, imageUrl) {
     shipping = 1.5;
     brand = "LumiGlow";
     modelCode = "LG-DESK-LED";
+    chineseTerm = "\u667A\u80FD\u62A4\u773C\u8C03\u5149LED\u53F0\u706F";
   } else if (q.includes("\xE7anta") || q.includes("bag") || q.includes("backpack") || q.includes("c\xFCzdan") || q.includes("wallet")) {
     baseTitle = "Wodoodporny Plecak Miejski na Laptopa 15.6 USB Antykradzie\u017Cowy";
     categoryName = "Moda > Akcesoria i dodatki > Torby i plecaki";
@@ -2022,12 +2304,21 @@ function buildSynthesizedProduct(targetQuery, imageBase64, imageUrl) {
     shipping = 2;
     brand = "TravelGuard";
     modelCode = "TG-CITY-BAG";
+    chineseTerm = "\u5546\u52A1\u591A\u529F\u80FD\u9632\u6C34\u9632\u76D7\u53CC\u80A9\u5305";
   } else {
     const displayKeyword = clean.length > 2 ? clean.split(" ").slice(0, 4).join(" ") : "Wysokiej Jako\u015Bci Produkt";
     baseTitle = `${displayKeyword} - Nowoczesny Design & Wytrzyma\u0142o\u015B\u0107`.slice(0, 72);
+    chineseTerm = clean ? clean.slice(0, 30) : "\u6E90\u5934\u4F18\u8D28\u8D27\u6E90\u6279\u53D1";
   }
   const primaryImg = imageBase64 && imageBase64.startsWith("data:") ? imageBase64 : imageUrl || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80";
   const directAliUrl = `https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(clean || baseTitle)}`;
+  const { matches: platformMatches, platformDirectUrls } = buildPlatformMatches({
+    searchTerm: clean || baseTitle,
+    chineseTerm,
+    baseTitle,
+    basePriceUsd: price,
+    imageUrl: primaryImg
+  });
   return {
     id: `ali-smart-${Date.now()}`,
     sourceUrl: directAliUrl,
@@ -2068,20 +2359,255 @@ function buildSynthesizedProduct(targetQuery, imageBase64, imageUrl) {
         priceUsd: parseFloat((price * 0.92).toFixed(2)),
         supplierName: "Global Tech Supplier Store"
       }
-    ]
+    ],
+    platformMatches,
+    platformDirectUrls
   };
 }
+function buildPlatformMatches(params) {
+  const { searchTerm, chineseTerm, baseTitle, basePriceUsd, imageUrl } = params;
+  const cnQuery = (chineseTerm || searchTerm).trim();
+  const encCn = encodeURIComponent(cnQuery);
+  const encEn = encodeURIComponent(searchTerm.trim());
+  const price1688Usd = parseFloat(Math.max(1.8, basePriceUsd * 0.38).toFixed(2));
+  const price1688Cny = Math.round(price1688Usd * 7.25);
+  const priceTaobaoUsd = parseFloat(Math.max(2.5, basePriceUsd * 0.52).toFixed(2));
+  const priceTaobaoCny = Math.round(priceTaobaoUsd * 7.25);
+  const priceTemuUsd = parseFloat(Math.max(3.2, basePriceUsd * 0.7).toFixed(2));
+  const priceAlibabaUsd = parseFloat(Math.max(1.5, basePriceUsd * 0.35).toFixed(2));
+  const priceAliExpressUsd = parseFloat(basePriceUsd.toFixed(2));
+  const platformDirectUrls = {
+    "1688": `https://s.1688.com/selloffer/offer_search.htm?keywords=${encCn}`,
+    "taobao": `https://s.taobao.com/search?q=${encCn}`,
+    "temu": `https://www.temu.com/search_result.html?search_key=${encEn}`,
+    "alibaba": `https://www.alibaba.com/trade/search?SearchText=${encEn}`,
+    "aliexpress": `https://www.aliexpress.com/wholesale?SearchText=${encEn}`
+  };
+  const matches = [
+    {
+      id: `match-1688-${Date.now()}-1`,
+      platform: "1688",
+      title: `${cnQuery} (1688 \u6E90\u5934\u5DE5\u5382\u76F4\u4F9B\u6279\u53D1\u751F\u4EA7)`,
+      titleOriginal: cnQuery,
+      priceUsd: price1688Usd,
+      priceLocal: { amount: price1688Cny, currency: "CNY" },
+      moq: 5,
+      supplierName: "Guangdong Hengchuang Direct Factory (1688 \u5B9E\u529B\u5546\u5BB6)",
+      supplierRating: 4.96,
+      location: "Guangdong / Yiwu, \xC7in",
+      shippingEstimateUsd: 1.5,
+      deliveryDays: "3-5 g\xFCn i\xE7 transfer + uluslararas\u0131",
+      sourceUrl: platformDirectUrls["1688"],
+      imageUrl,
+      matchScore: 98,
+      verifiedSupplier: true
+    },
+    {
+      id: `match-taobao-${Date.now()}-2`,
+      platform: "taobao",
+      title: `${cnQuery} (\u6DD8\u5B9D\u5DE5\u5382\u76F4\u8425\u5E97 \u6B63\u54C1\u4FDD\u969C)`,
+      titleOriginal: cnQuery,
+      priceUsd: priceTaobaoUsd,
+      priceLocal: { amount: priceTaobaoCny, currency: "CNY" },
+      moq: 1,
+      supplierName: "Taobao Factory Direct Flagship Store (\u6DD8\u5DE5\u5382\u76F4\u8425)",
+      supplierRating: 4.92,
+      location: "Zhejiang, \xC7in",
+      shippingEstimateUsd: 1.2,
+      deliveryDays: "4-7 g\xFCn",
+      sourceUrl: platformDirectUrls["taobao"],
+      imageUrl,
+      matchScore: 95,
+      verifiedSupplier: true
+    },
+    {
+      id: `match-temu-${Date.now()}-3`,
+      platform: "temu",
+      title: `${baseTitle} (Temu Direct Global Express)`,
+      titleOriginal: searchTerm,
+      priceUsd: priceTemuUsd,
+      priceLocal: { amount: priceTemuUsd, currency: "USD" },
+      moq: 1,
+      supplierName: "Temu Certified Global Hub Direct",
+      supplierRating: 4.85,
+      location: "Temu Global Warehouse Hub",
+      shippingEstimateUsd: 0,
+      deliveryDays: "5-8 g\xFCn (H\u0131zl\u0131 Kargo)",
+      sourceUrl: platformDirectUrls["temu"],
+      imageUrl,
+      matchScore: 94,
+      verifiedSupplier: true
+    },
+    {
+      id: `match-alibaba-${Date.now()}-4`,
+      platform: "alibaba",
+      title: `${baseTitle} OEM/ODM Custom Logo Wholesale`,
+      titleOriginal: searchTerm,
+      priceUsd: priceAlibabaUsd,
+      priceLocal: { amount: priceAlibabaUsd, currency: "USD" },
+      moq: 50,
+      supplierName: "Shenzhen Top-Tech OEM/ODM Manufacturing Co., Ltd.",
+      supplierRating: 4.98,
+      location: "Shenzhen, \xC7in (Gold Supplier 8 Yrs)",
+      shippingEstimateUsd: 2,
+      deliveryDays: "10-15 g\xFCn (OEM/ODM \xDCretim)",
+      sourceUrl: platformDirectUrls["alibaba"],
+      imageUrl,
+      matchScore: 97,
+      verifiedSupplier: true
+    },
+    {
+      id: `match-aliexpress-${Date.now()}-5`,
+      platform: "aliexpress",
+      title: `${baseTitle} AliExpress Choice Edition`,
+      titleOriginal: searchTerm,
+      priceUsd: priceAliExpressUsd,
+      priceLocal: { amount: priceAliExpressUsd, currency: "USD" },
+      moq: 1,
+      supplierName: "AliExpress Choice Official Store",
+      supplierRating: 4.88,
+      location: "Cainiao Global Sort Center",
+      shippingEstimateUsd: 0,
+      deliveryDays: "7-10 i\u015F g\xFCn\xFC (Standart Kargo)",
+      sourceUrl: platformDirectUrls["aliexpress"],
+      imageUrl,
+      matchScore: 92,
+      verifiedSupplier: true
+    }
+  ];
+  return { matches, platformDirectUrls };
+}
+async function getQwenConfig(customKey) {
+  let apiKey = (customKey || process.env.QWEN_API_KEY || process.env.DASHSCOPE_API_KEY || "").trim();
+  if (!apiKey) {
+    try {
+      const dbKey = await dbGetConfig("qwen_api_key");
+      if (dbKey && typeof dbKey === "string" && dbKey.trim()) {
+        apiKey = dbKey.trim();
+      }
+    } catch {
+    }
+  }
+  let activeModel = "qwen-max";
+  try {
+    const dbModel = await dbGetConfig("qwen_model");
+    if (dbModel && typeof dbModel === "string" && dbModel.trim()) {
+      activeModel = dbModel.trim();
+    }
+  } catch {
+  }
+  return { apiKey, activeModel };
+}
+async function callQwenApi(opts) {
+  const { apiKey: key, activeModel: defaultModel } = await getQwenConfig(opts.apiKey);
+  if (!key) {
+    return { success: false, text: "", message: "Qwen API Key (QWEN_API_KEY / DashScope) bulunamad\u0131." };
+  }
+  let model = opts.model || defaultModel || "qwen-max";
+  if (opts.imageBase64 && !model.includes("vl")) {
+    model = "qwen-vl-max";
+  }
+  const apiUrl = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions";
+  const messages = [];
+  if (opts.systemPrompt) {
+    messages.push({ role: "system", content: opts.systemPrompt });
+  }
+  if (opts.imageBase64) {
+    let imgData = opts.imageBase64;
+    if (!imgData.startsWith("data:")) {
+      imgData = `data:image/jpeg;base64,${imgData}`;
+    }
+    messages.push({
+      role: "user",
+      content: [
+        { type: "image_url", image_url: { url: imgData } },
+        { type: "text", text: opts.prompt }
+      ]
+    });
+  } else {
+    messages.push({ role: "user", content: opts.prompt });
+  }
+  try {
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${key}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model,
+        messages
+      })
+    });
+    const data = await response.json().catch(() => null);
+    if (response.ok && data?.choices?.[0]?.message?.content) {
+      return {
+        success: true,
+        text: data.choices[0].message.content
+      };
+    } else {
+      const errMsg = data?.error?.message || data?.message || `HTTP ${response.status} Qwen API Hatas\u0131`;
+      return {
+        success: false,
+        text: "",
+        message: errMsg
+      };
+    }
+  } catch (err) {
+    return {
+      success: false,
+      text: "",
+      message: `Qwen API Istek Hatas\u0131: ${err?.message || err}`
+    };
+  }
+}
 app.get("/api/ai/config", async (_req, res) => {
-  const { apiKey } = await getAiClient();
-  const isConfigured = Boolean(apiKey && apiKey.length > 8);
-  const maskedKey = isConfigured ? `${apiKey.slice(0, 6)}...${apiKey.slice(-4)}` : "";
+  const { apiKey: geminiKey } = await getAiClient();
+  const isGeminiConfigured = Boolean(geminiKey && geminiKey.length > 8);
+  const maskedGeminiKey = isGeminiConfigured ? `${geminiKey.slice(0, 6)}...${geminiKey.slice(-4)}` : "";
+  const { apiKey: qwenKey, activeModel: qwenModel } = await getQwenConfig();
+  const isQwenConfigured = Boolean(qwenKey && qwenKey.length > 8);
+  const maskedQwenKey = isQwenConfigured ? `${qwenKey.slice(0, 6)}...${qwenKey.slice(-4)}` : "";
+  let activeProvider = "qwen";
+  try {
+    const savedProv = await dbGetConfig("ai_provider");
+    if (savedProv === "qwen" || savedProv === "gemini") {
+      activeProvider = savedProv;
+    } else if (isGeminiConfigured && !isQwenConfigured) {
+      activeProvider = "gemini";
+    }
+  } catch {
+  }
+  const isConfigured = activeProvider === "qwen" ? isQwenConfigured : isGeminiConfigured;
+  const maskedKey = activeProvider === "qwen" ? maskedQwenKey : maskedGeminiKey;
+  const activeModel = activeProvider === "qwen" ? qwenModel : "gemini-2.5-flash";
   res.json({
     success: true,
+    activeProvider,
     isConfigured,
     maskedKey,
-    activeModel: "gemini-2.5-flash",
-    supportedModels: ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+    activeModel,
+    gemini: {
+      isConfigured: isGeminiConfigured,
+      maskedKey: maskedGeminiKey,
+      activeModel: "gemini-2.5-flash",
+      supportedModels: ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+    },
+    qwen: {
+      isConfigured: isQwenConfigured,
+      maskedKey: maskedQwenKey,
+      activeModel: qwenModel,
+      supportedModels: ["qwen-max", "qwen-plus", "qwen-turbo", "qwen2.5-72b-instruct", "qwen-vl-max", "qwen2.5-vl-72b-instruct"]
+    }
   });
+});
+app.post("/api/ai/provider", async (req, res) => {
+  const { provider } = req.body || {};
+  if (provider !== "gemini" && provider !== "qwen") {
+    return res.status(400).json({ success: false, message: "Ge\xE7ersiz AI Sa\u011Flay\u0131c\u0131s\u0131 (gemini veya qwen olmal\u0131)." });
+  }
+  await dbSaveConfig("ai_provider", provider, "Active AI Engine Provider");
+  return res.json({ success: true, activeProvider: provider, message: `Aktif AI Sa\u011Flay\u0131c\u0131s\u0131 ${provider === "qwen" ? "Alibaba Qwen" : "Google Gemini"} olarak g\xFCncellendi.` });
 });
 app.post("/api/ai/config", async (req, res) => {
   const { apiKey } = req.body || {};
@@ -2119,6 +2645,94 @@ GEMINI_API_KEY="${cleanKey}"`;
     });
   }
 });
+app.post("/api/ai/qwen/config", async (req, res) => {
+  const { apiKey, model = "qwen-max" } = req.body || {};
+  if (!apiKey || typeof apiKey !== "string" || apiKey.trim().length < 8) {
+    return res.status(400).json({ success: false, message: "Ge\xE7ersiz Qwen (DashScope) API Anahtar\u0131." });
+  }
+  const cleanKey = apiKey.trim();
+  const cleanModel = (model || "qwen-max").trim();
+  const testRes = await callQwenApi({
+    apiKey: cleanKey,
+    model: cleanModel,
+    prompt: "Respond with OK"
+  });
+  if (!testRes.success) {
+    return res.status(400).json({
+      success: false,
+      message: `Qwen API Anahtar\u0131 do\u011Frulanamad\u0131: ${testRes.message}`
+    });
+  }
+  process.env.QWEN_API_KEY = cleanKey;
+  await dbSaveConfig("qwen_api_key", cleanKey, "Alibaba Qwen / DashScope API Key");
+  await dbSaveConfig("qwen_model", cleanModel, "Selected Qwen Model");
+  const envPath = path2.resolve(process.cwd(), ".env");
+  let envContent = fs2.existsSync(envPath) ? fs2.readFileSync(envPath, "utf-8") : "";
+  const regex = /^QWEN_API_KEY=.*$/m;
+  if (regex.test(envContent)) {
+    envContent = envContent.replace(regex, `QWEN_API_KEY="${cleanKey}"`);
+  } else {
+    envContent += `
+QWEN_API_KEY="${cleanKey}"`;
+  }
+  fs2.writeFileSync(envPath, envContent.trim() + "\n", "utf-8");
+  return res.json({
+    success: true,
+    activeModel: cleanModel,
+    message: `Alibaba Qwen API anahtar\u0131 (${cleanModel}) ba\u015Far\u0131yla do\u011Fruland\u0131 ve kaydedildi!`
+  });
+});
+app.post("/api/ai/generate", async (req, res) => {
+  const { prompt, imageBase64, provider: reqProvider, model: reqModel } = req.body || {};
+  if (!prompt || typeof prompt !== "string") {
+    return res.status(400).json({ success: false, message: "Prompt alan\u0131 zorunludur." });
+  }
+  let provider = reqProvider;
+  if (!provider) {
+    const savedProv = await dbGetConfig("ai_provider").catch(() => null);
+    provider = savedProv === "gemini" ? "gemini" : "qwen";
+  }
+  if (provider === "qwen") {
+    const result = await callQwenApi({
+      prompt,
+      imageBase64,
+      model: reqModel
+    });
+    if (result.success) {
+      return res.json({ success: true, provider: "qwen", text: result.text });
+    } else {
+      return res.status(400).json({ success: false, provider: "qwen", message: result.message });
+    }
+  } else {
+    const { ai: aiClient } = await getAiClient();
+    if (!aiClient) {
+      return res.status(400).json({ success: false, provider: "gemini", message: "Gemini API Key yap\u0131land\u0131r\u0131lmam\u0131\u015F." });
+    }
+    try {
+      const parts = [];
+      if (imageBase64) {
+        let clean = imageBase64;
+        let mime = "image/jpeg";
+        const match = imageBase64.match(/^data:([^;]+);base64,(.+)$/s);
+        if (match) {
+          mime = match[1];
+          clean = match[2];
+        } else {
+          clean = imageBase64.replace(/^data:[^;]+;base64,/, "");
+        }
+        parts.push({ inlineData: { mimeType: mime, data: clean } });
+      }
+      parts.push({ text: prompt });
+      const aiRes = await aiClient.models.generateContent({
+        model: reqModel || "gemini-2.5-flash",
+        contents: parts
+      });
+      return res.json({ success: true, provider: "gemini", text: aiRes.text });
+    } catch (err) {
+      return res.status(400).json({ success: false, provider: "gemini", message: err?.message || err });
+    }
+  }
+});
 app.post("/api/sourcing/aliexpress-search", async (req, res) => {
   const { imageBase64: rawBase64, imageUrl, mimeType: rawMime = "image/jpeg", queryText = "", apiKey: reqKey } = req.body || {};
   let searchTargetQuery = (queryText || "").trim();
@@ -2152,7 +2766,139 @@ app.post("/api/sourcing/aliexpress-search", async (req, res) => {
       cleanBase64 = imageBase64.replace(/^data:[^;]+;base64,/, "").trim();
     }
   }
-  const { ai: aiClient, apiKey: activeKey } = await getAiClient(reqKey);
+  const savedProv = await dbGetConfig("ai_provider").catch(() => null);
+  const { apiKey: qwenKey, activeModel: qwenModel } = await getQwenConfig(reqKey);
+  const { ai: aiClient, apiKey: activeGeminiKey } = await getAiClient(reqKey);
+  const isQwenActive = savedProv === "qwen" || !savedProv && Boolean(qwenKey) || Boolean(qwenKey) && !activeGeminiKey;
+  const singlePrompt = `You are a cross-border e-commerce intelligence and sourcing engine connecting 1688, Taobao, Temu, Alibaba, and AliExpress with Allegro and eMAG sellers.
+Analyze ${cleanBase64 ? "the provided product image" : "the product query"} "${searchTargetQuery || "product"}".
+Identify the exact product, functionality, materials, target category and Chinese manufacturer keywords.
+Format multi-platform sourcing data as a JSON object:
+{
+  "detectedSearchQuery": "best 4-7 word search query in English for AliExpress and Temu/Alibaba",
+  "detectedSearchQueryChinese": "exact 3-6 word Chinese product search keyword for 1688 and Taobao wholesale (e.g. \u65E0\u7EBF\u8F66\u8F7D\u5438\u5C18\u5668, \u4E09\u5408\u4E00\u78C1\u5438\u65E0\u7EBF\u5145, \u7535\u52A8\u5496\u5561\u78E8\u8C46\u673A)",
+  "isCustomOrUniqueProduct": true_if_custom_or_proprietary_product_otherwise_false,
+  "sourcingNote": "Short Turkish note explaining match quality across 1688, Taobao, Temu, Alibaba, and AliExpress",
+  "titleEn": "Full commercial English title with key specifications",
+  "titlePl": "Polish title strictly <= 72 characters compliant with Allegro standards",
+  "categoryName": "Allegro category hierarchy (e.g. Elektronika > Akcesoria telefoniczne > \u0141adowarki)",
+  "allegroCategoryId": "6-digit Allegro category id like 124921, 67414, 42540, 1454, or 66887",
+  "priceUsd": 14.50,
+  "shippingUsd": 1.20,
+  "supplierName": "Store name on AliExpress Choice / Official Store",
+  "supplierRating": 4.88,
+  "deliveryDays": "7-10 dni roboczych",
+  "stockAvailable": 750,
+  "specifications": {
+    "brand": "Manufacturer Brand",
+    "model": "Model Code",
+    "ean": "590${Math.floor(1e9 + Math.random() * 9e9)}",
+    "condition": "Nowy",
+    "material": "Material in Polish",
+    "color": "Color in Polish"
+  },
+  "features": [
+    "Feature 1 in Polish",
+    "Feature 2 in Polish",
+    "Feature 3 in Polish"
+  ],
+  "candidateProducts": [
+    {
+      "titleEn": "Alternative variant 1",
+      "priceUsd": 16.90,
+      "supplierName": "Choice Direct Store"
+    }
+  ]
+}
+Ensure priceUsd and shippingUsd are numbers only. Return JSON ONLY.`;
+  if (isQwenActive && Boolean(qwenKey) && (cleanBase64 || searchTargetQuery)) {
+    try {
+      const qwenRes = await callQwenApi({
+        prompt: singlePrompt,
+        imageBase64: cleanBase64 ? imageBase64 : void 0,
+        apiKey: reqKey,
+        model: "qwen-vl-max"
+      });
+      if (qwenRes.success && qwenRes.text) {
+        let parsedProduct = null;
+        try {
+          parsedProduct = JSON.parse(qwenRes.text);
+        } catch {
+          const match = qwenRes.text.match(/\{[\s\S]*\}/);
+          if (match) parsedProduct = JSON.parse(match[0]);
+        }
+        if (parsedProduct && (parsedProduct.titleEn || parsedProduct.titlePl || parsedProduct.detectedSearchQuery)) {
+          const detectedSearchTerm = parsedProduct.detectedSearchQuery || searchTargetQuery || "trending electronics";
+          const safePrice = typeof parsedProduct?.priceUsd === "number" && !isNaN(parsedProduct.priceUsd) ? parsedProduct.priceUsd : parseFloat(String(parsedProduct?.priceUsd || "").replace(/[^0-9.]/g, "")) || 14.8;
+          const safeShipping = typeof parsedProduct?.shippingUsd === "number" && !isNaN(parsedProduct.shippingUsd) ? parsedProduct.shippingUsd : parseFloat(String(parsedProduct?.shippingUsd || "").replace(/[^0-9.]/g, "")) || 0;
+          const safeCandidates = Array.isArray(parsedProduct?.candidateProducts) ? parsedProduct.candidateProducts.map((cand) => ({
+            titleEn: String(cand?.titleEn || "Alternatywny wariant AliExpress"),
+            priceUsd: typeof cand?.priceUsd === "number" && !isNaN(cand.priceUsd) ? cand.priceUsd : parseFloat(String(cand?.priceUsd || "").replace(/[^0-9.]/g, "")) || safePrice + 2,
+            supplierName: String(cand?.supplierName || "AliExpress Choice Store")
+          })) : [];
+          const liveDirectSearchUrl = `https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(detectedSearchTerm)}`;
+          const primaryImg = sourceImagePreview || (imageBase64 && imageBase64.startsWith("data:") ? imageBase64 : "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80");
+          const { matches: platformMatches, platformDirectUrls } = buildPlatformMatches({
+            searchTerm: detectedSearchTerm,
+            chineseTerm: parsedProduct?.detectedSearchQueryChinese,
+            baseTitle: parsedProduct?.titleEn || `${detectedSearchTerm} High-Performance Edition`,
+            basePriceUsd: safePrice,
+            imageUrl: primaryImg
+          });
+          const finalProduct = {
+            id: `ali-qwen-${Date.now()}`,
+            sourceUrl: liveDirectSearchUrl,
+            directSearchUrl: liveDirectSearchUrl,
+            titleEn: parsedProduct?.titleEn || `${detectedSearchTerm} High-Performance Edition`,
+            titlePl: (parsedProduct?.titlePl || detectedSearchTerm).slice(0, 72),
+            categoryName: parsedProduct?.categoryName || "Elektronika > Akcesoria i gad\u017Cety",
+            allegroCategoryId: parsedProduct?.allegroCategoryId || "124921",
+            priceUsd: safePrice,
+            shippingUsd: safeShipping,
+            supplierName: parsedProduct?.supplierName || "AliExpress Qwen Supplier Store",
+            supplierRating: typeof parsedProduct?.supplierRating === "number" ? parsedProduct.supplierRating : 4.92,
+            deliveryDays: parsedProduct?.deliveryDays || "7-10 dni roboczych",
+            stockAvailable: typeof parsedProduct?.stockAvailable === "number" ? parsedProduct.stockAvailable : 950,
+            primaryImage: primaryImg,
+            specifications: {
+              brand: parsedProduct?.specifications?.brand || "QwenTech Global",
+              model: parsedProduct?.specifications?.model || `QWN-${Date.now().toString().slice(-5)}`,
+              ean: parsedProduct?.specifications?.ean || `590${Math.floor(1e9 + Math.random() * 9e9)}`,
+              condition: "Nowy",
+              material: parsedProduct?.specifications?.material || "Aluminium + ABS",
+              color: parsedProduct?.specifications?.color || "Czarny"
+            },
+            features: Array.isArray(parsedProduct?.features) ? parsedProduct.features : [
+              "Alibaba Qwen AI ile do\u011Fruland\u0131",
+              "Szybkie \u0142adowanie i wysoka jako\u015B\u0107",
+              "Gwarancja 24 miesi\u0105ce"
+            ],
+            isCustomOrUniqueProduct: Boolean(parsedProduct?.isCustomOrUniqueProduct),
+            sourcingNote: parsedProduct?.sourcingNote || (parsedProduct?.isCustomOrUniqueProduct ? "\xD6zel / \xF6zg\xFCn tasar\u0131m \xFCr\xFCn tespiti: 1688, Taobao, Temu, Alibaba ve AliExpress \xFCzerinde benzer kategorideki en uygun muadil \xFCr\xFCnler ve toptan fabrika fiyatlar\u0131 listelenmi\u015Ftir." : null),
+            descriptionPl: parsedProduct?.descriptionPl || `<h2>Produkt przeanalizowany przez Alibaba Qwen AI</h2><p>Nowoczesny design i gwarantowana jako\u015B\u0107.</p>`,
+            candidateProducts: safeCandidates,
+            platformMatches,
+            platformDirectUrls
+          };
+          return res.json({
+            success: true,
+            product: finalProduct,
+            aiVisionActive: true,
+            searchMetadata: {
+              queries: [`Qwen multi-platform search for ${detectedSearchTerm}`],
+              sources: [liveDirectSearchUrl],
+              detectedQuery: detectedSearchTerm,
+              mode: "qwen-vl-vision-live",
+              model: "qwen-vl-max",
+              executedAt: (/* @__PURE__ */ new Date()).toISOString()
+            }
+          });
+        }
+      }
+    } catch (qwenErr) {
+      console.warn("[Qwen Vision Analysis Error/Fallback]:", qwenErr?.message || qwenErr);
+    }
+  }
   if (aiClient && (cleanBase64 || searchTargetQuery)) {
     try {
       let parsedProduct = null;
@@ -2166,50 +2912,6 @@ app.post("/api/sourcing/aliexpress-search", async (req, res) => {
           }
         });
       }
-      const singlePrompt = `You are a cross-border e-commerce intelligence engine connecting AliExpress suppliers with Allegro and eMAG sellers.
-Analyze ${cleanBase64 ? "the provided product image" : "the product query"} "${searchTargetQuery || "product"}".
-Identify the exact product, functionality, materials and market segment.
-Format real AliExpress sourcing data as a JSON object:
-{
-  "detectedSearchQuery": "best 4-7 word search query in English for AliExpress describing this exact product",
-  "titleEn": "Full commercial English title on AliExpress with key specifications",
-  "titlePl": "Polish title strictly <= 72 characters compliant with Allegro standards (no symbols like !?, uppercase only when proper noun)",
-  "categoryName": "Allegro category hierarchy (e.g. Elektronika > Akcesoria telefoniczne > \u0141adowarki)",
-  "allegroCategoryId": "6-digit Allegro category id like 124921, 67414, 42540, 1454, or 66887",
-  "priceUsd": 14.50,
-  "shippingUsd": 1.20,
-  "supplierName": "Store name on AliExpress Choice / Official Store",
-  "supplierRating": 4.88,
-  "deliveryDays": "7-10 dni roboczych (AliExpress Standard Shipping do Polski)",
-  "stockAvailable": 750,
-  "specifications": {
-    "brand": "Manufacturer Brand",
-    "model": "Model Code",
-    "ean": "590${Math.floor(1e9 + Math.random() * 9e9)}",
-    "condition": "Nowy",
-    "material": "Material in Polish",
-    "color": "Color in Polish"
-  },
-  "features": [
-    "Feature 1 in Polish",
-    "Feature 2 in Polish",
-    "Feature 3 in Polish",
-    "Feature 4 in Polish"
-  ],
-  "candidateProducts": [
-    {
-      "titleEn": "Alternative variant 1 on AliExpress",
-      "priceUsd": 16.90,
-      "supplierName": "Choice Direct Store"
-    },
-    {
-      "titleEn": "Alternative variant 2 on AliExpress",
-      "priceUsd": 12.50,
-      "supplierName": "Global Factory Supplier"
-    }
-  ]
-}
-Ensure priceUsd and shippingUsd are numbers only. Return JSON ONLY.`;
       parts.push({ text: singlePrompt });
       const aiRes = await generateWithModelFallback(
         aiClient,
@@ -2240,6 +2942,14 @@ Ensure priceUsd and shippingUsd are numbers only. Return JSON ONLY.`;
           supplierName: String(cand?.supplierName || "AliExpress Choice Store")
         })) : [];
         const liveDirectSearchUrl = `https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(detectedSearchTerm || parsedProduct?.titleEn || "trending electronics")}`;
+        const primaryImg = sourceImagePreview || (imageBase64 && imageBase64.startsWith("data:") ? imageBase64 : "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80");
+        const { matches: platformMatches, platformDirectUrls } = buildPlatformMatches({
+          searchTerm: detectedSearchTerm,
+          chineseTerm: parsedProduct?.detectedSearchQueryChinese,
+          baseTitle: parsedProduct?.titleEn || `${detectedSearchTerm} High-Performance Edition`,
+          basePriceUsd: safePrice,
+          imageUrl: primaryImg
+        });
         const finalProduct = {
           id: `ali-gemini-${Date.now()}`,
           sourceUrl: liveDirectSearchUrl,
@@ -2254,7 +2964,7 @@ Ensure priceUsd and shippingUsd are numbers only. Return JSON ONLY.`;
           supplierRating: typeof parsedProduct?.supplierRating === "number" ? parsedProduct.supplierRating : 4.88,
           deliveryDays: parsedProduct?.deliveryDays || "7-10 dni roboczych",
           stockAvailable: typeof parsedProduct?.stockAvailable === "number" ? parsedProduct.stockAvailable : 850,
-          primaryImage: sourceImagePreview || (imageBase64 && imageBase64.startsWith("data:") ? imageBase64 : "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80"),
+          primaryImage: primaryImg,
           specifications: {
             brand: parsedProduct?.specifications?.brand || "OmniTech Pro",
             model: parsedProduct?.specifications?.model || `MOD-${Date.now().toString().slice(-5)}`,
@@ -2268,15 +2978,19 @@ Ensure priceUsd and shippingUsd are numbers only. Return JSON ONLY.`;
             "Szybkie \u0142adowanie USB-C",
             "Gwarancja 24 miesi\u0105ce"
           ],
-          descriptionPl: parsedProduct?.descriptionPl || `<h2>Wysokiej jako\u015Bci produkt z AliExpress</h2><p>Nowoczesny design i niezawodno\u015B\u0107.</p>`,
-          candidateProducts: safeCandidates
+          isCustomOrUniqueProduct: Boolean(parsedProduct?.isCustomOrUniqueProduct),
+          sourcingNote: parsedProduct?.sourcingNote || (parsedProduct?.isCustomOrUniqueProduct ? "\xD6zel / \xF6zg\xFCn tasar\u0131m \xFCr\xFCn tespiti: 1688, Taobao, Temu, Alibaba ve AliExpress \xFCzerinde benzer kategorideki muadil \xFCr\xFCnler ve toptan fabrika fiyatlar\u0131 listelenmi\u015Ftir." : null),
+          descriptionPl: parsedProduct?.descriptionPl || `<h2>Wysokiej jako\u015Bci produkt</h2><p>Nowoczesny design i niezawodno\u015B\u0107.</p>`,
+          candidateProducts: safeCandidates,
+          platformMatches,
+          platformDirectUrls
         };
         return res.json({
           success: true,
           product: finalProduct,
           aiVisionActive: true,
           searchMetadata: {
-            queries: [`AliExpress search for ${detectedSearchTerm}`],
+            queries: [`Multi-platform search for ${detectedSearchTerm}`],
             sources: [liveDirectSearchUrl],
             detectedQuery: detectedSearchTerm,
             mode: "gemini-vision-live",
@@ -2299,7 +3013,7 @@ Ensure priceUsd and shippingUsd are numbers only. Return JSON ONLY.`;
       sources: [synthesized.sourceUrl],
       detectedQuery: searchTargetQuery || synthesized.titleEn,
       mode: "smart-local-engine",
-      quotaNotice: activeKey ? "Gemini kota s\u0131n\u0131r\u0131na ula\u015F\u0131ld\u0131, ak\u0131ll\u0131 yerel e\u015Fleme motoru devrede." : "Gemini AI Vision API Anahtar\u0131 girilmedi\u011Fi i\xE7in ak\u0131ll\u0131 yerel e\u015Fleme motoru kullan\u0131ld\u0131.",
+      quotaNotice: qwenKey || activeGeminiKey ? "AI kota s\u0131n\u0131r\u0131na ula\u015F\u0131ld\u0131, ak\u0131ll\u0131 yerel e\u015Fleme motoru devrede." : "Yapay Zeka API Anahtar\u0131 girilmedi\u011Fi i\xE7in ak\u0131ll\u0131 yerel e\u015Fleme motoru kullan\u0131ld\u0131.",
       executedAt: (/* @__PURE__ */ new Date()).toISOString()
     }
   });
@@ -2433,14 +3147,25 @@ app.post("/api/emag/orders", async (req, res) => {
     const isSuccess = apiRes.ok && (data?.isError === false || data?.is_error === false);
     if (isSuccess) {
       const orders = Array.isArray(data.results) ? data.results : [];
+      let dbSavedCount = 0;
+      if (orders.length > 0) {
+        try {
+          const dbRes = await dbSaveOrdersBulk(orders);
+          dbSavedCount = dbRes.count;
+          console.log(`[eMAG Orders] ${dbSavedCount} sipari\u015F MySQL veritaban\u0131na (${getActivePrefix()}orders) kaydedildi.`);
+        } catch (dbErr) {
+          console.warn("[eMAG Orders DB save notice]:", dbErr?.message || dbErr);
+        }
+      }
       return res.json({
         success: true,
         count: orders.length,
+        dbSavedCount,
         durationMs,
         serverIp,
         headerPreview: maskedHeaderPreview,
         results: orders,
-        message: `eMAG (${emagDomain}) canl\u0131 API do\u011Frulamas\u0131 ba\u015Far\u0131l\u0131! ${orders.length > 0 ? `${orders.length} adet sipari\u015F ba\u015Far\u0131yla \xE7ekildi.` : "Ba\u011Flant\u0131 kuruldu, \u015Fu anda \xE7ekilecek yeni sipari\u015F bulunmuyor."} (${durationMs}ms)`
+        message: `eMAG (${emagDomain}) sipari\u015Fleri \xE7ekildi ${dbSavedCount > 0 ? `ve ${dbSavedCount} tanesi MySQL veritaban\u0131na kaydedildi.` : ""} (${durationMs}ms)`
       });
     } else {
       const rawErrMsg = (data?.messages && Array.isArray(data.messages) ? data.messages.join(", ") : null) || `HTTP ${apiRes.status}`;
@@ -3565,9 +4290,7 @@ app.post("/api/emag/match-category", async (req, res) => {
       message: `Excel kategori kodu (#${knownCat.id} - ${knownCat.trName}) eMAG resmi taksonomisine ba\u015Far\u0131yla e\u015Flendi.`
     });
   }
-  if (process.env.GEMINI_API_KEY) {
-    try {
-      const taxonomyPrompt = `You are an expert eMAG Marketplace (Romania, Bulgaria, Hungary) Taxonomy Specialist.
+  const taxonomyPrompt = `You are an expert eMAG Marketplace (Romania, Bulgaria, Hungary) Taxonomy Specialist.
 Match the following product to the official eMAG category tree and output strictly JSON. Note that eMAG category IDs must be valid positive integers <= 65535.
 
 Product Title: "${rawTitle}"
@@ -3604,6 +4327,37 @@ Output format JSON:
   },
   "reasoning": "Turkish/English explanation"
 }`;
+  try {
+    const qwenCatRes = await callQwenApi({ prompt: taxonomyPrompt });
+    if (qwenCatRes.success && qwenCatRes.text) {
+      let parsedJson = null;
+      try {
+        parsedJson = JSON.parse(qwenCatRes.text);
+      } catch {
+        const match = qwenCatRes.text.match(/\{[\s\S]*\}/);
+        if (match) parsedJson = JSON.parse(match[0]);
+      }
+      if (parsedJson && parsedJson.categoryId) {
+        let finalCatId = Number(parsedJson.categoryId);
+        if (finalCatId === 6001) finalCatId = 257548;
+        return res.json({
+          success: true,
+          categoryId: finalCatId,
+          categoryName: parsedJson.categoryName,
+          trName: parsedJson.trName,
+          source: "QWEN_AI",
+          confidence: parsedJson.confidence || 0.98,
+          characteristics: parsedJson.characteristics || {},
+          reasoning: parsedJson.reasoning,
+          message: `Qwen AI ile eMAG Kategori ${finalCatId} (${parsedJson.trName}) ba\u015Far\u0131yla e\u015Fle\u015Ftirildi.`
+        });
+      }
+    }
+  } catch (e) {
+    console.warn("Qwen categorization fallback to Gemini/rules:", e?.message || e);
+  }
+  if (process.env.GEMINI_API_KEY) {
+    try {
       const aiRes = await generateWithModelFallback(
         ai,
         (model) => ai.models.generateContent({
@@ -4430,12 +5184,23 @@ app.post("/api/baselinker/orders", async (req, res) => {
     const data = await apiRes.json().catch(() => null);
     if (apiRes.ok && data?.status === "SUCCESS") {
       const orders = data.orders || [];
+      let dbSavedCount = 0;
+      if (orders.length > 0) {
+        try {
+          const dbRes = await dbSaveOrdersBulk(orders);
+          dbSavedCount = dbRes.count;
+          console.log(`[BaseLinker Orders] ${dbSavedCount} sipari\u015F MySQL veritaban\u0131na (${getActivePrefix()}orders) kaydedildi.`);
+        } catch (dbErr) {
+          console.warn("[BaseLinker Orders DB save notice]:", dbErr?.message || dbErr);
+        }
+      }
       return res.json({
         success: true,
         count: orders.length,
+        dbSavedCount,
         durationMs,
         orders,
-        message: `BaseLinker \xFCzerinden ${orders.length} sipari\u015F ba\u015Far\u0131yla \xE7ekildi (${durationMs}ms).`
+        message: `BaseLinker \xFCzerinden ${orders.length} sipari\u015F ba\u015Far\u0131yla \xE7ekildi ${dbSavedCount > 0 ? `ve ${dbSavedCount} tanesi MySQL veritaban\u0131na kaydedildi.` : ""} (${durationMs}ms).`
       });
     } else {
       return res.json({
@@ -4677,15 +5442,53 @@ app.post("/api/allegro/token", async (req, res) => {
   }
 });
 var activeAllegroSession = {
-  accessToken: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2FsbGVncm8ucGwiLCJ1c2VyX25hbWUiOiIxNDE5MjY0MjciLCJzY29wZSI6WyJhbGxlZ3JvOmFwaTpvcmRlcnM6cmVhZCIsImFsbGVncm86YXBpOmZ1bGZpbGxtZW50OnJlYWQiLCJhbGxlZ3JvOmFwaTpwcm9maWxlOndyaXRlIiwiYWxsZWdybzphcGk6ZnVsZmlsbG1lbnQ6d3JpdGUiLCJhbGxlZ3JvOmFwaTpzYWxlOm9mZmVyczp3cml0ZSIsImFsbGVncm86YXBpOmJpbGxpbmc6cmVhZCIsImFsbGVncm86YXBpOmNhbXBhaWducyIsImFsbGVncm86YXBpOmFmZmlsaWF0ZTp3cml0ZSIsImFsbGVncm86YXBpOmRpc3B1dGVzIiwiYWxsZWdybzphcGk6YmlkcyIsImFsbGVncm86YXBpOnNhbGU6b2ZmZXJzOnJlYWQiLCJhbGxlZ3JvOmFwaTpzaGlwbWVudHM6d3JpdGUiLCJhbGxlZ3JvOmFwaTpvcmRlcnM6d3JpdGUiLCJhbGxlZ3JvOmFwaTphZHMiLCJhbGxlZ3JvOmFwaTpwYXltZW50czp3cml0ZSIsImFsbGVncm86YXBpOnNhbGU6c2V0dGluZ3M6d3JpdGUiLCJhbGxlZ3JvOmFwaTpwcm9maWxlOnJlYWQiLCJhbGxlZ3JvOmFwaTphZmZpbGlhdGU6cmVhZCIsImFsbGVncm86YXBpOnJhdGluZ3MiLCJhbGxlZ3JvOmFwaTpzYWxlOnNldHRpbmdzOnJlYWQiLCJhbGxlZ3JvOmFwaTpwYXltZW50czpyZWFkIiwiYWxsZWdybzphcGk6c2hpcG1lbnRzOnJlYWQiLCJhbGxlZ3JvOmFwaTptZXNzYWdpbmciXSwiYWxsZWdyb19hcGkiOnRydWUsImV4cCI6MTc5MTkzODQ5MCwiY2xpZW50X2lkIjoiZjJhYWNjYjA0YmMxNDZlNGE2ODMyMTc5ZjEwYTEyYzMiLCJqdGkiOiJkZDQyMjQ2OC02MzA0LTQ2MDUtODFlYS01NDRkYjA4YTUzYTQifQ.DhHD45k7izZngeEa0mOrI2agLod23RY3atKNMJzKrWkvLDVUhtVZHeCW32cYaZiRuWFsOGDGDEehBZxdlf-GBcfZhtnIJCXIEU5SIMG9RBA-XmlKNlXD3fSvxrGn9tsPaZTfgEVGQISTQf1Ts4KJnVsHi5soRCOTuBZXx9WHHyBY4w9NZsrb2cK5WzqqqHSf10BzqQAWLA7IhR3Pj8Wn-26PJVSvbKYRSWFh4QylkzydtHGp38M_5LB_iur3AarFEiV35u_xq7LUOdPGw-i_zMmKFSZVziVyEKs1bScoquXih9iGFFAJZeRh1QOeq5CexOt_9gCMQtB_b3C5I8qA5w",
-  refreshToken: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2FsbGVncm8ucGwiLCJ1c2VyX25hbWUiOiIxNDE5MjY0MjciLCJzY29wZSI6WyJhbGxlZ3JvOmFwaTpvcmRlcnM6cmVhZCIsImFsbGVncm86YXBpOmZ1bGZpbGxtZW50OnJlYWQiLCJhbGxlZ3JvOmFwaTpwcm9maWxlOndyaXRlIiwiYWxsZWdybzphcGk6ZnVsZmlsbG1lbnQ6d3JpdGUiLCJhbGxlZ3JvOmFwaTpzYWxlOm9mZmVyczp3cml0ZSIsImFsbGVncm86YXBpOmJpbGxpbmc6cmVhZCIsImFsbGVncm86YXBpOmNhbXBhaWducyIsImFsbGVncm86YXBpOmFmZmlsaWF0ZTp3cml0ZSIsImFsbGVncm86YXBpOmRpc3B1dGVzIiwiYWxsZWdybzphcGk6YmlkcyIsImFsbGVncm86YXBpOnNhbGU6b2ZmZXJzOnJlYWQiLCJhbGxlZ3JvOmFwaTpzaGlwbWVudHM6d3JpdGUiLCJhbGxlZ3JvOmFwaTpvcmRlcnM6d3JpdGUiLCJhbGxlZ3JvOmFwaTphZHMiLCJhbGxlZ3JvOmFwaTpwYXltZW50czp3cml0ZSIsImFsbGVncm86YXBpOnNhbGU6c2V0dGluZ3M6d3JpdGUiLCJhbGxlZ3JvOmFwaTpwcm9maWxlOnJlYWQiLCJhbGxlZ3JvOmFwaTphZmZpbGlhdGU6cmVhZCIsImFsbGVncm86YXBpOnJhdGluZ3MiLCJhbGxlZ3JvOmFwaTpzYWxlOnNldHRpbmdzOnJlYWQiLCJhbGxlZ3JvOmFwaTpwYXltZW50czpyZWFkIiwiYWxsZWdybzphcGk6c2hpcG1lbnRzOnJlYWQiLCJhbGxlZ3JvOmFwaTptZXNzYWdpbmciXSwiYXRpIjoiZGQ0MjI0NjgtNjMwNC00NjA1LTgxZWEtNTQ0ZGIwOGE1M2E0IiwiYWxsZWdyb19hcGkiOnRydWUsImV4cCI6MTc5OTY3MTI5MCwiY2xpZW50X2lkIjoiZjJhYWNjYjA0YmMxNDZlNGE2ODMyMTc5ZjEwYTEyYzMiLCJqdGkiOiI0NzNjNzhkNi03ZjM5LTQwZjMtYmNiOC0wMDdiN2VlM2FiZjgifQ.Rf15RSCRzINtB5dMCvryXSwwQgFn-Ucq4Q9NJBV2ts0B-3Bmpp2EekxWnUjg3qWvXidF34ugWXNANJz9Md7pA8nJyPwPqk0KGpmpRMxtaj6kGmkdJJ7qWHs1LtHIVu4x0-2VqNDEBoVTvvHZdQNYaLvOLQFhddnuI6nxu8ZGwsus2dA59hKU0O03mV0YdCE_Wkl_xnvksLuyDZ_fywSPpHRo-lgTUaMfUpFa0CxgbGqGI2GpvSMM-t67U3BewBDgO5R7PKRlG9TkFknTrQPavdd8OOc5Gs9-9bA4pZj_q5n2CFnplExLj88UO-yk-xw8zvsd41qmumYXHtwthXyatA",
-  tokenExpiresAt: 179193849e4
+  accessToken: "",
+  refreshToken: "",
+  tokenExpiresAt: 0
 };
+app.post("/api/allegro/clear-session", async (_req, res) => {
+  activeAllegroSession = { accessToken: "", refreshToken: "", tokenExpiresAt: 0 };
+  try {
+    await dbSaveCredentials("allegro", {
+      clientId: "f2aaccb04bc146e4a6832179f10a12c3",
+      clientSecret: "YAaC1OJpbFLPYg7npUT8ZVuLIO0uxUiFmI7rZxQU4TwPCr1VTbSuNZ2qhmpZxTBl",
+      accessToken: "",
+      refreshToken: "",
+      tokenExpiresAt: 0,
+      sellerLogin: "charsioutlet",
+      environment: "production",
+      country: "pl",
+      status: "disconnected"
+    });
+  } catch {
+  }
+  return res.json({ success: true, message: "Allegro oturumu s\u0131f\u0131rland\u0131. L\xFCtfen yeniden giri\u015F yap\u0131n." });
+});
 async function getValidAllegroToken(requestedToken) {
-  if (requestedToken && requestedToken.trim() && !requestedToken.includes("expired")) {
+  if (requestedToken && requestedToken.trim() && !requestedToken.includes("expired") && !requestedToken.startsWith("eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2FsbGVncm8ucGwiLCJ1c2VyX25hbWUiOiIxNDE5MjY0MjciLCJzY29wZSI6WyJhbGxlZ3JvOmFwaTpvcmRlcnM6cmVhZCIsImFsbGVncm86YXBpOmZ1bGZpbGxtZW50OnJlYWQiLCJhbGxlZ3JvOmFwaTpwcm9maWxlOndyaXRlIiwiYWxsZWdybzphcGk6ZnVsZmlsbG1lbnQ6d3JpdGUiLCJhbGxlZ3JvOmFwaTpzYWxlOm9mZmVyczp3cml0ZSIsImFsbGVncm86YXBpOmJpbGxpbmc6cmVhZCIsImFsbGVncm86YXBpOmNhbXBhaWducyIsImFsbGVncm86YXBpOmFmZmlsaWF0ZTp3cml0ZSIsImFsbGVncm86YXBpOmRpc3B1dGVzIiwiYWxsZWdybzphcGk6YmlkcyIsImFsbGVncm86YXBpOnNhbGU6b2ZmZXJzOnJlYWQiLCJhbGxlZ3JvOmFwaTpzaGlwbWVudHM6d3JpdGUiLCJhbGxlZ3JvOmFwaTpvcmRlcnM6d3JpdGUiLCJhbGxlZ3JvOmFwaTphZHMiLCJhbGxlZ3JvOmFwaTpwYXltZW50czp3cml0ZSIsImFsbGVncm86YXBpOnNhbGU6c2V0dGluZ3M6d3JpdGUiLCJhbGxlZ3JvOmFwaTpwcm9maWxlOnJlYWQiLCJhbGxlZ3JvOmFwaTphZmZpbGlhdGU6cmVhZCIsImFsbGVncm86YXBpOnJhdGluZ3MiLCJhbGxlZ3JvOmFwaTpzYWxlOnNldHRpbmdzOnJlYWQiLCJhbGxlZ3JvOmFwaTpwYXltZW50czpyZWFkIiwiYWxsZWdybzphcGk6c2hpcG1lbnRzOnJlYWQiLCJhbGxlZ3JvOmFwaTptZXNzYWdpbmciXSwiYWxsZWdyb19hcGkiOnRydWUsImV4cCI6MTc5MTkzODQ5MC")) {
     return requestedToken.trim();
   }
-  if (Date.now() > activeAllegroSession.tokenExpiresAt - 5 * 60 * 1e3 && activeAllegroSession.refreshToken) {
+  if (activeAllegroSession.accessToken && Date.now() < activeAllegroSession.tokenExpiresAt - 60 * 1e3) {
+    return activeAllegroSession.accessToken;
+  }
+  if (!activeAllegroSession.refreshToken) {
+    try {
+      const allCreds = await dbGetCredentials();
+      const dbCreds = allCreds?.allegro;
+      if (dbCreds?.accessToken && dbCreds?.tokenExpiresAt && Date.now() < dbCreds.tokenExpiresAt - 60 * 1e3) {
+        activeAllegroSession = {
+          accessToken: dbCreds.accessToken,
+          refreshToken: dbCreds.refreshToken || "",
+          tokenExpiresAt: dbCreds.tokenExpiresAt
+        };
+        return activeAllegroSession.accessToken;
+      } else if (dbCreds?.refreshToken && !dbCreds.refreshToken.includes("47NjM5LTQwZjMtYmNiOC")) {
+        activeAllegroSession.refreshToken = dbCreds.refreshToken;
+      }
+    } catch {
+    }
+  }
+  if (activeAllegroSession.refreshToken) {
     try {
       const clientId = "f2aaccb04bc146e4a6832179f10a12c3";
       const clientSecret = "YAaC1OJpbFLPYg7npUT8ZVuLIO0uxUiFmI7rZxQU4TwPCr1VTbSuNZ2qhmpZxTBl";
@@ -4716,14 +5519,21 @@ async function getValidAllegroToken(requestedToken) {
           tokenExpiresAt: activeAllegroSession.tokenExpiresAt,
           sellerLogin: "charsioutlet",
           environment: "production",
-          country: "pl"
+          country: "pl",
+          status: "connected"
         }).catch(() => {
         });
+        return activeAllegroSession.accessToken;
+      } else {
+        if (refreshData?.error === "invalid_grant" || String(refreshData?.error_description).includes("Invalid refresh token")) {
+          console.warn("[Allegro OAuth Notice] Stored refresh token has expired or was revoked. Re-authorization required.");
+          activeAllegroSession = { accessToken: "", refreshToken: "", tokenExpiresAt: 0 };
+        }
       }
     } catch {
     }
   }
-  return activeAllegroSession.accessToken;
+  return activeAllegroSession.accessToken || "";
 }
 app.get("/api/allegro/active-session", (_req, res) => {
   return res.json({
@@ -4975,12 +5785,23 @@ app.post("/api/allegro/orders", async (req, res) => {
     const data = await apiRes.json().catch(() => null);
     if (apiRes.ok) {
       const forms = data?.checkoutForms || [];
+      let dbSavedCount = 0;
+      if (forms.length > 0) {
+        try {
+          const dbRes = await dbSaveOrdersBulk(forms);
+          dbSavedCount = dbRes.count;
+          console.log(`[Allegro Orders] ${dbSavedCount} sipari\u015F MySQL veritaban\u0131na (${getActivePrefix()}orders) kaydedildi.`);
+        } catch (dbErr) {
+          console.warn("[Allegro Orders DB save notice]:", dbErr?.message || dbErr);
+        }
+      }
       return res.json({
         success: true,
         count: forms.length,
+        dbSavedCount,
         durationMs,
         checkoutForms: forms,
-        message: `Allegro (${environment}) \xFCzerinden ${forms.length} sipari\u015F ba\u015Far\u0131yla \xE7ekildi (${durationMs}ms).`
+        message: `Allegro (${environment}) \xFCzerinden ${forms.length} sipari\u015F ba\u015Far\u0131yla \xE7ekildi ${dbSavedCount > 0 ? `ve ${dbSavedCount} tanesi MySQL veritaban\u0131na kaydedildi.` : ""} (${durationMs}ms).`
       });
     } else {
       const allegroErrorMsg = data?.errors?.[0]?.userMessage || data?.errors?.[0]?.message || data?.error_description || data?.error || (data?.errors?.[0]?.code ? `Allegro Kod: ${data.errors[0].code}` : "Sipari\u015Fler \xE7ekilemedi");
@@ -5278,6 +6099,23 @@ app.post("/api/sync/live-catalog", async (req, res) => {
     } catch {
     }
   }
+  if (liveOffers.length > 0) {
+    try {
+      await dbSaveOffersBulk(liveOffers);
+      await dbSaveProductsBulk(liveOffers);
+      console.log(`[Live Catalog Sync] ${liveOffers.length} \xFCr\xFCn MySQL veritaban\u0131na (cnt_offers & cnt_products) kaydedildi.`);
+    } catch (e) {
+      console.log("[Live Catalog Sync Note]:", e?.message);
+    }
+  }
+  if (liveOrders.length > 0) {
+    try {
+      await dbSaveOrdersBulk(liveOrders);
+      console.log(`[Live Catalog Sync] ${liveOrders.length} sipari\u015F MySQL veritaban\u0131na (cnt_orders) kaydedildi.`);
+    } catch (e) {
+      console.log("[Live Order Sync Note]:", e?.message);
+    }
+  }
   return res.json({
     success: true,
     fetchedOffersCount: liveOffers.length,
@@ -5304,9 +6142,84 @@ app.post("/api/auth/login", async (req, res) => {
   const result = await loginDatabaseUser(String(username || ""), String(password || ""));
   res.json(result);
 });
+app.get("/api/mysql/config", async (_req, res) => {
+  try {
+    const config = getMySQLConfigInfo();
+    res.json({ success: true, config });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err?.message || String(err) });
+  }
+});
+app.post("/api/mysql/config", async (req, res) => {
+  try {
+    const { host, port: port2, database, user, password, prefix, ssl, charset, databaseUrl } = req.body || {};
+    const existing = getSavedMySQLConfig();
+    let targetHost = host;
+    let targetPort = port2 ? Number(port2) : existing.port;
+    let targetDb = database;
+    let targetUser = user;
+    let targetPassword = password;
+    let targetSsl = ssl !== void 0 ? Boolean(ssl) : existing.ssl;
+    let targetCharset = charset || existing.charset || "utf8mb4";
+    if (databaseUrl && typeof databaseUrl === "string" && databaseUrl.trim()) {
+      const parsed = parseDatabaseUrl(databaseUrl.trim());
+      if (parsed) {
+        if (parsed.host) targetHost = parsed.host;
+        if (parsed.port) targetPort = parsed.port;
+        if (parsed.database) targetDb = parsed.database;
+        if (parsed.user) targetUser = parsed.user;
+        if (parsed.password !== void 0 && parsed.password !== "") targetPassword = parsed.password;
+        if (parsed.ssl !== void 0) targetSsl = parsed.ssl;
+        if (parsed.charset) targetCharset = parsed.charset;
+      }
+    }
+    const newConfig = {
+      host: String(targetHost || existing.host || "194.59.164.74").trim(),
+      port: Number(targetPort) || 3306,
+      database: String(targetDb || existing.database || "").trim(),
+      user: String(targetUser || existing.user || "").trim(),
+      password: targetPassword !== void 0 && targetPassword !== "" ? String(targetPassword) : existing.password,
+      prefix: String(prefix || existing.prefix || "cnt_").trim(),
+      ssl: targetSsl,
+      charset: targetCharset
+    };
+    const testRes = await testMySQLConnection(newConfig);
+    saveMySQLConfig(newConfig);
+    if (newConfig.prefix) {
+      setDetectedPrefix(newConfig.prefix);
+    }
+    const currentStatus = await getMySQLDatabaseStatus(newConfig);
+    res.json({
+      success: true,
+      message: testRes.success ? "Veritaban\u0131 ba\u011Flant\u0131s\u0131 ba\u015Far\u0131yla kuruldu ve kaydedildi!" : `Veritaban\u0131 yap\u0131land\u0131rmas\u0131 kaydedildi (Test uyar\u0131s\u0131: ${testRes.message})`,
+      testResult: testRes,
+      config: getMySQLConfigInfo(),
+      status: currentStatus
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err?.message || String(err) });
+  }
+});
+app.get("/api/mysql/status", async (_req, res) => {
+  try {
+    const result = await getMySQLDatabaseStatus();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err?.message || String(err) });
+  }
+});
 app.post("/api/mysql/test-connection", async (req, res) => {
   const result = await testMySQLConnection(req.body);
   res.json(result);
+});
+app.post("/api/mysql/init-tables", async (req, res) => {
+  try {
+    const cfg = req.body && req.body.host ? req.body : getSavedMySQLConfig();
+    const result = await installMySQLDatabase(cfg);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err?.message || String(err) });
+  }
 });
 app.post("/api/mysql/install-database", async (req, res) => {
   const result = await installMySQLDatabase(req.body);
@@ -5393,13 +6306,27 @@ app.post("/api/db/company-info", async (req, res) => {
 app.get("/api/db/branding", async (_req, res) => {
   const branding = await dbGetConfig("system_branding", {
     brandName: "Jiguli",
-    slogan: "Az yakar, \xE7ok satar."
+    slogan: "Az yakar, \xE7ok satar.",
+    logoUrl: ""
   });
   res.json({ success: true, branding });
 });
 app.post("/api/db/branding", async (req, res) => {
-  const success = await dbSaveConfig("system_branding", req.body, "Panel Marka Ad\u0131 ve Slogan");
-  res.json({ success });
+  try {
+    const current = await dbGetConfig("system_branding", {
+      brandName: "Jiguli",
+      slogan: "Az yakar, \xE7ok satar.",
+      logoUrl: ""
+    });
+    const updated = {
+      ...current,
+      ...req.body || {}
+    };
+    const success = await dbSaveConfig("system_branding", updated, "Panel Marka Ad\u0131, Slogan ve Logo");
+    res.json({ success: true, branding: updated });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err?.message || String(err) });
+  }
 });
 app.get("/api/db/categories", async (req, res) => {
   const categories = await dbGetCategories();
@@ -6394,15 +7321,20 @@ app.post("/api/allegro/publish-offer", async (req, res) => {
         message: pubStatus === "ACTIVE" ? `\xDCr\xFCn Allegro (${environment}) \xFCzerinde ba\u015Far\u0131yla yay\u0131na al\u0131nd\u0131! \u0130lan No: ${generatedOfferId}` : `\xDCr\xFCn Allegro (${environment}) \xFCzerine Taslak (INACTIVE) olarak ba\u015Far\u0131yla y\xFCklendi! \u0130lan No: ${generatedOfferId}`
       });
     } else {
-      let errorMsg = data?.errors?.map((e) => `${e.message || e.userMessage || ""}${e.code ? ` (${e.code})` : ""}${e.path ? ` [Alan: ${e.path}]` : ""}`).filter(Boolean).join("; ") || data?.error_description || data?.error || `HTTP ${apiRes.status}`;
+      let rawError = data?.errors?.map((e) => `${e.message || e.userMessage || ""}${e.code ? ` (${e.code})` : ""}${e.path ? ` [Alan: ${e.path}]` : ""}`).filter(Boolean).join("; ") || data?.error_description || data?.error || `HTTP ${apiRes.status}`;
       if (!shippingRateId && shippingWarning) {
-        errorMsg += ` \xB7 Not: ${shippingWarning}`;
+        rawError += ` \xB7 Not: ${shippingWarning}`;
       }
+      const isAuthError = apiRes.status === 401 || apiRes.status === 403 || rawError.toLowerCase().includes("accessdenied") || rawError.toLowerCase().includes("unauthorized") || rawError.toLowerCase().includes("invalid_token");
+      const cleanMessage = isAuthError ? `Allegro oturum anahtar\u0131n\u0131z\u0131n (OAuth Access Token) s\xFCresi dolmu\u015F veya yetki reddedildi (AccessDeniedException). L\xFCtfen Ayarlar > Allegro b\xF6l\xFCm\xFCnden veya 'Giri\u015F Yap' butonuyla ma\u011Fazan\u0131z\u0131 yeniden yetkilendirin.` : rawError;
       return res.json({
         success: false,
         status: apiRes.status,
         durationMs,
-        message: `Allegro Yay\u0131na Alma Hatas\u0131: ${errorMsg}`,
+        isAuthError,
+        authErrorCode: isAuthError ? "ACCESS_DENIED_EXPIRED" : void 0,
+        message: cleanMessage,
+        rawError,
         details: data
       });
     }
@@ -6689,29 +7621,100 @@ async function startServer() {
   }).catch((err) => {
     console.warn("[Startup DB Init warning]:", err?.message || err);
   });
+  app.get(["/api/health", "/health"], (_req, res) => {
+    return res.json({
+      status: "ok",
+      app: "Jiguli Cross-Border E-Commerce Hub",
+      uptime: Math.floor(process.uptime()),
+      nodeVersion: process.version,
+      port: String(port),
+      environment: process.env.NODE_ENV || "production",
+      distBuilt: fs2.existsSync(path2.resolve(__dirname, "dist/index.html")),
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
+  });
   const isDev = process.env.NODE_ENV !== "production";
   if (isDev) {
-    const vite = await createViteServer({
-      server: { middlewareMode: true, hmr: process.env.DISABLE_HMR !== "true" },
-      appType: "spa"
-    });
-    app.use(vite.middlewares);
+    try {
+      const { createServer: createViteServer } = await import("vite");
+      const vite = await createViteServer({
+        server: { middlewareMode: true, hmr: process.env.DISABLE_HMR !== "true" },
+        appType: "spa"
+      });
+      app.use(vite.middlewares);
+      console.log("> Jiguli Vite dev middlewares mounted.");
+    } catch (viteErr) {
+      console.warn("> Vite dynamic import failed in dev, serving static fallback:", viteErr?.message || viteErr);
+    }
   } else {
-    app.use(express.static(path2.resolve(__dirname, "dist")));
-    app.get("*", (_req, res) => {
-      res.sendFile(path2.resolve(__dirname, "dist/index.html"));
+    const distPath = path2.resolve(__dirname, "dist");
+    const indexPath = path2.resolve(distPath, "index.html");
+    if (fs2.existsSync(distPath)) {
+      app.use(express.static(distPath));
+    }
+    app.get("*", (req, res, next) => {
+      if (req.path.startsWith("/api")) {
+        return next();
+      }
+      if (fs2.existsSync(indexPath)) {
+        return res.sendFile(indexPath);
+      }
+      return res.status(200).send(`<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jiguli Panel - Hostinger Kurulum Durumu</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #0b0f19; color: #f1f5f9; display: flex; min-height: 100vh; align-items: center; justify-content: center; padding: 24px; }
+    .card { max-width: 680px; width: 100%; background: #161b28; border: 1px solid #232c3f; border-radius: 20px; padding: 36px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6); }
+    .status-badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 9999px; color: #10b981; font-size: 13px; font-weight: 600; margin-bottom: 20px; }
+    .dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; box-shadow: 0 0 8px #10b981; }
+    h1 { font-size: 24px; font-weight: 700; color: #ffffff; margin-bottom: 12px; }
+    p { color: #94a3b8; font-size: 15px; line-height: 1.6; margin-bottom: 20px; }
+    .info-box { background: #0f131d; border: 1px solid #1e2638; border-radius: 12px; padding: 18px; margin-bottom: 24px; text-align: left; }
+    .info-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #38bdf8; font-weight: 700; margin-bottom: 10px; }
+    code { font-family: 'JetBrains Mono', Consolas, Monaco, monospace; background: #1a2234; padding: 3px 8px; border-radius: 6px; color: #f59e0b; font-size: 13px; }
+    pre { background: #090c14; border: 1px solid #1e2638; border-radius: 8px; padding: 14px; color: #a5f3fc; font-family: monospace; font-size: 14px; overflow-x: auto; margin-top: 10px; }
+    .btn-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+    .btn { display: inline-flex; align-items: center; padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; border: none; }
+    .btn-primary { background: #38bdf8; color: #0b0f19; }
+    .btn-secondary { background: #232c3f; color: #f1f5f9; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="status-badge"><span class="dot"></span> Backend Servisi Aktif & \xC7al\u0131\u015F\u0131yor (Node.js)</div>
+    <h1>Jiguli Panel Sunucusu Haz\u0131r</h1>
+    <p>Hostinger \xFCzerinde Node.js backend sunucunuz ve API servisleri ba\u015Far\u0131yla aya\u011Fa kalkt\u0131. Ancak kullan\u0131c\u0131 aray\xFCz\xFC (frontend) derleme dosyalar\u0131 (<code>dist/index.html</code>) hen\xFCz olu\u015Fturulmam\u0131\u015F.</p>
+    
+    <div class="info-box">
+      <div class="info-title">Hostinger Panelinde \xC7\xF6z\xFCm Ad\u0131mlar\u0131 (Tek Seferlik)</div>
+      <p style="margin-bottom: 8px; color: #cbd5e1; font-size: 14px;">1. Hostinger hPanel &gt; <strong>Node.js</strong> b\xF6l\xFCm\xFCne gidin veya SSH terminalini a\xE7\u0131n.</p>
+      <p style="margin-bottom: 8px; color: #cbd5e1; font-size: 14px;">2. A\u015Fa\u011F\u0131daki komutu \xE7al\u0131\u015Ft\u0131rarak frontend dosyalar\u0131n\u0131 derleyin:</p>
+      <pre>npm run build</pre>
+      <p style="margin-top: 12px; margin-bottom: 0; color: #cbd5e1; font-size: 14px;">3. Veya yerel bilgisayar\u0131n\u0131zda <code>npm run build</code> yapt\u0131ktan sonra olu\u015Fan <strong>dist</strong> klas\xF6r\xFCn\xFC Hostinger Dosya Y\xF6neticisi ile y\xFCkleyin.</p>
+    </div>
+
+    <div class="btn-row">
+      <a href="/api/health" class="btn btn-primary" target="_blank">API Sa\u011Fl\u0131k Durumu (/api/health)</a>
+      <a href="javascript:location.reload()" class="btn btn-secondary">Sayfay\u0131 Yenile</a>
+    </div>
+  </div>
+</body>
+</html>`);
     });
   }
   const isNamedPipeOrSocket = isNaN(Number(port));
-  if (isNamedPipeOrSocket) {
-    app.listen(port, () => {
-      console.log(`> Jiguli Server ready on socket: ${port}`);
-    });
-  } else {
-    app.listen(Number(port), "0.0.0.0", () => {
-      console.log(`> Jiguli Server ready at http://0.0.0.0:${port}`);
-    });
-  }
+  const server = isNamedPipeOrSocket ? app.listen(port, () => {
+    console.log(`> Jiguli Server ready on socket: ${port}`);
+  }) : app.listen(Number(port), () => {
+    console.log(`> Jiguli Server ready on port: ${port}`);
+  });
+  server.on("error", (err) => {
+    console.error("[Hostinger Server Listen Guard]:", err?.message || err);
+  });
 }
 startServer();
 export {

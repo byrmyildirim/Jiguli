@@ -308,6 +308,7 @@ function MainAppLayout() {
               <OffersView
                 onOpenCreateOffer={() => setIsCreateOfferModalOpen(true)}
                 onNavigateToSourcing={() => navigateToTab('aliexpress')}
+                onNavigateToSettings={() => navigateToTab('settings')}
                 theme={theme}
               />
             )}

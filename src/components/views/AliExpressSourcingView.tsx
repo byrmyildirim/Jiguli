@@ -181,12 +181,13 @@ export const AliExpressSourcingView: React.FC<AliExpressSourcingViewProps> = ({
     }
   };
 
-  // Clipboard Paste listener for instant screenshot search (Ctrl+V / Cmd+V)
+  // 1688 Clipboard Paste listener for instant screenshot & URL search (Ctrl+V / Cmd+V)
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       const items = e.clipboardData?.items;
       if (!items) return;
 
+      // 1. Check for clipboard image blob (screenshots, snips, copied photos)
       for (let i = 0; i < items.length; i++) {
         if (items[i].type.indexOf('image') !== -1) {
           const file = items[i].getAsFile();
@@ -199,12 +200,29 @@ export const AliExpressSourcingView: React.FC<AliExpressSourcingViewProps> = ({
               await executeLiveAliExpressSearch({
                 imageBase64: dataUrl,
                 mimeType: file.type || 'image/jpeg',
-                queryText: 'Panodan Yapıştırılan Görsel'
+                queryText: '1688 图搜 (Panodan Yapıştırılan Görsel)'
               });
             };
             reader.readAsDataURL(file);
-            break;
+            return;
           }
+        }
+      }
+
+      // 2. Check for pasted image URL or platform link
+      const text = e.clipboardData?.getData('text/plain')?.trim();
+      if (text && /^https?:\/\/.+/i.test(text)) {
+        const isImg = /\.(jpg|jpeg|png|webp|avif|bmp|gif)(\?.*)?$/i.test(text) ||
+          /alicdn\.com|1688\.com|taobao\.com|temu\.com|alibaba\.com|unsplash\.com/i.test(text);
+
+        if (isImg) {
+          setUploadedPreview(text);
+          setImageUrlInput(text);
+          setSourcingMode('url');
+          executeLiveAliExpressSearch({
+            imageUrl: text,
+            queryText: `Direct Link: ${text}`
+          });
         }
       }
     };
@@ -626,19 +644,19 @@ export const AliExpressSourcingView: React.FC<AliExpressSourcingViewProps> = ({
         </button>
       </div>
 
-      {/* Sourcing Input: File Drag & Drop vs Image Link URL */}
+      {/* 1688 Authentic Visual Search (图搜) Sourcing Input */}
       <div className="space-y-3">
         <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
           <button
             onClick={() => setSourcingMode('upload')}
             className={`px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               sourcingMode === 'upload'
-                ? 'bg-[#14171A] text-white shadow-xs'
+                ? 'bg-[#FF5A00] text-white shadow-xs'
                 : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
             }`}
           >
-            <Upload className="w-3.5 h-3.5" />
-            <span>Görsel Dosyası Sürükle / Seç</span>
+            <Camera className="w-3.5 h-3.5" />
+            <span>1688 Görsel Arama (图搜 · Ctrl+V)</span>
           </button>
 
           <button
@@ -655,62 +673,108 @@ export const AliExpressSourcingView: React.FC<AliExpressSourcingViewProps> = ({
         </div>
 
         {sourcingMode === 'upload' ? (
-          <label
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsDragging(true);
-            }}
-            onDragLeave={(e) => {
-              e.preventDefault();
-              setIsDragging(false);
-            }}
-            onDrop={handleDrop}
-            className={`border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all block ${
-              isDragging
-                ? 'border-emerald-500 bg-emerald-50/70 scale-[1.01]'
-                : 'border-slate-200 hover:border-[#14171A] bg-[#FAFBFC] hover:bg-[#F4F5F7]'
-            }`}
-          >
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-            {uploadedPreview ? (
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <img
-                  src={uploadedPreview}
-                  alt="Yüklenen Görsel"
-                  className="w-16 h-16 rounded-2xl object-cover border border-slate-200 shadow-xs"
-                />
-                <div className="text-center sm:text-left">
-                  <div className="text-sm font-bold text-[#14171A] flex items-center gap-1.5 justify-center sm:justify-start">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>Görsel Yüklendi ve Canlı Eşleşti</span>
+          <div className="search-image-upload-container rounded-3xl bg-white border border-slate-200 shadow-sm overflow-hidden p-6 md:p-8 space-y-5">
+            {/* 1688 Drop & Button Area */}
+            <label
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                setIsDragging(false);
+              }}
+              onDrop={handleDrop}
+              className={`border-2 border-dashed rounded-2xl p-6 md:p-8 text-center cursor-pointer transition-all block ${
+                isDragging
+                  ? 'border-[#FF5A00] bg-orange-50/70 scale-[1.01]'
+                  : 'border-slate-200 hover:border-[#FF5A00] bg-[#FAFBFC] hover:bg-orange-50/20'
+              }`}
+            >
+              <input
+                type="file"
+                accept=".jpg,.jpeg,.png,.bmp,.webp"
+                onChange={handleFileUpload}
+                className="hidden image-file-reader-wrapper"
+              />
+              {uploadedPreview ? (
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <div className="relative">
+                    <img
+                      src={uploadedPreview}
+                      alt="1688 Yüklenen Görsel"
+                      className="w-20 h-20 rounded-2xl object-cover border-2 border-[#FF5A00] shadow-sm"
+                    />
+                    <span className="absolute -top-2 -right-2 px-2 py-0.5 rounded-full bg-[#FF5A00] text-white text-[9px] font-bold">
+                      1688 图搜
+                    </span>
                   </div>
-                  <div className="text-xs text-[#5D7079] mt-0.5">
-                    Farklı bir görsel seçmek veya sürüklemek için tıklayın
+                  <div className="text-center sm:text-left">
+                    <div className="text-sm font-bold text-[#14171A] flex items-center gap-1.5 justify-center sm:justify-start">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span>Görsel Yüklendi ve 1688 Fabrika Ağı Taranıyor</span>
+                    </div>
+                    <div className="text-xs text-[#5D7079] mt-0.5">
+                      Farklı bir görsel seçmek veya sürüklemek için tıklayın · Panodan yapıştırmak için <strong>Ctrl+V</strong>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="w-14 h-14 mx-auto rounded-2xl bg-orange-500/10 text-[#FF5A00] flex items-center justify-center border border-orange-500/20">
+                    <Camera className="w-7 h-7 stroke-[2]" />
+                  </div>
+                  <div>
+                    <div className="text-base font-black text-[#14171A] flex items-center justify-center gap-2">
+                      <span>1688 Görsel Arama</span>
+                      <span className="px-2 py-0.5 rounded-md bg-[#FF5A00] text-white text-[10px] font-bold uppercase tracking-wider">
+                        图搜
+                      </span>
+                    </div>
+                    <div className="text-xs text-[#5D7079] mt-1">
+                      Yerelinizden resim yüklemek veya sürükleyip bırakmak için tıklayın
+                    </div>
+                  </div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-[11px] text-slate-600 font-mono">
+                    <Zap className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Hızlı Arama: Panodan yapıştırmak için <strong>Ctrl + V</strong></span>
+                  </div>
+                </div>
+              )}
+            </label>
+
+            {/* 1688 Authentic Tip Container */}
+            <div className="tip-container p-4 sm:p-5 rounded-2xl bg-orange-50/60 border border-orange-200/80 text-xs text-orange-950 space-y-2.5">
+              <div className="tip-title font-bold text-orange-900 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-orange-600 shrink-0" />
+                <span>Aşağıdaki görüntüyü kullanarak aynı stil ürünleri için fiyat karşılaştırma yöntemini destekliyoruz.</span>
+              </div>
+              <div className="space-y-1.5 text-[11.5px] text-orange-900/90 pl-1">
+                <div className="tip-warp flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#FF5A00] shrink-0" />
+                  <div className="tip-text">1. Yerelinden resim yüklemek için tıklayın (.jpg, .jpeg, .png, .bmp, .webp)</div>
+                </div>
+                <div className="tip-warp flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#FF5A00] shrink-0" />
+                  <div className="tip-text">2. Hızlı arama için bir resim veya resim bağlantısı yapıştırmak için <strong>Ctrl + V</strong> tuşlarını kullanın.</div>
+                </div>
+                <div className="tip-warp flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#FF5A00] shrink-0" />
+                  <div className="tip-text flex items-center gap-2 flex-wrap">
+                    <span>3. Web üzerinde 1688, Taobao, Temu, Alibaba ve AliExpress eşleşen ürün ve doğrudan fabrika linklerini sıralayın.</span>
+                    <a
+                      className="tip-link text-[#FF5A00] hover:text-[#e04f00] font-bold underline ml-1"
+                      href={`https://s.1688.com/selloffer/offer_search.htm?keywords=${encodeURIComponent(selectedProduct.titleEn || 'wholesale')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      1688'de Doğrudan Ara ↗
+                    </a>
                   </div>
                 </div>
               </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="w-12 h-12 mx-auto rounded-full bg-[#9FE870]/30 text-[#163300] flex items-center justify-center">
-                  <Upload className="w-6 h-6 stroke-[2.2]" />
-                </div>
-                <div className="text-sm font-bold text-[#14171A]">
-                  Fotoğrafı Buraya Sürükleyin veya Dosya Seçin
-                </div>
-                <div className="text-xs text-[#5D7079]">
-                  Gemini Vision fotoğrafı tanımlar, AliExpress'te canlı arama yaparak gerçek ürünü getirir
-                </div>
-                <div className="text-[11px] text-slate-400 font-mono mt-1">
-                  💡 İpucu: Panonuzdaki ekran görüntüsünü doğrudan Ctrl+V / Cmd+V ile yapıştırabilirsiniz
-                </div>
-              </div>
-            )}
-          </label>
+            </div>
+          </div>
         ) : (
           <form onSubmit={handleImageUrlSearch} className="p-6 rounded-3xl bg-[#FAFBFC] border border-slate-200 space-y-4">
             <div className="space-y-1">

@@ -1,2 +1,2 @@
-// Jiguli Entry Point for Hosting Environments (cPanel / Plesk / CloudLinux / Passenger)
+// Jiguli Hub - Node.js Entry Point for Hostinger / cPanel / LiteSpeed / Passenger
 import './server.js';

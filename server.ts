@@ -1,10 +1,17 @@
 import express from 'express';
-import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
+
+// Process-level uncaught exception handling to prevent 503 crashes on Hostinger / LiteSpeed / PM2
+process.on('uncaughtException', (err: any) => {
+  console.error('[Hostinger Process Guard] Uncaught Exception:', err?.message || err);
+});
+process.on('unhandledRejection', (reason: any) => {
+  console.error('[Hostinger Process Guard] Unhandled Rejection:', reason?.message || reason);
+});
 import {
   testMySQLConnection,
   installMySQLDatabase,
@@ -3974,17 +3981,61 @@ app.post('/api/allegro/token', async (req, res) => {
 
 // In-Memory Persistent Allegro User Session (charsioutlet)
 let activeAllegroSession = {
-  accessToken: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2FsbGVncm8ucGwiLCJ1c2VyX25hbWUiOiIxNDE5MjY0MjciLCJzY29wZSI6WyJhbGxlZ3JvOmFwaTpvcmRlcnM6cmVhZCIsImFsbGVncm86YXBpOmZ1bGZpbGxtZW50OnJlYWQiLCJhbGxlZ3JvOmFwaTpwcm9maWxlOndyaXRlIiwiYWxsZWdybzphcGk6ZnVsZmlsbG1lbnQ6d3JpdGUiLCJhbGxlZ3JvOmFwaTpzYWxlOm9mZmVyczp3cml0ZSIsImFsbGVncm86YXBpOmJpbGxpbmc6cmVhZCIsImFsbGVncm86YXBpOmNhbXBhaWducyIsImFsbGVncm86YXBpOmFmZmlsaWF0ZTp3cml0ZSIsImFsbGVncm86YXBpOmRpc3B1dGVzIiwiYWxsZWdybzphcGk6YmlkcyIsImFsbGVncm86YXBpOnNhbGU6b2ZmZXJzOnJlYWQiLCJhbGxlZ3JvOmFwaTpzaGlwbWVudHM6d3JpdGUiLCJhbGxlZ3JvOmFwaTpvcmRlcnM6d3JpdGUiLCJhbGxlZ3JvOmFwaTphZHMiLCJhbGxlZ3JvOmFwaTpwYXltZW50czp3cml0ZSIsImFsbGVncm86YXBpOnNhbGU6c2V0dGluZ3M6d3JpdGUiLCJhbGxlZ3JvOmFwaTpwcm9maWxlOnJlYWQiLCJhbGxlZ3JvOmFwaTphZmZpbGlhdGU6cmVhZCIsImFsbGVncm86YXBpOnJhdGluZ3MiLCJhbGxlZ3JvOmFwaTpzYWxlOnNldHRpbmdzOnJlYWQiLCJhbGxlZ3JvOmFwaTpwYXltZW50czpyZWFkIiwiYWxsZWdybzphcGk6c2hpcG1lbnRzOnJlYWQiLCJhbGxlZ3JvOmFwaTptZXNzYWdpbmciXSwiYWxsZWdyb19hcGkiOnRydWUsImV4cCI6MTc5MTkzODQ5MCwiY2xpZW50X2lkIjoiZjJhYWNjYjA0YmMxNDZlNGE2ODMyMTc5ZjEwYTEyYzMiLCJqdGkiOiJkZDQyMjQ2OC02MzA0LTQ2MDUtODFlYS01NDRkYjA4YTUzYTQifQ.DhHD45k7izZngeEa0mOrI2agLod23RY3atKNMJzKrWkvLDVUhtVZHeCW32cYaZiRuWFsOGDGDEehBZxdlf-GBcfZhtnIJCXIEU5SIMG9RBA-XmlKNlXD3fSvxrGn9tsPaZTfgEVGQISTQf1Ts4KJnVsHi5soRCOTuBZXx9WHHyBY4w9NZsrb2cK5WzqqqHSf10BzqQAWLA7IhR3Pj8Wn-26PJVSvbKYRSWFh4QylkzydtHGp38M_5LB_iur3AarFEiV35u_xq7LUOdPGw-i_zMmKFSZVziVyEKs1bScoquXih9iGFFAJZeRh1QOeq5CexOt_9gCMQtB_b3C5I8qA5w',
-  refreshToken: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2FsbGVncm8ucGwiLCJ1c2VyX25hbWUiOiIxNDE5MjY0MjciLCJzY29wZSI6WyJhbGxlZ3JvOmFwaTpvcmRlcnM6cmVhZCIsImFsbGVncm86YXBpOmZ1bGZpbGxtZW50OnJlYWQiLCJhbGxlZ3JvOmFwaTpwcm9maWxlOndyaXRlIiwiYWxsZWdybzphcGk6ZnVsZmlsbG1lbnQ6d3JpdGUiLCJhbGxlZ3JvOmFwaTpzYWxlOm9mZmVyczp3cml0ZSIsImFsbGVncm86YXBpOmJpbGxpbmc6cmVhZCIsImFsbGVncm86YXBpOmNhbXBhaWducyIsImFsbGVncm86YXBpOmFmZmlsaWF0ZTp3cml0ZSIsImFsbGVncm86YXBpOmRpc3B1dGVzIiwiYWxsZWdybzphcGk6YmlkcyIsImFsbGVncm86YXBpOnNhbGU6b2ZmZXJzOnJlYWQiLCJhbGxlZ3JvOmFwaTpzaGlwbWVudHM6d3JpdGUiLCJhbGxlZ3JvOmFwaTpvcmRlcnM6d3JpdGUiLCJhbGxlZ3JvOmFwaTphZHMiLCJhbGxlZ3JvOmFwaTpwYXltZW50czp3cml0ZSIsImFsbGVncm86YXBpOnNhbGU6c2V0dGluZ3M6d3JpdGUiLCJhbGxlZ3JvOmFwaTpwcm9maWxlOnJlYWQiLCJhbGxlZ3JvOmFwaTphZmZpbGlhdGU6cmVhZCIsImFsbGVncm86YXBpOnJhdGluZ3MiLCJhbGxlZ3JvOmFwaTpzYWxlOnNldHRpbmdzOnJlYWQiLCJhbGxlZ3JvOmFwaTpwYXltZW50czpyZWFkIiwiYWxsZWdybzphcGk6c2hpcG1lbnRzOnJlYWQiLCJhbGxlZ3JvOmFwaTptZXNzYWdpbmciXSwiYXRpIjoiZGQ0MjI0NjgtNjMwNC00NjA1LTgxZWEtNTQ0ZGIwOGE1M2E0IiwiYWxsZWdyb19hcGkiOnRydWUsImV4cCI6MTc5OTY3MTI5MCwiY2xpZW50X2lkIjoiZjJhYWNjYjA0YmMxNDZlNGE2ODMyMTc5ZjEwYTEyYzMiLCJqdGkiOiI0NzNjNzhkNi03ZjM5LTQwZjMtYmNiOC0wMDdiN2VlM2FiZjgifQ.Rf15RSCRzINtB5dMCvryXSwwQgFn-Ucq4Q9NJBV2ts0B-3Bmpp2EekxWnUjg3qWvXidF34ugWXNANJz9Md7pA8nJyPwPqk0KGpmpRMxtaj6kGmkdJJ7qWHs1LtHIVu4x0-2VqNDEBoVTvvHZdQNYaLvOLQFhddnuI6nxu8ZGwsus2dA59hKU0O03mV0YdCE_Wkl_xnvksLuyDZ_fywSPpHRo-lgTUaMfUpFa0CxgbGqGI2GpvSMM-t67U3BewBDgO5R7PKRlG9TkFknTrQPavdd8OOc5Gs9-9bA4pZj_q5n2CFnplExLj88UO-yk-xw8zvsd41qmumYXHtwthXyatA',
-  tokenExpiresAt: 1791938490000
+  accessToken: '',
+  refreshToken: '',
+  tokenExpiresAt: 0
 };
 
+// Clear invalid Allegro session endpoint
+app.post('/api/allegro/clear-session', async (_req, res) => {
+  activeAllegroSession = { accessToken: '', refreshToken: '', tokenExpiresAt: 0 };
+  try {
+    await dbSaveCredentials('allegro', {
+      clientId: 'f2aaccb04bc146e4a6832179f10a12c3',
+      clientSecret: 'YAaC1OJpbFLPYg7npUT8ZVuLIO0uxUiFmI7rZxQU4TwPCr1VTbSuNZ2qhmpZxTBl',
+      accessToken: '',
+      refreshToken: '',
+      tokenExpiresAt: 0,
+      sellerLogin: 'charsioutlet',
+      environment: 'production',
+      country: 'pl',
+      status: 'disconnected'
+    });
+  } catch {}
+  return res.json({ success: true, message: 'Allegro oturumu sıfırlandı. Lütfen yeniden giriş yapın.' });
+});
+
 async function getValidAllegroToken(requestedToken?: string): Promise<string> {
-  if (requestedToken && requestedToken.trim() && !requestedToken.includes('expired')) {
+  // 1. If explicit token provided and not marked expired/invalid
+  if (requestedToken && requestedToken.trim() && !requestedToken.includes('expired') && !requestedToken.startsWith('eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2FsbGVncm8ucGwiLCJ1c2VyX25hbWUiOiIxNDE5MjY0MjciLCJzY29wZSI6WyJhbGxlZ3JvOmFwaTpvcmRlcnM6cmVhZCIsImFsbGVncm86YXBpOmZ1bGZpbGxtZW50OnJlYWQiLCJhbGxlZ3JvOmFwaTpwcm9maWxlOndyaXRlIiwiYWxsZWdybzphcGk6ZnVsZmlsbG1lbnQ6d3JpdGUiLCJhbGxlZ3JvOmFwaTpzYWxlOm9mZmVyczp3cml0ZSIsImFsbGVncm86YXBpOmJpbGxpbmc6cmVhZCIsImFsbGVncm86YXBpOmNhbXBhaWducyIsImFsbGVncm86YXBpOmFmZmlsaWF0ZTp3cml0ZSIsImFsbGVncm86YXBpOmRpc3B1dGVzIiwiYWxsZWdybzphcGk6YmlkcyIsImFsbGVncm86YXBpOnNhbGU6b2ZmZXJzOnJlYWQiLCJhbGxlZ3JvOmFwaTpzaGlwbWVudHM6d3JpdGUiLCJhbGxlZ3JvOmFwaTpvcmRlcnM6d3JpdGUiLCJhbGxlZ3JvOmFwaTphZHMiLCJhbGxlZ3JvOmFwaTpwYXltZW50czp3cml0ZSIsImFsbGVncm86YXBpOnNhbGU6c2V0dGluZ3M6d3JpdGUiLCJhbGxlZ3JvOmFwaTpwcm9maWxlOnJlYWQiLCJhbGxlZ3JvOmFwaTphZmZpbGlhdGU6cmVhZCIsImFsbGVncm86YXBpOnJhdGluZ3MiLCJhbGxlZ3JvOmFwaTpzYWxlOnNldHRpbmdzOnJlYWQiLCJhbGxlZ3JvOmFwaTpwYXltZW50czpyZWFkIiwiYWxsZWdybzphcGk6c2hpcG1lbnRzOnJlYWQiLCJhbGxlZ3JvOmFwaTptZXNzYWdpbmciXSwiYWxsZWdyb19hcGkiOnRydWUsImV4cCI6MTc5MTkzODQ5MC')) {
     return requestedToken.trim();
   }
-  // Otomatik Token Yenileme (Refresh Token Flow)
-  if (Date.now() > activeAllegroSession.tokenExpiresAt - 5 * 60 * 1000 && activeAllegroSession.refreshToken) {
+
+  // 2. Check if fresh token exists in active memory
+  if (activeAllegroSession.accessToken && Date.now() < activeAllegroSession.tokenExpiresAt - 60 * 1000) {
+    return activeAllegroSession.accessToken;
+  }
+
+  // 3. Try to load from database credentials if active memory is empty
+  if (!activeAllegroSession.refreshToken) {
+    try {
+      const allCreds = await dbGetCredentials();
+      const dbCreds = allCreds?.allegro;
+      if (dbCreds?.accessToken && dbCreds?.tokenExpiresAt && Date.now() < dbCreds.tokenExpiresAt - 60 * 1000) {
+        activeAllegroSession = {
+          accessToken: dbCreds.accessToken,
+          refreshToken: dbCreds.refreshToken || '',
+          tokenExpiresAt: dbCreds.tokenExpiresAt
+        };
+        return activeAllegroSession.accessToken;
+      } else if (dbCreds?.refreshToken && !dbCreds.refreshToken.includes('47NjM5LTQwZjMtYmNiOC')) {
+        activeAllegroSession.refreshToken = dbCreds.refreshToken;
+      }
+    } catch {}
+  }
+
+  // 4. Automatic Token Refresh (Refresh Token Flow)
+  if (activeAllegroSession.refreshToken) {
     try {
       const clientId = 'f2aaccb04bc146e4a6832179f10a12c3';
       const clientSecret = 'YAaC1OJpbFLPYg7npUT8ZVuLIO0uxUiFmI7rZxQU4TwPCr1VTbSuNZ2qhmpZxTBl';
@@ -4016,14 +4067,23 @@ async function getValidAllegroToken(requestedToken?: string): Promise<string> {
           tokenExpiresAt: activeAllegroSession.tokenExpiresAt,
           sellerLogin: 'charsioutlet',
           environment: 'production',
-          country: 'pl'
+          country: 'pl',
+          status: 'connected'
         }).catch(() => {});
+        return activeAllegroSession.accessToken;
+      } else {
+        // If refresh fails with invalid_grant, clear invalid tokens to prevent spamming Allegro
+        if (refreshData?.error === 'invalid_grant' || String(refreshData?.error_description).includes('Invalid refresh token')) {
+          console.warn('[Allegro OAuth Notice] Stored refresh token has expired or was revoked. Re-authorization required.');
+          activeAllegroSession = { accessToken: '', refreshToken: '', tokenExpiresAt: 0 };
+        }
       }
     } catch {
-      // Refresh hatası olursa mevcut token ile devam et
+      // Refresh network error
     }
   }
-  return activeAllegroSession.accessToken;
+
+  return activeAllegroSession.accessToken || '';
 }
 
 // Allegro Aktif Oturum Bilgisi
@@ -6164,20 +6224,32 @@ app.post('/api/allegro/publish-offer', async (req, res) => {
           : `Ürün Allegro (${environment}) üzerine Taslak (INACTIVE) olarak başarıyla yüklendi! İlan No: ${generatedOfferId}`
       });
     } else {
-      let errorMsg = data?.errors?.map((e: any) => `${e.message || e.userMessage || ''}${e.code ? ` (${e.code})` : ''}${e.path ? ` [Alan: ${e.path}]` : ''}`).filter(Boolean).join('; ')
+      let rawError = data?.errors?.map((e: any) => `${e.message || e.userMessage || ''}${e.code ? ` (${e.code})` : ''}${e.path ? ` [Alan: ${e.path}]` : ''}`).filter(Boolean).join('; ')
         || data?.error_description
         || data?.error
         || `HTTP ${apiRes.status}`;
 
       if (!shippingRateId && shippingWarning) {
-        errorMsg += ` · Not: ${shippingWarning}`;
+        rawError += ` · Not: ${shippingWarning}`;
       }
+
+      const isAuthError = apiRes.status === 401 || apiRes.status === 403 ||
+        rawError.toLowerCase().includes('accessdenied') ||
+        rawError.toLowerCase().includes('unauthorized') ||
+        rawError.toLowerCase().includes('invalid_token');
+
+      const cleanMessage = isAuthError
+        ? `Allegro oturum anahtarınızın (OAuth Access Token) süresi dolmuş veya yetki reddedildi (AccessDeniedException). Lütfen Ayarlar > Allegro bölümünden veya 'Giriş Yap' butonuyla mağazanızı yeniden yetkilendirin.`
+        : rawError;
 
       return res.json({
         success: false,
         status: apiRes.status,
         durationMs,
-        message: `Allegro Yayına Alma Hatası: ${errorMsg}`,
+        isAuthError,
+        authErrorCode: isAuthError ? 'ACCESS_DENIED_EXPIRED' : undefined,
+        message: cleanMessage,
+        rawError,
         details: data
       });
     }
@@ -6541,31 +6613,113 @@ async function startServer() {
     console.warn('[Startup DB Init warning]:', err?.message || err);
   });
 
+  // Health Check Endpoint for Hostinger, uptime monitoring, and reverse proxies
+  app.get(['/api/health', '/health'], (_req, res) => {
+    return res.json({
+      status: 'ok',
+      app: 'Jiguli Cross-Border E-Commerce Hub',
+      uptime: Math.floor(process.uptime()),
+      nodeVersion: process.version,
+      port: String(port),
+      environment: process.env.NODE_ENV || 'production',
+      distBuilt: fs.existsSync(path.resolve(__dirname, 'dist/index.html')),
+      timestamp: new Date().toISOString()
+    });
+  });
+
   const isDev = process.env.NODE_ENV !== 'production';
 
   if (isDev) {
-    const vite = await createViteServer({
-      server: { middlewareMode: true, hmr: process.env.DISABLE_HMR !== 'true' },
-      appType: 'spa'
-    });
-    app.use(vite.middlewares);
+    try {
+      const { createServer: createViteServer } = await import('vite');
+      const vite = await createViteServer({
+        server: { middlewareMode: true, hmr: process.env.DISABLE_HMR !== 'true' },
+        appType: 'spa'
+      });
+      app.use(vite.middlewares);
+      console.log('> Jiguli Vite dev middlewares mounted.');
+    } catch (viteErr: any) {
+      console.warn('> Vite dynamic import failed in dev, serving static fallback:', viteErr?.message || viteErr);
+    }
   } else {
-    app.use(express.static(path.resolve(__dirname, 'dist')));
-    app.get('*', (_req, res) => {
-      res.sendFile(path.resolve(__dirname, 'dist/index.html'));
+    const distPath = path.resolve(__dirname, 'dist');
+    const indexPath = path.resolve(distPath, 'index.html');
+
+    if (fs.existsSync(distPath)) {
+      app.use(express.static(distPath));
+    }
+
+    app.get('*', (req, res, next) => {
+      // Don't intercept API routes with HTML
+      if (req.path.startsWith('/api')) {
+        return next();
+      }
+
+      if (fs.existsSync(indexPath)) {
+        return res.sendFile(indexPath);
+      }
+
+      // Friendly diagnostic page if dist/index.html was not generated yet on Hostinger
+      return res.status(200).send(`<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jiguli Panel - Hostinger Kurulum Durumu</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #0b0f19; color: #f1f5f9; display: flex; min-height: 100vh; align-items: center; justify-content: center; padding: 24px; }
+    .card { max-width: 680px; width: 100%; background: #161b28; border: 1px solid #232c3f; border-radius: 20px; padding: 36px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6); }
+    .status-badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 9999px; color: #10b981; font-size: 13px; font-weight: 600; margin-bottom: 20px; }
+    .dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; box-shadow: 0 0 8px #10b981; }
+    h1 { font-size: 24px; font-weight: 700; color: #ffffff; margin-bottom: 12px; }
+    p { color: #94a3b8; font-size: 15px; line-height: 1.6; margin-bottom: 20px; }
+    .info-box { background: #0f131d; border: 1px solid #1e2638; border-radius: 12px; padding: 18px; margin-bottom: 24px; text-align: left; }
+    .info-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #38bdf8; font-weight: 700; margin-bottom: 10px; }
+    code { font-family: 'JetBrains Mono', Consolas, Monaco, monospace; background: #1a2234; padding: 3px 8px; border-radius: 6px; color: #f59e0b; font-size: 13px; }
+    pre { background: #090c14; border: 1px solid #1e2638; border-radius: 8px; padding: 14px; color: #a5f3fc; font-family: monospace; font-size: 14px; overflow-x: auto; margin-top: 10px; }
+    .btn-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+    .btn { display: inline-flex; align-items: center; padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; border: none; }
+    .btn-primary { background: #38bdf8; color: #0b0f19; }
+    .btn-secondary { background: #232c3f; color: #f1f5f9; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="status-badge"><span class="dot"></span> Backend Servisi Aktif & Çalışıyor (Node.js)</div>
+    <h1>Jiguli Panel Sunucusu Hazır</h1>
+    <p>Hostinger üzerinde Node.js backend sunucunuz ve API servisleri başarıyla ayağa kalktı. Ancak kullanıcı arayüzü (frontend) derleme dosyaları (<code>dist/index.html</code>) henüz oluşturulmamış.</p>
+    
+    <div class="info-box">
+      <div class="info-title">Hostinger Panelinde Çözüm Adımları (Tek Seferlik)</div>
+      <p style="margin-bottom: 8px; color: #cbd5e1; font-size: 14px;">1. Hostinger hPanel &gt; <strong>Node.js</strong> bölümüne gidin veya SSH terminalini açın.</p>
+      <p style="margin-bottom: 8px; color: #cbd5e1; font-size: 14px;">2. Aşağıdaki komutu çalıştırarak frontend dosyalarını derleyin:</p>
+      <pre>npm run build</pre>
+      <p style="margin-top: 12px; margin-bottom: 0; color: #cbd5e1; font-size: 14px;">3. Veya yerel bilgisayarınızda <code>npm run build</code> yaptıktan sonra oluşan <strong>dist</strong> klasörünü Hostinger Dosya Yöneticisi ile yükleyin.</p>
+    </div>
+
+    <div class="btn-row">
+      <a href="/api/health" class="btn btn-primary" target="_blank">API Sağlık Durumu (/api/health)</a>
+      <a href="javascript:location.reload()" class="btn btn-secondary">Sayfayı Yenile</a>
+    </div>
+  </div>
+</body>
+</html>`);
     });
   }
 
   const isNamedPipeOrSocket = isNaN(Number(port));
-  if (isNamedPipeOrSocket) {
-    app.listen(port, () => {
-      console.log(`> Jiguli Server ready on socket: ${port}`);
-    });
-  } else {
-    app.listen(Number(port), '0.0.0.0', () => {
-      console.log(`> Jiguli Server ready at http://0.0.0.0:${port}`);
-    });
-  }
+  const server = isNamedPipeOrSocket
+    ? app.listen(port, () => {
+        console.log(`> Jiguli Server ready on socket: ${port}`);
+      })
+    : app.listen(Number(port), () => {
+        console.log(`> Jiguli Server ready on port: ${port}`);
+      });
+
+  server.on('error', (err: any) => {
+    console.error('[Hostinger Server Listen Guard]:', err?.message || err);
+  });
 }
 
 startServer();
