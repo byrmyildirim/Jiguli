@@ -46,12 +46,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [allegroConfig, setAllegroConfig] = useState<AllegroConfig>(store.getAllegroConfig());
   const [brandName, setBrandName] = useState<string>(store.getBrandName());
   const [slogan, setSlogan] = useState<string>(store.getSlogan());
+  const [logoUrl, setLogoUrl] = useState<string>(store.getLogoUrl());
 
   useEffect(() => {
     return store.subscribe(() => {
       setAllegroConfig(store.getAllegroConfig());
       setBrandName(store.getBrandName());
       setSlogan(store.getSlogan());
+      setLogoUrl(store.getLogoUrl());
     });
   }, []);
 
@@ -133,9 +135,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onClick={() => handleTabClick('dashboard')}
               title={`${brandName} - ${slogan}`}
             >
-              {/* Çerçevesiz Siyah Ok (Tamamen çerçevesiz, arka plansız ve ikonlarla hizalı) */}
+              {/* Logo (Özel Görsel veya Çerçevesiz Siyah Ok) */}
               <div className="w-10 h-10 shrink-0 flex items-center justify-center text-2xl font-black text-[#14171A] dark:text-white select-none">
-                <span className="brand-logo-arrow font-bold text-2xl leading-none">↗</span>
+                {logoUrl ? (
+                  <img src={logoUrl} alt={brandName} className="w-8 h-8 object-contain rounded-lg max-h-8" />
+                ) : (
+                  <span className="brand-logo-arrow font-bold text-2xl leading-none">↗</span>
+                )}
               </div>
 
               {/* Brand Name & Slogan - Always visible on mobile, accordion on desktop */}

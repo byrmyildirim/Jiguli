@@ -394,7 +394,7 @@ export interface RepricingItem {
   competitorSellerName: string;
   buyBoxStatus: 'WINNING' | 'LOSING' | 'TIED';
   strategy: 'BEAT_BY_0_10' | 'MATCH' | 'MARGIN_TARGET';
-  currency: 'PLN' | 'RON';
+  currency: SupportedCurrency;
   platform: MarketplaceId;
   autoEnabled: boolean;
   lastRepricedAt: string;

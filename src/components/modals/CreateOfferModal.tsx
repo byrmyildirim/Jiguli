@@ -780,7 +780,7 @@ export const CreateOfferModal: React.FC<CreateOfferModalProps> = ({
   // AI Category Matching using Gemini
   const handleAiMatchEmagCategory = async () => {
     setIsAiMatching(true);
-    setToastNotice('🤖 Gemini AI ürün içeriklerini analiz ederek eMAG taksonomisini eşleştiriyor...');
+    setToastNotice('🤖 Qwen AI ürün içeriklerini analiz ederek eMAG taksonomisini eşleştiriyor...');
     
     setTimeout(() => {
       const auto = autoDetectAttributesFromProduct({

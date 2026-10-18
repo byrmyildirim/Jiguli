@@ -53,6 +53,7 @@ import { categorySchemaSyncService, ValidationResult } from '../../services/Cate
 import { emagTaxonomySyncService } from '../../services/emagTaxonomySyncService';
 import { EmagCategorySelector } from '../common/EmagCategorySelector';
 import { MarketplaceLogo, MARKETPLACE_LOGOS } from '../../constants/marketplaces';
+import { ProductEditView } from './ProductEditView';
 
 interface OffersViewProps {
   onOpenCreateOffer: () => void;
@@ -682,10 +683,10 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
     }
 
     const matchesSearch =
-      offer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      offer.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (offer.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (offer.sku || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (offer.ean && offer.ean.includes(searchQuery)) ||
-      offer.id.includes(searchQuery);
+      (offer.id || '').includes(searchQuery);
 
     if (!matchesSearch) return false;
 
@@ -784,6 +785,22 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
   };
 
   const isAllSelected = filteredOffers.length > 0 && selectedOfferIds.length === filteredOffers.length;
+
+  if (editingOffer) {
+    return (
+      <ProductEditView
+        offer={editingOffer}
+        onBack={() => {
+          setEditingOffer(null);
+          setOffers(store.getOffers());
+        }}
+        onSaveSuccess={() => {
+          setOffers(store.getOffers());
+        }}
+        theme={theme}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -1652,7 +1669,7 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
               const isSelected = selectedOfferIds.includes(offer.id);
               const isEditingPrice = editingPriceId === offer.id;
               const isEditingStock = editingStockId === offer.id;
-              const pricePln = parseFloat(offer.sellingMode.price.amount);
+              const pricePln = parseFloat(offer.sellingMode?.price?.amount || '0');
 
               return (
                 <div
@@ -1685,7 +1702,7 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
                           ? offer.primaryImage
                           : resolveProductImage(offer)
                       }
-                      alt={offer.name}
+                      alt={offer.name || 'Ürün'}
                       className="w-14 h-14 rounded-xl"
                       isDark={isDark}
                       showChangeButton={true}
@@ -1698,7 +1715,7 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
                     <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-[10px] font-mono text-[#7D8F99] truncate">
-                          ID: {offer.id} · SKU: {offer.sku}
+                          ID: {offer.id} · SKU: {offer.sku || '-'}
                         </span>
                         {offer.isDraft || offer.publication?.status === 'DRAFT' ? (
                           <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold text-slate-700 bg-slate-100 border border-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700">
@@ -1715,10 +1732,10 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
                         )}
                       </div>
                       <div className={`font-semibold text-xs line-clamp-2 leading-snug ${isDark ? 'text-zinc-100' : 'text-slate-900'}`}>
-                        {offer.name}
+                        {offer.name || 'İsimsiz Ürün'}
                       </div>
                       <div className="flex items-center justify-between gap-1 text-[11px] text-[#7D8F99]">
-                        <span className="truncate">{offer.category.name}</span>
+                        <span className="truncate">{offer.category?.name || 'Genel Kategori'}</span>
                         <button
                           type="button"
                           onClick={() => setQuickCategoryOffer(offer)}
@@ -1737,7 +1754,7 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
                     {/* Price Cell */}
                     <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800">
                       <div className="text-[10px] text-[#7D8F99] font-medium flex items-center justify-between">
-                        <span>Fiyat ({offer.sellingMode.price.currency})</span>
+                        <span>Fiyat ({offer.sellingMode?.price?.currency || 'PLN'})</span>
                         {!isEditingPrice && (
                           <button
                             onClick={() => handleStartEditPrice(offer)}
@@ -1773,7 +1790,7 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
                       ) : (
                         <div className="mt-0.5">
                           <div className="text-xs font-mono font-bold text-[#14171A] dark:text-white">
-                            {offer.sellingMode.price.amount} {offer.sellingMode.price.currency}
+                            {offer.sellingMode?.price?.amount || '0.00'} {offer.sellingMode?.price?.currency || 'PLN'}
                           </div>
                           <div className="text-[10px] font-mono text-slate-400">
                             ≈ {store.formatConverted(pricePln)}
@@ -1791,7 +1808,7 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
                             onClick={() => handleStartEditStock(offer)}
                             className="text-[#14171A] hover:underline p-0.5"
                           >
-                            <Edit2 className="w-3 h-3 text-slate-500" />
+                            <Edit2 className="w-3 h-3 text-[#14171A]" />
                           </button>
                         )}
                       </div>
@@ -1823,8 +1840,8 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
                         </div>
                       ) : (
                         <div className="mt-0.5">
-                          <div className={`text-xs font-mono font-bold ${offer.stock.available <= 15 ? 'text-amber-600' : 'text-slate-900 dark:text-zinc-100'}`}>
-                            {offer.stock.available} {offer.stock.unit.toLowerCase()}
+                          <div className={`text-xs font-mono font-bold ${(offer.stock?.available ?? 0) <= 15 ? 'text-amber-600' : 'text-slate-900 dark:text-zinc-100'}`}>
+                            {offer.stock?.available ?? 0} {(offer.stock?.unit || 'UNIT').toLowerCase()}
                           </div>
                           <div className="text-[10px] text-emerald-700 font-semibold">
                             Allegro + eMAG bağlı
@@ -2054,7 +2071,7 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
                     const isSelected = selectedOfferIds.includes(offer.id);
                     const isEditingPrice = editingPriceId === offer.id;
                     const isEditingStock = editingStockId === offer.id;
-                    const pricePln = parseFloat(offer.sellingMode.price.amount);
+                    const pricePln = parseFloat(offer.sellingMode?.price?.amount || '0');
 
                     return (
                       <tr key={offer.id} className={`transition-colors ${
@@ -2088,7 +2105,7 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
                                   ? offer.primaryImage
                                   : resolveProductImage(offer)
                               }
-                              alt={offer.name}
+                              alt={offer.name || 'Ürün'}
                               className="w-12 h-12 rounded-xl"
                               isDark={isDark}
                               showChangeButton={true}
@@ -2102,12 +2119,12 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
                               <div className={`font-semibold line-clamp-2 leading-snug ${
                                 isDark ? 'text-zinc-100' : 'text-slate-900'
                               }`}>
-                                {offer.name}
+                                {offer.name || 'İsimsiz Ürün'}
                               </div>
                               <div className={`flex items-center gap-2 text-[11px] font-mono ${
                                 isDark ? 'text-zinc-400' : 'text-slate-500'
                               }`}>
-                                <span>SKU: {offer.sku}</span>
+                                <span>SKU: {offer.sku || '-'}</span>
                                 {offer.ean && (
                                   <>
                                     <span className={isDark ? 'text-zinc-600' : 'text-slate-300'}>·</span>
@@ -2243,7 +2260,7 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
                           ) : (
                             <div className="group flex items-center justify-end gap-1.5">
                               <div className="font-mono font-bold tabular-nums text-sm text-slate-900">
-                                {offer.sellingMode.price.amount} {offer.sellingMode.price.currency}
+                                {offer.sellingMode?.price?.amount || '0.00'} {offer.sellingMode?.price?.currency || 'PLN'}
                               </div>
                               <button
                                 onClick={() => handleStartEditPrice(offer)}
@@ -2290,10 +2307,10 @@ export const OffersView: React.FC<OffersViewProps> = ({ onOpenCreateOffer, onNav
                             <div className="group flex items-center justify-center gap-1">
                               <span
                                 className={`font-mono font-bold tabular-nums ${
-                                  offer.stock.available <= 15 ? 'text-amber-600' : 'text-slate-800'
+                                  (offer.stock?.available ?? 0) <= 15 ? 'text-amber-600' : 'text-slate-800'
                                 }`}
                               >
-                                {offer.stock.available} {offer.stock.unit.toLowerCase()}
+                                {offer.stock?.available ?? 0} {(offer.stock?.unit || 'UNIT').toLowerCase()}
                               </span>
                               <button
                                 onClick={() => handleStartEditStock(offer)}
