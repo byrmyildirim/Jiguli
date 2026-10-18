@@ -501,7 +501,18 @@ async function callQwenApi(opts: {
     model = 'qwen-vl-max';
   }
 
-  const apiUrl = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions';
+  // Support QwenCloud (maas.qwencloudapi.com) and DashScope endpoints
+  const apiUrls = (key.startsWith('sk-ws') || key.toLowerCase().includes('qwencloud'))
+    ? [
+        'https://maas.qwencloudapi.com/compatible-mode/v1/chat/completions',
+        'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions',
+        'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'
+      ]
+    : [
+        'https://maas.qwencloudapi.com/compatible-mode/v1/chat/completions',
+        'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions',
+        'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'
+      ];
 
   const messages: any[] = [];
   if (opts.systemPrompt) {
@@ -510,7 +521,7 @@ async function callQwenApi(opts: {
 
   if (opts.imageBase64) {
     let imgData = opts.imageBase64;
-    if (!imgData.startsWith('data:')) {
+    if (!imgData.startsWith('data:') && !imgData.startsWith('http://') && !imgData.startsWith('https://')) {
       imgData = `data:image/jpeg;base64,${imgData}`;
     }
     messages.push({
@@ -524,40 +535,40 @@ async function callQwenApi(opts: {
     messages.push({ role: 'user', content: opts.prompt });
   }
 
-  try {
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${key}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model,
-        messages
-      })
-    });
+  let lastError = '';
+  for (const apiUrl of apiUrls) {
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${key}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model,
+          messages
+        })
+      });
 
-    const data = await response.json().catch(() => null);
-    if (response.ok && data?.choices?.[0]?.message?.content) {
-      return {
-        success: true,
-        text: data.choices[0].message.content
-      };
-    } else {
-      const errMsg = data?.error?.message || data?.message || `HTTP ${response.status} Qwen API Hatası`;
-      return {
-        success: false,
-        text: '',
-        message: errMsg
-      };
+      const data = await response.json().catch(() => null);
+      if (response.ok && data?.choices?.[0]?.message?.content) {
+        return {
+          success: true,
+          text: data.choices[0].message.content
+        };
+      } else {
+        lastError = data?.error?.message || data?.message || `HTTP ${response.status} Qwen API Hatası (${apiUrl})`;
+      }
+    } catch (err: any) {
+      lastError = err?.message || String(err);
     }
-  } catch (err: any) {
-    return {
-      success: false,
-      text: '',
-      message: `Qwen API Istek Hatası: ${err?.message || err}`
-    };
   }
+
+  return {
+    success: false,
+    text: '',
+    message: lastError || 'Qwen AI sunucusu yanıt vermedi.'
+  };
 }
 
 // AI Engine Configuration Endpoints (Gemini & Qwen Dual Support)
@@ -744,6 +755,124 @@ app.post('/api/ai/generate', async (req, res) => {
         contents: parts
       });
       return res.json({ success: true, provider: 'gemini', text: aiRes.text });
+    } catch (err: any) {
+      return res.status(400).json({ success: false, provider: 'gemini', message: err?.message || err });
+    }
+  }
+});
+
+// Qwen & Gemini Intelligent AI Marketplace Category & Parameter Classifier
+app.post('/api/ai/classify-category', async (req, res) => {
+  const { title, brand, sku, ean, description, imageBase64, marketplace = 'allegro', taxonomyList } = req.body || {};
+
+  if (!title && !description) {
+    return res.status(400).json({ success: false, message: 'Ürün başlığı veya açıklaması girmelisiniz.' });
+  }
+
+  // Active AI Engine Provider (Qwen / Gemini)
+  const savedProv = await dbGetConfig('ai_provider').catch(() => null);
+  const provider = savedProv === 'gemini' ? 'gemini' : 'qwen';
+
+  const systemPrompt = `Sen e-ticaret pazaryerleri (Allegro, eMAG) taksonomi ve ürün kategori sınıflandırma uzmanı yapay zeka asistanısın. Görevin verilen ürün bilgilerini ve görsellerini analiz ederek sağlanan taksonomi listesinden EN UYGUN kategori ID'sini seçmek ve kategorinin zorunlu parametrelerini doldurmaktır. Yanıtın SADECE geçerli bir JSON objesi olmalıdır.`;
+
+  const prompt = `Aşağıdaki e-ticaret ürün bilgilerini ve görsel verilerini incele:
+
+Ürün Başlığı: ${title || 'Bilinmiyor'}
+Marka / Üretici: ${brand || 'Generic'}
+SKU / Stok Kodu: ${sku || '—'}
+EAN / GTIN Barkod: ${ean || '—'}
+Hedef Pazaryeri: ${marketplace}
+Ürün Açıklaması: ${(description || '').slice(0, 500)}
+
+GEÇERLİ TAKSONOMİ KATEGORİ LİSTESİ:
+${JSON.stringify((taxonomyList && taxonomyList.length > 0 ? taxonomyList : []).map((c: any) => ({
+  id: String(c.id),
+  nameTr: c.nameTr,
+  namePl: c.namePl,
+  nameEn: c.nameEn,
+  path: c.path,
+  keywords: c.keywords,
+  parameters: (c.parameters || []).map((p: any) => ({ id: p.id, name: p.name, trName: p.trName, options: p.options, required: p.required }))
+})), null, 2)}
+
+Aşağıdaki JSON şemasına BİREBİR UYGUN yanıt ver (başka metin ekleme, doğrudan JSON yaz):
+{
+  "categoryId": "Seçilen Kategori ID",
+  "categoryNameTr": "Seçilen Kategori Türkçe Adı",
+  "categoryNamePl": "Seçilen Kategori Lehçe Adı",
+  "confidence": 0.98,
+  "reasoning": "Ürün başlığı ve niteliklerinden hareketle kategorinin neden seçildiğine dair 1 cümlelik Türkçe gerekçe",
+  "parameters": {
+    "PARAM_ID": "PARAM_VALUE"
+  }
+}`;
+
+  if (provider === 'qwen') {
+    const qwenRes = await callQwenApi({
+      prompt,
+      systemPrompt,
+      imageBase64
+    });
+
+    if (qwenRes.success && qwenRes.text) {
+      try {
+        let cleanText = qwenRes.text.replace(/```json/gi, '').replace(/```/g, '').trim();
+        const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
+        const jsonStr = jsonMatch ? jsonMatch[0] : cleanText;
+        const sanitized = jsonStr.replace(/,\s*([}\]])/g, '$1');
+        const parsed = JSON.parse(sanitized);
+        return res.json({
+          success: true,
+          provider: 'qwen',
+          aiModel: imageBase64 ? 'qwen-vl-max' : 'qwen-max',
+          data: parsed
+        });
+      } catch {
+        return res.json({
+          success: true,
+          provider: 'qwen',
+          rawText: qwenRes.text
+        });
+      }
+    } else {
+      return res.status(400).json({
+        success: false,
+        provider: 'qwen',
+        message: qwenRes.message || 'Qwen AI bağlantı yanıtı alınamadı.'
+      });
+    }
+  } else {
+    // Gemini Fallback
+    const { ai: aiClient } = await getAiClient();
+    if (!aiClient) {
+      return res.status(400).json({ success: false, provider: 'gemini', message: 'Gemini AI API Key bulunamadı.' });
+    }
+    try {
+      const parts: any[] = [];
+      if (imageBase64) {
+        let clean = imageBase64;
+        let mime = 'image/jpeg';
+        const match = imageBase64.match(/^data:([^;]+);base64,(.+)$/s);
+        if (match) { mime = match[1]; clean = match[2]; }
+        parts.push({ inlineData: { mimeType: mime, data: clean } });
+      }
+      parts.push({ text: `${systemPrompt}\n\n${prompt}` });
+
+      const aiRes = await aiClient.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: parts
+      });
+
+      const text = aiRes.text || '';
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : text;
+      const parsed = JSON.parse(jsonStr);
+      return res.json({
+        success: true,
+        provider: 'gemini',
+        aiModel: 'gemini-2.5-flash',
+        data: parsed
+      });
     } catch (err: any) {
       return res.status(400).json({ success: false, provider: 'gemini', message: err?.message || err });
     }

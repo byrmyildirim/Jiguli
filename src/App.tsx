@@ -286,7 +286,7 @@ function MainAppLayout() {
         />
 
         {/* Main Content Body */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-10 pb-24 md:pb-10 overflow-y-auto w-full">
+        <main className="flex-1 p-3 sm:p-5 lg:p-6 pb-24 md:pb-8 overflow-y-auto w-full">
           <div className="w-full">
             {currentTab === 'dashboard' && (
               <DashboardView

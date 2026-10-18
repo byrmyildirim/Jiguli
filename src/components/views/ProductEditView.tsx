@@ -37,6 +37,7 @@ import {
   ShieldAlert,
   Zap,
   Maximize2,
+  Minimize2,
   Search,
   Copy,
   Star,
@@ -70,6 +71,8 @@ import {
   getAllegroTaxonomyCategory,
   matchAllegroCategoryFromTitle,
   autoFillAllegroParameters,
+  formatAllegroOptionLabel,
+  getAllegroMainCategoryGroups,
   AllegroTaxonomyCategory
 } from '../../services/allegroCategoryTaxonomy';
 
@@ -275,23 +278,34 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
     offer.channelData?.allegro?.smartEligible ?? offer.smartEligible ?? true
   );
   const [allegroCategoryId, setAllegroCategoryId] = useState<string>(() => {
-    const rawId = String(offer.channelData?.allegro?.categoryId || offer.category?.id || '').trim();
-    if (rawId && rawId !== '2713' && getAllegroTaxonomyCategory(rawId)) {
-      return rawId;
+    const channelId = String(offer.channelData?.allegro?.categoryId || '').trim();
+    if (channelId && getAllegroTaxonomyCategory(channelId)) {
+      return channelId;
     }
     const matched = matchAllegroCategoryFromTitle(offer.name || '');
-    return matched ? matched.id : '4228';
+    return matched ? matched.id : '147572';
   });
   const [allegroCategorySearchQuery, setAllegroCategorySearchQuery] = useState('');
   const [showAllegroCategoryDropdown, setShowAllegroCategoryDropdown] = useState(false);
+  const [isContainerFullScreen, setIsContainerFullScreen] = useState(false);
 
   const currentTaxonomyCategory = useMemo(() => {
     return getAllegroTaxonomyCategory(allegroCategoryId) || ALLEGRO_TAXONOMY[0];
   }, [allegroCategoryId]);
 
+  const [selectedCategoryRootDomain, setSelectedCategoryRootDomain] = useState<string>('ALL');
+
+  const allegroCategoryGroups = useMemo(() => {
+    return getAllegroMainCategoryGroups();
+  }, []);
+
   const searchedTaxonomyCategories = useMemo(() => {
-    return searchAllegroTaxonomy(allegroCategorySearchQuery);
-  }, [allegroCategorySearchQuery]);
+    let list = searchAllegroTaxonomy(allegroCategorySearchQuery);
+    if (selectedCategoryRootDomain !== 'ALL') {
+      list = list.filter(c => (c.path || '').startsWith(selectedCategoryRootDomain));
+    }
+    return list;
+  }, [allegroCategorySearchQuery, selectedCategoryRootDomain]);
   const [allegroStock, setAllegroStock] = useState<number>(
     offer.channelData?.allegro?.stock ?? offer.stock?.available ?? 10
   );
@@ -805,6 +819,69 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
     showNotice('success', `Allegro Kategorisi Seçildi: ${cat.nameTr} (${cat.namePl}) · ID: ${cat.id}`);
   };
 
+  const [isClassifyingWithQwen, setIsClassifyingWithQwen] = useState(false);
+
+  const handleQwenAiClassifyCategory = async () => {
+    setIsClassifyingWithQwen(true);
+    showNotice('info', '🤖 Qwen AI Yapay Zeka modeli ürün görseli ve bilgilerini analiz ediyor...');
+    try {
+      const res = await fetch('/api/ai/classify-category', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: allegroTitle || name,
+          brand: brand,
+          sku: sku,
+          ean: ean,
+          description: description,
+          imageBase64: primaryImage,
+          marketplace: 'allegro',
+          taxonomyList: ALLEGRO_TAXONOMY
+        })
+      }).catch(() => null);
+
+      if (res && res.ok) {
+        const result = await res.json();
+        if (result?.data?.categoryId) {
+          const aiCatId = String(result.data.categoryId).trim();
+          const taxonomyMatch = getAllegroTaxonomyCategory(aiCatId) || matchAllegroCategoryFromTitle(allegroTitle || name);
+          
+          setAllegroCategoryId(taxonomyMatch.id);
+          if (result.data.parameters && typeof result.data.parameters === 'object') {
+            setAllegroParams(prev => ({
+              ...prev,
+              ...result.data.parameters
+            }));
+          } else {
+            const filled = autoFillAllegroParameters(taxonomyMatch, allegroTitle || name, brand, sku, ean);
+            setAllegroParams(prev => ({ ...prev, ...filled }));
+          }
+
+          const confidencePct = Math.round((result.data.confidence || 0.98) * 100);
+          showNotice('success', `🤖 Qwen AI Eşleştirmesi (%${confidencePct} Doğruluk): "${taxonomyMatch.nameTr}" (ID: ${taxonomyMatch.id}) kategorisi atandı! ${result.data.reasoning ? '— ' + result.data.reasoning : ''}`);
+          setIsClassifyingWithQwen(false);
+          return;
+        }
+      }
+
+      // Fallback local rule matching
+      const matched = matchAllegroCategoryFromTitle(allegroTitle || name);
+      handleSelectAllegroCategory(matched);
+      showNotice('success', `Akıllı Eşleştirme: "${matched.nameTr}" (ID: ${matched.id}) kategorisine atandı.`);
+    } catch {
+      const matched = matchAllegroCategoryFromTitle(allegroTitle || name);
+      handleSelectAllegroCategory(matched);
+    } finally {
+      setIsClassifyingWithQwen(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!offer.channelData?.allegro?.categoryId) {
+      handleQwenAiClassifyCategory();
+    }
+  }, [offer.id]);
+
   const handleAutoSuggestAllegroCategory = () => {
     const matched = matchAllegroCategoryFromTitle(allegroTitle || name);
     if (matched) {
@@ -845,7 +922,11 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
   const allegroTitleLength = allegroTitle.length;
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 p-4 md:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+    <div className={
+      isContainerFullScreen
+        ? "fixed inset-0 z-50 overflow-y-auto bg-slate-100 dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 p-3 sm:p-6 space-y-6 w-full h-full animate-in fade-in duration-200"
+        : "min-h-screen bg-white dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 p-2 sm:p-4 md:p-6 space-y-6 w-full max-w-none"
+    }>
       
       {/* STICKY TOP HEADER & ACTION BAR */}
       <div className="sticky top-0 z-30 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
@@ -873,6 +954,17 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Tam Ekran Yap / Alana Sığdır Butonu */}
+            <button
+              type="button"
+              onClick={() => setIsContainerFullScreen(!isContainerFullScreen)}
+              className="px-3 py-2 rounded-xl border border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-800 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+              title={isContainerFullScreen ? "Sayfa boyutuna dön" : "Bu alanı tam ekran yap ve alana sığdır"}
+            >
+              {isContainerFullScreen ? <Minimize2 className="w-3.5 h-3.5 text-orange-600" /> : <Maximize2 className="w-3.5 h-3.5 text-orange-600" />}
+              <span>{isContainerFullScreen ? 'Normal Görünüm' : 'Tam Ekran Yap'}</span>
+            </button>
+
             {/* Modal Aç Butonu */}
             <button
               onClick={() => setShowModalView(true)}
@@ -1663,15 +1755,28 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleAutoSuggestAllegroCategory}
-                  className="px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors shrink-0"
-                  title="Ürün başlığındaki kelimelerden otomatik kategori önerisi al"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Başlıktan Otomatik Kategori Bul</span>
-                </button>
+                <div className="flex items-center gap-2 flex-wrap shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleQwenAiClassifyCategory}
+                    disabled={isClassifyingWithQwen}
+                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-orange-600 hover:from-purple-700 hover:to-orange-700 text-white font-black text-xs flex items-center gap-1.5 cursor-pointer shadow-md transition-all shrink-0 disabled:opacity-50"
+                    title="Alibaba Qwen Yapay Zeka modeliyle ürün görselini ve bilgilerini analiz ederek pazaryeri kategorisini tam doğrulukla seçer"
+                  >
+                    <Zap className={`w-3.5 h-3.5 text-amber-300 ${isClassifyingWithQwen ? 'animate-spin' : ''}`} />
+                    <span>{isClassifyingWithQwen ? 'Qwen AI Analiz Ediyor...' : '🤖 Qwen AI ile Kategori & Parametre Eşle'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleAutoSuggestAllegroCategory}
+                    className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors shrink-0"
+                    title="Ürün başlığındaki anahtar kelimelerden hızlı kural bazlı öneri al"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-orange-600" />
+                    <span>Kural Bazlı Bul</span>
+                  </button>
+                </div>
               </div>
 
               {/* Aktif Seçili Kategori Kartı */}
@@ -1731,69 +1836,105 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                     )}
                   </div>
 
-                  {/* Hızlı Kategori Rozetleri */}
-                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Hızlı Seçim:</span>
-                    {ALLEGRO_TAXONOMY.slice(0, 6).map(cat => (
+                  {/* Ana Kategori Kırılım Filtre Sekmeleri */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 no-scrollbar border-b border-slate-100">
+                    <span className="text-[10px] font-bold text-slate-400 shrink-0 uppercase tracking-wider">Alt Kırılım Filtresi:</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCategoryRootDomain('ALL')}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer shrink-0 ${
+                        selectedCategoryRootDomain === 'ALL'
+                          ? 'bg-slate-900 text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      🌐 Tüm Kırılımlar ({ALLEGRO_TAXONOMY.length})
+                    </button>
+                    {allegroCategoryGroups.map(group => (
                       <button
-                        key={cat.id}
+                        key={group.name}
                         type="button"
-                        onClick={() => handleSelectAllegroCategory(cat)}
-                        className={`text-[11px] px-2 py-0.5 rounded-lg border transition-colors cursor-pointer ${
-                          cat.id === allegroCategoryId
-                            ? 'bg-orange-600 text-white border-orange-600 font-bold'
-                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200 font-medium'
+                        onClick={() => setSelectedCategoryRootDomain(group.name)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer shrink-0 ${
+                          selectedCategoryRootDomain === group.name
+                            ? 'bg-orange-600 text-white shadow-2xs'
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                         }`}
                       >
-                        {cat.nameTr.split('(')[0].trim()} ({cat.id})
+                        {group.name} ({group.categories.length})
                       </button>
                     ))}
                   </div>
 
-                  {/* Arama Sonuçları Listesi */}
-                  <div className="max-h-64 overflow-y-auto space-y-1.5 divide-y divide-slate-100 pr-1">
+                  {/* Arama ve Alt Kırılım Sonuçları Listesi */}
+                  <div className="max-h-72 overflow-y-auto space-y-2 pr-1 divide-y divide-slate-100">
                     {searchedTaxonomyCategories.length === 0 ? (
                       <div className="p-4 text-center text-xs text-slate-400">
-                        Eşleşen kategori bulunamadı. Lütfen başka bir anahtar kelime veya ID deneyin.
+                        Eşleşen alt kırılım bulunamadı. Lütfen başka bir anahtar kelime veya ID deneyin.
                       </div>
                     ) : (
-                      searchedTaxonomyCategories.map(cat => (
-                        <div
-                          key={cat.id}
-                          onClick={() => handleSelectAllegroCategory(cat)}
-                          className={`p-2.5 rounded-xl cursor-pointer transition-colors flex items-center justify-between gap-3 ${
-                            cat.id === allegroCategoryId
-                              ? 'bg-orange-50 border border-orange-300'
-                              : 'hover:bg-slate-50 border border-transparent'
-                          }`}
-                        >
-                          <div className="space-y-0.5">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-slate-900">
-                                🇵🇱 {cat.namePl}
-                              </span>
-                              <span className="text-xs font-semibold text-orange-700">
-                                (🇹🇷 {cat.nameTr})
-                              </span>
-                              <span className="text-[11px] text-slate-500">
-                                / 🇬🇧 {cat.nameEn}
-                              </span>
-                            </div>
-                            <div className="text-[10px] text-slate-400 font-mono">
-                              {cat.path}
-                            </div>
-                          </div>
+                      searchedTaxonomyCategories.map(cat => {
+                        const pathSegments = (cat.path || '').split('>').map(s => s.trim());
+                        return (
+                          <div
+                            key={cat.id}
+                            onClick={() => handleSelectAllegroCategory(cat)}
+                            className={`p-3 rounded-xl cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
+                              cat.id === allegroCategoryId
+                                ? 'bg-orange-50/90 border-2 border-orange-500 shadow-xs'
+                                : 'hover:bg-slate-50 border border-slate-100 hover:border-slate-300'
+                            }`}
+                          >
+                            <div className="space-y-1.5 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-xs font-black text-slate-900">
+                                  🇵🇱 {cat.namePl}
+                                </span>
+                                <span className="text-xs font-bold text-orange-700">
+                                  (🇹🇷 {cat.nameTr})
+                                </span>
+                                <span className="text-[11px] text-slate-500 font-medium">
+                                  / 🇬🇧 {cat.nameEn}
+                                </span>
+                              </div>
 
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono text-[10px] font-bold">
-                              ID: {cat.id}
-                            </span>
-                            {cat.id === allegroCategoryId && (
-                              <CheckCircle className="w-4 h-4 text-emerald-600" />
-                            )}
+                              {/* Hiyerarşik Alt Kırılım Yolu Adımları (Breadcrumb Badges) */}
+                              <div className="flex flex-wrap items-center gap-1 text-[10px] font-mono">
+                                <span className="text-slate-400 font-sans font-bold text-[9px] uppercase tracking-wider">Hiyerarşi:</span>
+                                {pathSegments.map((seg, sIdx) => (
+                                  <React.Fragment key={sIdx}>
+                                    <span className={`px-1.5 py-0.5 rounded font-medium ${
+                                      sIdx === pathSegments.length - 1
+                                        ? 'bg-emerald-100 text-emerald-800 font-bold'
+                                        : sIdx === 0
+                                        ? 'bg-slate-100 text-slate-700 font-semibold'
+                                        : 'bg-orange-100/80 text-orange-900'
+                                    }`}>
+                                      {seg}
+                                    </span>
+                                    {sIdx < pathSegments.length - 1 && (
+                                      <span className="text-slate-300">›</span>
+                                    )}
+                                  </React.Fragment>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                              <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-800 font-mono text-[11px] font-bold">
+                                ID: {cat.id}
+                              </span>
+                              {cat.id === allegroCategoryId ? (
+                                <CheckCircle className="w-4 h-4 text-emerald-600" />
+                              ) : (
+                                <span className="px-2 py-1 rounded-lg bg-orange-50 text-orange-700 text-[10px] font-bold border border-orange-200">
+                                  Seç & Uygula
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>
@@ -1864,7 +2005,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                           <option value="">Seçiniz...</option>
                           {param.options.map((opt, i) => (
                             <option key={i} value={opt}>
-                              {opt}
+                              {formatAllegroOptionLabel(opt)}
                             </option>
                           ))}
                         </select>

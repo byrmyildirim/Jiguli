@@ -1011,7 +1011,7 @@ export const CreateOfferModal: React.FC<CreateOfferModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-xs animate-in fade-in overflow-y-auto">
-      <div className={`border rounded-3xl w-full max-w-5xl overflow-hidden shadow-2xl transition-all my-auto flex flex-col max-h-[94vh] ${
+      <div className={`border rounded-3xl w-full max-w-[98vw] 2xl:max-w-[1600px] overflow-hidden shadow-2xl transition-all my-auto flex flex-col max-h-[96vh] ${
         isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-slate-200 text-slate-900'
       }`}>
         {/* Modal Header */}
