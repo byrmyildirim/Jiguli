@@ -97,7 +97,7 @@ export const AliExpressSourcingView: React.FC<AliExpressSourcingViewProps> = ({
 
   // Drag and Drop & AI Key Modal States
   const [isDragging, setIsDragging] = useState(false);
-  const [aiConfig, setAiConfig] = useState<{ isConfigured: boolean; maskedKey: string; activeModel: string } | null>(null);
+  const [aiConfig, setAiConfig] = useState<{ isConfigured: boolean; maskedKey: string; activeModel: string; activeProvider?: string } | null>(null);
   const [showAiKeyModal, setShowAiKeyModal] = useState(false);
   const [inputApiKey, setInputApiKey] = useState('');
   const [isSavingKey, setIsSavingKey] = useState(false);
@@ -123,19 +123,23 @@ export const AliExpressSourcingView: React.FC<AliExpressSourcingViewProps> = ({
 
   const handleSaveApiKey = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputApiKey.trim()) return;
+    const cleanKey = inputApiKey.trim();
+    if (!cleanKey) return;
     setIsSavingKey(true);
     setKeySaveMessage(null);
     try {
-      const res = await fetch('/api/ai/config', {
+      const endpoint = cleanKey.startsWith('sk-') ? '/api/ai/qwen/config' : '/api/ai/config';
+      const body = cleanKey.startsWith('sk-') ? { apiKey: cleanKey, model: 'qwen-vl-max' } : { apiKey: cleanKey };
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: inputApiKey.trim() })
+        body: JSON.stringify(body)
       });
       const data = await res.json();
       if (data.success) {
-        localStorage.setItem('jiguli_gemini_api_key', inputApiKey.trim());
-        setKeySaveMessage({ text: data.message || 'Gemini API Anahtarı başarıyla doğrulandı ve kaydedildi!' });
+        localStorage.setItem('jiguli_qwen_api_key', cleanKey);
+        localStorage.setItem('jiguli_gemini_api_key', cleanKey);
+        setKeySaveMessage({ text: data.message || 'Yapay Zeka (AI) API Anahtarı başarıyla doğrulandı ve kaydedildi!' });
         await refreshAiConfig();
         setTimeout(() => {
           setShowAiKeyModal(false);
@@ -361,7 +365,7 @@ export const AliExpressSourcingView: React.FC<AliExpressSourcingViewProps> = ({
     setPublishResult(null);
     setShowLiveTerminal(false);
 
-    setScanningStep('Görsel Gemini Vision AI ile analiz ediliyor...');
+    setScanningStep('Görsel Alibaba Qwen VL / Vision AI ile analiz ediliyor...');
     const stepTimer1 = setTimeout(() => {
       setScanningStep('AliExpress pazarında canlı ilanlar ve tedarikçiler taranıyor...');
     }, 800);
@@ -434,7 +438,7 @@ export const AliExpressSourcingView: React.FC<AliExpressSourcingViewProps> = ({
           <h1 className="text-2xl sm:text-3xl font-black text-[#14171A] tracking-tight flex items-center gap-2">
             <span>Canlı Ürün Bul, İncele & Pazaryerlerine Aktar</span>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#9FE870]/40 text-[#163300]">
-              Gemini Vision & Live API
+              Qwen VL Vision & Live AI
             </span>
           </h1>
           <p className="text-xs sm:text-sm text-[#5D7079] mt-1">
@@ -511,12 +515,12 @@ export const AliExpressSourcingView: React.FC<AliExpressSourcingViewProps> = ({
           <div>
             <div className="text-xs font-bold text-[#14171A] flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-              <span>{aiConfig?.isConfigured ? 'Gemini 2.5 Vision AI Aktif' : 'Gemini AI Vision Standby (Akıllı Eşleme Devrede)'}</span>
+              <span>{aiConfig?.isConfigured ? `Alibaba Qwen / ${aiConfig.activeModel} AI Vision Aktif` : 'Alibaba Qwen VL AI Standby (Akıllı Eşleme Devrede)'}</span>
             </div>
             <div className="text-[11px] text-[#5D7079]">
               {aiConfig?.isConfigured
-                ? `Model: ${aiConfig.activeModel} • Anahtar: ${aiConfig.maskedKey} (Canlı görsel analizi hazır)`
-                : 'Google Gemini API anahtarınızı tanımlayarak fotoğrafları yapay zeka ile %100 doğrulukla analiz edin.'}
+                ? `Motor: ${aiConfig.activeProvider === 'qwen' ? 'Alibaba Qwen' : 'Google Gemini'} (${aiConfig.activeModel}) • Anahtar: ${aiConfig.maskedKey}`
+                : 'Alibaba Qwen veya Google Gemini API anahtarınızı tanımlayarak fotoğrafları yapay zeka ile %100 doğrulukla analiz edin.'}
             </div>
           </div>
         </div>
@@ -774,6 +778,17 @@ export const AliExpressSourcingView: React.FC<AliExpressSourcingViewProps> = ({
                 <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
               </a>
             </div>
+          </div>
+
+          {/* Unique/Custom Product Sourcing Notice */}
+          <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-xs space-y-1.5 text-amber-950">
+            <div className="font-bold flex items-center gap-1.5 text-amber-900">
+              <Sparkles className="w-4 h-4 text-amber-700 shrink-0" />
+              <span>Görsel Arama ve Özgün Ürün Analizi Bilgilendirmesi</span>
+            </div>
+            <p className="text-[11.5px] text-amber-900/90 leading-relaxed">
+              Yüklediğiniz görsel kendi markanıza ait özgün veya özel üretim bir ürün ise, AliExpress üzerinde bu ürünün birebir (1:1) ilan kaydı bulunmaz. Yapay Zeka (Qwen VL / Gemini Vision), ürününüzün kategorisini, materyalini ve işlevini analiz ederek AliExpress'teki <strong>en yakın muadil ürün arama terimini (SearchText)</strong> belirler. <strong>"AliExpress'te Canlı Aç"</strong> butonu, bu kategorideki fason tedarikçileri ve muadil ürünleri AliExpress üzerinde aratır.
+            </p>
           </div>
 
           {/* Multilingual Title Editor with English as Primary Default */}
@@ -1307,14 +1322,14 @@ export const AliExpressSourcingView: React.FC<AliExpressSourcingViewProps> = ({
         </div>
       )}
 
-      {/* Gemini AI Key Setup Modal */}
+      {/* Qwen / Gemini AI Key Setup Modal */}
       {showAiKeyModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
           <div className="bg-white rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl border border-slate-200">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2 font-bold text-sm text-[#14171A]">
                 <Sparkles className="w-4 h-4 text-emerald-600" />
-                <span>Google Gemini AI Vision Kurulumu</span>
+                <span>Yapay Zeka (AI) Görsel Motoru Kurulumu</span>
               </div>
               <button
                 type="button"
@@ -1327,25 +1342,38 @@ export const AliExpressSourcingView: React.FC<AliExpressSourcingViewProps> = ({
 
             <div className="text-xs text-[#5D7079] leading-relaxed space-y-2">
               <p>
-                Görselleri fotoğraf veya ekran görüntüsüyle %100 doğrulukla aramak ve AliExpress ile eşleştirmek için Google Gemini API anahtarı gereklidir.
+                Görselleri fotoğraf veya ekran görüntüsüyle %100 doğrulukla aramak ve AliExpress ile eşleştirmek için Alibaba Qwen veya Google Gemini API anahtarı gereklidir.
               </p>
-              <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 text-emerald-900 text-[11px] space-y-1">
+              <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 text-emerald-900 text-[11px] space-y-2">
                 <div className="font-bold flex items-center gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Ücretsiz ve Hızlı:</span>
+                  <span>Desteklenen API Anahtarları:</span>
                 </div>
-                <div>
-                  Google AI Studio'dan tamamen ücretsiz API anahtarı alabilirsiniz.
+                <div className="space-y-1">
+                  <div>• <strong>Alibaba Qwen API Key:</strong> DashScope console (sk-...)</div>
+                  <div>• <strong>Google Gemini API Key:</strong> AI Studio (AIzaSy...)</div>
                 </div>
-                <a
-                  href="https://aistudio.google.com/app/apikey"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-bold text-emerald-700 underline inline-flex items-center gap-1 hover:text-emerald-800 pt-0.5"
-                >
-                  <span>Ücretsiz Gemini API Anahtarı Al (aistudio.google.com)</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
+                <div className="flex items-center gap-3 pt-1 border-t border-emerald-200/60">
+                  <a
+                    href="https://dashscope.console.aliyun.com/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-bold text-emerald-700 underline inline-flex items-center gap-1 hover:text-emerald-800"
+                  >
+                    <span>Qwen Key Al</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                  <span className="text-slate-300">•</span>
+                  <a
+                    href="https://aistudio.google.com/app/apikey"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-bold text-emerald-700 underline inline-flex items-center gap-1 hover:text-emerald-800"
+                  >
+                    <span>Gemini Key Al</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
               </div>
             </div>
 
@@ -1353,14 +1381,14 @@ export const AliExpressSourcingView: React.FC<AliExpressSourcingViewProps> = ({
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-[#14171A] flex items-center gap-1.5">
                   <Key className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Gemini API Key:</span>
+                  <span>Alibaba Qwen / Gemini API Key:</span>
                 </label>
                 <input
                   type="password"
                   required
                   value={inputApiKey}
                   onChange={(e) => setInputApiKey(e.target.value)}
-                  placeholder="AIzaSy... ile başlayan anahtarı yapıştırın"
+                  placeholder="sk-... veya AIzaSy... anahtarınızı girin"
                   className="w-full bg-[#FAFBFC] border border-slate-200 rounded-2xl px-4 py-3 text-xs text-[#14171A] focus:outline-none focus:ring-2 focus:ring-[#14171A] font-mono"
                 />
               </div>

@@ -36,7 +36,14 @@ import {
   KeyRound,
   Copy,
   Package,
-  Camera
+  Camera,
+  Database,
+  Lock,
+  Eye,
+  EyeOff,
+  Wrench,
+  ServerCrash,
+  Bot
 } from 'lucide-react';
 import { store } from '../../services/marketplaceStore';
 import { SUPPORTED_CURRENCIES, EXCHANGE_RATES, CURRENCY_SYMBOLS } from '../../services/allegroData';
@@ -75,11 +82,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
   const [editingSlogan, setEditingSlogan] = useState(false);
   const [sloganInput, setSloganInput] = useState<string>(store.getSlogan());
 
+  const [logoUrl, setLogoUrl] = useState<string>(store.getLogoUrl());
+  const [editingLogo, setEditingLogo] = useState(false);
+  const [logoInput, setLogoInput] = useState<string>(store.getLogoUrl());
+  const [isSavingBranding, setIsSavingBranding] = useState(false);
+
   // Company & Tax Info State
   const [companyTax, setCompanyTax] = useState<CompanyTaxInfo>(store.getCompanyTaxInfo());
   const [isSavingTaxInfo, setIsSavingTaxInfo] = useState(false);
 
-  // Gemini AI Vision Configuration State
+  // Gemini & Qwen AI Vision Configuration State
+  const [activeAiProvider, setActiveAiProvider] = useState<'gemini' | 'qwen'>('qwen');
+  const [isSwitchingProvider, setIsSwitchingProvider] = useState(false);
+
   const [aiConfig, setAiConfig] = useState<{ hasKey: boolean; maskedKey: string; source: string; model: string }>({
     hasKey: false,
     maskedKey: '',
@@ -89,6 +104,88 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
   const [aiApiKeyInput, setAiApiKeyInput] = useState('');
   const [isSavingAiKey, setIsSavingAiKey] = useState(false);
   const [aiTestResult, setAiTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // Qwen (Alibaba DashScope) AI State
+  const [qwenApiKeyInput, setQwenApiKeyInput] = useState('');
+  const [qwenSelectedModel, setQwenSelectedModel] = useState('qwen-max');
+  const [qwenConfig, setQwenConfig] = useState<{ isConfigured: boolean; maskedKey: string; activeModel: string }>({
+    isConfigured: false,
+    maskedKey: '',
+    activeModel: 'qwen-max'
+  });
+  const [isSavingQwenKey, setIsSavingQwenKey] = useState(false);
+  const [qwenTestResult, setQwenTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // MySQL Database Configuration State (Production / Live)
+  const [dbConfig, setDbConfig] = useState<{
+    host: string;
+    port: number;
+    database: string;
+    user: string;
+    prefix: string;
+    ssl: boolean;
+    charset: string;
+    hasPassword: boolean;
+    maskedPassword: string;
+    source: string;
+    supportedSecrets?: Array<{ name: string; desc: string }>;
+  }>({
+    host: '127.0.0.1',
+    port: 3306,
+    database: 'u162532946_connect',
+    user: 'u162532946_connect',
+    prefix: 'cnt_',
+    ssl: false,
+    charset: 'utf8mb4',
+    hasPassword: true,
+    maskedPassword: '••••',
+    source: 'default'
+  });
+
+  const [dbForm, setDbForm] = useState({
+    host: '127.0.0.1',
+    port: '3306',
+    database: 'u162532946_connect',
+    user: 'u162532946_connect',
+    password: '',
+    prefix: 'cnt_',
+    ssl: false,
+    charset: 'utf8mb4'
+  });
+
+  const [showDbPassword, setShowDbPassword] = useState(false);
+  const [quickDbUrl, setQuickDbUrl] = useState('');
+  const [isTestingDb, setIsTestingDb] = useState(false);
+  const [isSavingDb, setIsSavingDb] = useState(false);
+  const [isRepairingDb, setIsRepairingDb] = useState(false);
+  const [isRefreshingDbStatus, setIsRefreshingDbStatus] = useState(false);
+  const [showSecretsHelp, setShowSecretsHelp] = useState(false);
+  const [copiedSecret, setCopiedSecret] = useState<string | null>(null);
+
+  const [dbTestResult, setDbTestResult] = useState<{
+    success: boolean;
+    message: string;
+    latencyMs?: number;
+    serverVersion?: string;
+    totalTablesCount?: number;
+    matchingPrefixCount?: number;
+    detectedPrefix?: string;
+    errorCode?: string;
+  } | null>(null);
+
+  const [dbStatus, setDbStatus] = useState<{
+    isConnected: boolean;
+    serverVersion?: string;
+    latencyMs?: number;
+    totalRecords: number;
+    tableStatuses: Array<{
+      tableName: string;
+      displayName: string;
+      recordCount: number;
+      exists: boolean;
+    }>;
+    errorMessage?: string;
+  } | null>(null);
 
   // Integration Tabs
   const [activeIntegrationTab, setActiveIntegrationTab] = useState<'ALL' | 'EMAG' | 'BASELINKER' | 'ALLEGRO'>('ALL');
@@ -162,6 +259,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
 
   // Status & Feedback per platform
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
+
+  const showNotice = (msg: string) => {
+    setSaveNotice(msg);
+    setTimeout(() => setSaveNotice(null), 3500);
+  };
+
   const [testingPlatform, setTestingPlatform] = useState<MarketplaceId | null>(null);
   const [pingStatus, setPingStatus] = useState<Record<string, { message: string; isError: boolean; status?: number; durationMs?: number } | null>>({});
   const [copiedPayload, setCopiedPayload] = useState(false);
@@ -169,6 +272,179 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
   const [clientIp, setClientIp] = useState<string>('');
   const [copiedIp, setCopiedIp] = useState(false);
   const [copiedClientIp, setCopiedClientIp] = useState(false);
+
+  const fetchDbConfigAndStatus = async () => {
+    try {
+      setIsRefreshingDbStatus(true);
+      const [cfgRes, statusRes] = await Promise.all([
+        fetch('/api/mysql/config').then(r => r.json()).catch(() => null),
+        fetch('/api/mysql/status').then(r => r.json()).catch(() => null)
+      ]);
+
+      if (cfgRes?.success && cfgRes.config) {
+        setDbConfig(cfgRes.config);
+        setDbForm(prev => ({
+          ...prev,
+          host: cfgRes.config.host || prev.host,
+          port: String(cfgRes.config.port || '3306'),
+          database: cfgRes.config.database || prev.database,
+          user: cfgRes.config.user || prev.user,
+          prefix: cfgRes.config.prefix || prev.prefix,
+          ssl: Boolean(cfgRes.config.ssl),
+          charset: cfgRes.config.charset || prev.charset
+        }));
+      }
+
+      if (statusRes) {
+        setDbStatus(statusRes);
+      }
+    } catch (err) {
+      console.warn('[Fetch DB Settings Error]:', err);
+    } finally {
+      setIsRefreshingDbStatus(false);
+    }
+  };
+
+  const handleApplyQuickUrl = () => {
+    if (!quickDbUrl.trim()) return;
+    try {
+      const url = new URL(quickDbUrl.trim());
+      setDbForm(prev => ({
+        ...prev,
+        host: url.hostname || prev.host,
+        port: url.port || '3306',
+        database: url.pathname.replace(/^\//, '') || prev.database,
+        user: decodeURIComponent(url.username || '') || prev.user,
+        password: decodeURIComponent(url.password || '') || prev.password,
+        ssl: url.searchParams.get('ssl') === 'true' || url.searchParams.get('sslmode') === 'require' || prev.ssl
+      }));
+      showNotice('Bağlantı URL bilgileri form alanlarına aktarıldı!');
+    } catch {
+      setDbTestResult({
+        success: false,
+        message: 'Geçersiz bağlantı URL formatı. Örnek: mysql://kullanici:sifre@host:3306/veritabani'
+      });
+    }
+  };
+
+  const handleTestDbConnection = async () => {
+    setIsTestingDb(true);
+    setDbTestResult(null);
+    try {
+      const res = await fetch('/api/mysql/test-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          host: dbForm.host,
+          port: Number(dbForm.port) || 3306,
+          database: dbForm.database,
+          user: dbForm.user,
+          password: dbForm.password,
+          prefix: dbForm.prefix,
+          ssl: dbForm.ssl,
+          charset: dbForm.charset
+        })
+      });
+      const data = await res.json();
+      setDbTestResult(data);
+      if (data.success) {
+        showNotice('Veritabanı bağlantı testi başarılı!');
+      }
+    } catch (err: any) {
+      setDbTestResult({
+        success: false,
+        message: `Bağlantı testi hatası: ${err?.message || err}`
+      });
+    } finally {
+      setIsTestingDb(false);
+    }
+  };
+
+  const handleSaveDbConfig = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setIsSavingDb(true);
+    setDbTestResult(null);
+    try {
+      const res = await fetch('/api/mysql/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          host: dbForm.host,
+          port: Number(dbForm.port) || 3306,
+          database: dbForm.database,
+          user: dbForm.user,
+          password: dbForm.password,
+          prefix: dbForm.prefix,
+          ssl: dbForm.ssl,
+          charset: dbForm.charset
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (data.config) setDbConfig(data.config);
+        if (data.status) setDbStatus(data.status);
+        if (data.testResult) setDbTestResult(data.testResult);
+        showNotice('MySQL veritabanı ayarları başarıyla kaydedildi!');
+        // Refresh master catalog in store
+        store.initFromDatabase();
+      } else {
+        setDbTestResult({
+          success: false,
+          message: data.message || 'Veritabanı ayarları kaydedilemedi.'
+        });
+      }
+    } catch (err: any) {
+      setDbTestResult({
+        success: false,
+        message: `Kayıt hatası: ${err?.message || err}`
+      });
+    } finally {
+      setIsSavingDb(false);
+    }
+  };
+
+  const handleInitDbTables = async () => {
+    setIsRepairingDb(true);
+    try {
+      const res = await fetch('/api/mysql/init-tables', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          host: dbForm.host,
+          port: Number(dbForm.port) || 3306,
+          database: dbForm.database,
+          user: dbForm.user,
+          password: dbForm.password,
+          prefix: dbForm.prefix,
+          ssl: dbForm.ssl,
+          charset: dbForm.charset
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showNotice(data.message || 'Tablolar başarıyla kontrol edildi ve onarıldı!');
+        await fetchDbConfigAndStatus();
+      } else {
+        setDbTestResult({
+          success: false,
+          message: data.message || 'Tablo onarımı gerçekleştirilemedi.'
+        });
+      }
+    } catch (err: any) {
+      setDbTestResult({
+        success: false,
+        message: `Tablo onarım hatası: ${err?.message || err}`
+      });
+    } finally {
+      setIsRepairingDb(false);
+    }
+  };
+
+  const handleCopySecret = (name: string) => {
+    navigator.clipboard?.writeText(name);
+    setCopiedSecret(name);
+    setTimeout(() => setCopiedSecret(null), 2000);
+  };
 
   useEffect(() => {
     fetch('/api/system/server-ip')
@@ -182,9 +458,29 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
     fetch('/api/ai/config')
       .then(r => r.json())
       .then(d => {
-        if (d) setAiConfig(d);
+        if (d && d.success) {
+          if (d.activeProvider) setActiveAiProvider(d.activeProvider);
+          if (d.gemini) {
+            setAiConfig({
+              hasKey: d.gemini.isConfigured,
+              maskedKey: d.gemini.maskedKey,
+              source: 'database',
+              model: d.gemini.activeModel || 'gemini-2.5-flash'
+            });
+          }
+          if (d.qwen) {
+            setQwenConfig({
+              isConfigured: d.qwen.isConfigured,
+              maskedKey: d.qwen.maskedKey,
+              activeModel: d.qwen.activeModel || 'qwen-max'
+            });
+            if (d.qwen.activeModel) setQwenSelectedModel(d.qwen.activeModel);
+          }
+        }
       })
       .catch(() => {});
+
+    fetchDbConfigAndStatus();
   }, []);
 
   const [tcmbData, setTcmbData] = useState<TCMBData | null>(tcmbService.getData());
@@ -192,7 +488,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
 
   useEffect(() => {
     const unsubStore = store.subscribe(() => {
+      setBrandName(store.getBrandName());
       setSlogan(store.getSlogan());
+      setLogoUrl(store.getLogoUrl());
       setActiveCurrency(store.getActiveCurrency());
       setCreds(store.getPlatformCredentials());
     });
@@ -275,32 +573,91 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
     'Global Trade Hub'
   ];
 
-  const handleSaveBrandName = () => {
+  const handleSaveBrandName = async () => {
     const val = brandNameInput.trim() || 'Jiguli';
-    store.setBrandName(val);
-    setEditingBrandName(false);
-    showNotice(`Marka adı "${val}" olarak başarıyla kaydedildi!`);
+    setIsSavingBranding(true);
+    try {
+      await store.setBranding({ brandName: val });
+      setEditingBrandName(false);
+      showNotice(`Marka adı "${val}" olarak veritabanına kaydedildi!`);
+    } catch {
+      showNotice('Marka adı kaydedildi.');
+    } finally {
+      setIsSavingBranding(false);
+    }
   };
 
-  const handleSelectPresetBrand = (preset: string) => {
+  const handleSelectPresetBrand = async (preset: string) => {
     setBrandNameInput(preset);
-    store.setBrandName(preset);
-    setEditingBrandName(false);
-    showNotice(`Marka adı "${preset}" olarak ayarlandı!`);
+    setIsSavingBranding(true);
+    try {
+      await store.setBranding({ brandName: preset });
+      setEditingBrandName(false);
+      showNotice(`Marka adı "${preset}" olarak veritabanına kaydedildi!`);
+    } finally {
+      setIsSavingBranding(false);
+    }
   };
 
-  const handleSaveSlogan = () => {
+  const handleSaveSlogan = async () => {
     const val = sloganInput.trim() || 'Küresel Pazaryeri Entegrasyon & Otomasyon Suite';
-    store.setSlogan(val);
-    setEditingSlogan(false);
-    showNotice('Kurumsal slogan başarıyla güncellendi!');
+    setIsSavingBranding(true);
+    try {
+      await store.setBranding({ slogan: val });
+      setEditingSlogan(false);
+      showNotice('Kurumsal slogan başarıyla veritabanına kaydedildi!');
+    } finally {
+      setIsSavingBranding(false);
+    }
   };
 
-  const handleSelectPresetSlogan = (preset: string) => {
+  const handleSelectPresetSlogan = async (preset: string) => {
     setSloganInput(preset);
-    store.setSlogan(preset);
-    setEditingSlogan(false);
-    showNotice(`Slogan güncellendi: "${preset}"`);
+    setIsSavingBranding(true);
+    try {
+      await store.setBranding({ slogan: preset });
+      setEditingSlogan(false);
+      showNotice(`Slogan veritabanına kaydedildi: "${preset}"`);
+    } finally {
+      setIsSavingBranding(false);
+    }
+  };
+
+  const handleSaveLogo = async () => {
+    const val = logoInput.trim();
+    setIsSavingBranding(true);
+    try {
+      await store.setBranding({ logoUrl: val });
+      setEditingLogo(false);
+      showNotice(val ? 'Logo başarıyla veritabanına kaydedildi!' : 'Varsayılan logo (↗) geri yüklendi.');
+    } finally {
+      setIsSavingBranding(false);
+    }
+  };
+
+  const handleLogoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      showNotice('Logo görseli boyutu en fazla 2MB olmalıdır.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+      setLogoInput(dataUrl);
+      setEditingLogo(true);
+      await store.setBranding({ logoUrl: dataUrl });
+      showNotice('Özel logo görseli başarıyla yüklendi ve veritabanına kaydedildi!');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleResetLogo = async () => {
+    setLogoInput('');
+    await store.setBranding({ logoUrl: '' });
+    setEditingLogo(false);
+    showNotice('Logo varsayılan (↗) haline getirildi.');
   };
 
   const handleSaveCompanyTax = () => {
@@ -342,6 +699,58 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
       setAiTestResult({ success: false, message: 'Bağlantı hatası: ' + (err.message || err) });
     } finally {
       setIsSavingAiKey(false);
+    }
+  };
+
+  const handleSwitchAiProvider = async (provider: 'gemini' | 'qwen') => {
+    setIsSwitchingProvider(true);
+    try {
+      const res = await fetch('/api/ai/provider', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setActiveAiProvider(provider);
+        showNotice(`Aktif AI motoru ${provider === 'qwen' ? 'Alibaba Qwen' : 'Google Gemini'} olarak ayarlandı!`);
+      }
+    } catch (err: any) {
+      showNotice('AI motoru değiştirilemedi: ' + (err.message || err));
+    } finally {
+      setIsSwitchingProvider(false);
+    }
+  };
+
+  const handleSaveQwenKey = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const key = qwenApiKeyInput.trim();
+    if (!key) return;
+    setIsSavingQwenKey(true);
+    setQwenTestResult(null);
+    try {
+      const res = await fetch('/api/ai/qwen/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: key, model: qwenSelectedModel })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setQwenTestResult({ success: true, message: data.message });
+        setQwenConfig({
+          isConfigured: true,
+          maskedKey: key.slice(0, 6) + '...' + key.slice(-4),
+          activeModel: qwenSelectedModel
+        });
+        localStorage.setItem('JIGULI_QWEN_API_KEY', key);
+        showNotice('Alibaba Qwen API anahtarı ve modeli başarıyla doğrulandı ve kaydedildi!');
+      } else {
+        setQwenTestResult({ success: false, message: data.message || 'Qwen API anahtarı doğrulanamadı.' });
+      }
+    } catch (err: any) {
+      setQwenTestResult({ success: false, message: 'Bağlantı hatası: ' + (err.message || err) });
+    } finally {
+      setIsSavingQwenKey(false);
     }
   };
 
@@ -858,11 +1267,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
     }
   };
 
-  const showNotice = (msg: string) => {
-    setSaveNotice(msg);
-    setTimeout(() => setSaveNotice(null), 3000);
-  };
-
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       {/* Header */}
@@ -1079,10 +1483,101 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
             </div>
           </div>
         </div>
+
+        {/* 1.3 Panel Logosu & Simge Yönetimi */}
+        <div className="space-y-3 border-t border-slate-100 dark:border-zinc-800 pt-4">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
+              <Camera className="w-3.5 h-3.5 text-slate-500" />
+              <span>Panel Logosu & Özel Simge:</span>
+            </label>
+            <span className="text-[10px] text-slate-400">Menü ve Giriş ekranında görüntülenir</span>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            {/* Live Logo Preview Box */}
+            <div className="w-14 h-14 rounded-2xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt="Panel Logo"
+                  className="w-10 h-10 object-contain max-h-10 rounded-lg"
+                  onError={() => {
+                    showNotice('Logo bağlantısı yüklenemedi, lütfen geçerli bir URL girin.');
+                  }}
+                />
+              ) : (
+                <span className="text-2xl font-bold brand-logo-arrow text-[#14171A] dark:text-white select-none">
+                  ↗
+                </span>
+              )}
+            </div>
+
+            {/* Controls */}
+            <div className="flex-1 space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={editingLogo ? logoInput : logoUrl}
+                  onChange={(e) => {
+                    setEditingLogo(true);
+                    setLogoInput(e.target.value);
+                  }}
+                  placeholder="Logo Resim URL'si (örn: https://... veya data:image/...)"
+                  className="flex-1 border border-slate-200 dark:border-zinc-700 focus:border-[#14171A] dark:focus:border-white rounded-xl p-2.5 text-xs font-mono focus:outline-none bg-slate-50 dark:bg-zinc-800 text-[#14171A] dark:text-white"
+                />
+                {editingLogo ? (
+                  <button
+                    type="button"
+                    onClick={handleSaveLogo}
+                    disabled={isSavingBranding}
+                    className="bg-[#14171A] dark:bg-white text-white dark:text-black px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-black transition-colors cursor-pointer shadow-2xs shrink-0"
+                  >
+                    Kaydet
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setEditingLogo(true)}
+                    className="bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-[#14171A] dark:text-white px-3.5 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Değiştir</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Upload & Reset Buttons */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <label className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs">
+                  <UploadCloud className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Logo Görseli Yükle (PNG/SVG)</span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                    onChange={handleLogoFileUpload}
+                    className="hidden"
+                  />
+                </label>
+
+                {logoUrl && (
+                  <button
+                    type="button"
+                    onClick={handleResetLogo}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Varsayılan Oku Kullan (↗)</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* 1.5. Google Gemini AI Vision (Görselle Ürün Arama) Yapılandırması */}
-      <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-2xs space-y-4">
+      {/* 1.5. Yapay Zeka (AI) Motoru Yapılandırması (Google Gemini & Alibaba Qwen Dual Engine) */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-2xs space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-zinc-800 pb-3">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
@@ -1091,57 +1586,94 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-sm font-bold text-[#14171A] dark:text-zinc-100">
-                  Google Gemini AI Vision & Görselle Ürün Arama
+                  Yapay Zeka (AI) Motoru Yapılandırması (Google Gemini & Alibaba Qwen)
                 </h2>
-                {aiConfig.hasKey ? (
-                  <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-800">
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
-                    {aiConfig.model} Aktif ({aiConfig.source === 'database' ? 'MySQL cnt_db_config' : aiConfig.source})
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800">
-                    <AlertTriangle className="w-3 h-3 text-amber-600" />
-                    API Key Yapılandırılmadı (Kategori Sentezi Aktif)
-                  </span>
-                )}
+                <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-800">
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+                  Aktif Motor: {activeAiProvider === 'qwen' ? `Alibaba Qwen (${qwenConfig.activeModel})` : `Google Gemini (${aiConfig.model})`}
+                </span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
-                Yüklenen ürün fotoğraflarını ve ekran görüntülerini derinlemesine analiz ederek AliExpress toptancı linkleri, Lehçe/Rumence optimize başlıklar ve e-ticaret parametreleri üretir.
+                Ürün fotoğrafları ve metin analizinde kullanılacak yapay zeka sağlayıcısını seçin. Görselle ürün arama, otomatik çeviri ve e-ticaret parametre sentezi sunar.
               </p>
             </div>
           </div>
+
+          {/* Provider Switcher Buttons */}
+          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-zinc-800 p-1 rounded-2xl border border-slate-200 dark:border-zinc-700 shrink-0">
+            <button
+              type="button"
+              disabled={isSwitchingProvider}
+              onClick={() => handleSwitchAiProvider('gemini')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeAiProvider === 'gemini'
+                  ? 'bg-white dark:bg-zinc-900 text-purple-700 dark:text-purple-300 shadow-2xs'
+                  : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+              <span>Google Gemini</span>
+            </button>
+            <button
+              type="button"
+              disabled={isSwitchingProvider}
+              onClick={() => handleSwitchAiProvider('qwen')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeAiProvider === 'qwen'
+                  ? 'bg-white dark:bg-zinc-900 text-amber-700 dark:text-amber-300 shadow-2xs'
+                  : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Bot className="w-3.5 h-3.5 text-amber-600" />
+              <span>Alibaba Qwen (API)</span>
+            </button>
+          </div>
         </div>
 
-        <form onSubmit={handleSaveAiKey} className="space-y-3 pt-1">
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
-                <Key className="w-3.5 h-3.5 text-purple-600" />
-                <span>Google Gemini API Key:</span>
-              </label>
-              <a
-                href="https://aistudio.google.com/app/apikey"
-                target="_blank"
-                rel="noreferrer"
-                className="text-[11px] font-bold text-purple-600 hover:text-purple-700 dark:text-purple-400 flex items-center gap-1 hover:underline"
-              >
-                <span>Ücretsiz API Anahtarı Alın</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
+        {/* Gemini Provider Config */}
+        <div className={`p-4 rounded-2xl border transition-all ${
+          activeAiProvider === 'gemini'
+            ? 'bg-purple-50/40 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800/60'
+            : 'bg-slate-50/50 dark:bg-zinc-800/40 border-slate-200 dark:border-zinc-800'
+        }`}>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-purple-600" />
+              <span className="text-xs font-bold text-slate-800 dark:text-zinc-100">1. Google Gemini AI Engine</span>
+              {aiConfig.hasKey ? (
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                  ✓ Doğrulandı ({aiConfig.maskedKey})
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                  Anahtar Girilmedi
+                </span>
+              )}
             </div>
+            <a
+              href="https://aistudio.google.com/app/apikey"
+              target="_blank"
+              rel="noreferrer"
+              className="text-[11px] font-bold text-purple-600 hover:underline flex items-center gap-1"
+            >
+              <span>Ücretsiz Gemini Key Al</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
 
+          <form onSubmit={handleSaveAiKey} className="space-y-3">
             <div className="flex items-center gap-2">
               <input
                 type="password"
                 value={aiApiKeyInput}
                 onChange={(e) => setAiApiKeyInput(e.target.value)}
-                placeholder={aiConfig.hasKey ? `Kayıtlı: ${aiConfig.maskedKey} (Değiştirmek için yeni anahtar girin)` : "AIzaSy..."}
-                className="flex-1 border border-slate-200 dark:border-zinc-700 focus:border-purple-600 dark:focus:border-purple-400 rounded-xl p-2.5 text-xs font-mono focus:outline-none bg-slate-50 dark:bg-zinc-800 text-[#14171A] dark:text-white"
+                placeholder={aiConfig.hasKey ? `Kayıtlı: ${aiConfig.maskedKey} (Yeni anahtar girin)` : "AIzaSy..."}
+                className="flex-1 border border-slate-200 dark:border-zinc-700 focus:border-purple-600 rounded-xl p-2.5 text-xs font-mono focus:outline-none bg-white dark:bg-zinc-900 text-[#14171A] dark:text-white"
               />
               <button
                 type="submit"
                 disabled={isSavingAiKey || !aiApiKeyInput.trim()}
-                className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs shrink-0"
+                className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
               >
                 {isSavingAiKey ? (
                   <>
@@ -1151,33 +1683,522 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
                 ) : (
                   <>
                     <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Kaydet & Test Et</span>
+                    <span>Gemini Kaydet</span>
                   </>
                 )}
               </button>
             </div>
+
+            {aiTestResult && (
+              <div className={`p-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+                aiTestResult.success ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/30' : 'bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/30'
+              }`}>
+                {aiTestResult.success ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />}
+                <span>{aiTestResult.message}</span>
+              </div>
+            )}
+          </form>
+        </div>
+
+        {/* Qwen Provider Config */}
+        <div className={`p-4 rounded-2xl border transition-all ${
+          activeAiProvider === 'qwen'
+            ? 'bg-amber-50/40 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/60'
+            : 'bg-slate-50/50 dark:bg-zinc-800/40 border-slate-200 dark:border-zinc-800'
+        }`}>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Bot className="w-4 h-4 text-amber-600" />
+              <span className="text-xs font-bold text-slate-800 dark:text-zinc-100">2. Alibaba Qwen AI Engine (DashScope)</span>
+              {qwenConfig.isConfigured ? (
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                  ✓ Doğrulandı ({qwenConfig.maskedKey})
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                  Anahtar Girilmedi
+                </span>
+              )}
+            </div>
+            <a
+              href="https://dashscope.console.aliyun.com/"
+              target="_blank"
+              rel="noreferrer"
+              className="text-[11px] font-bold text-amber-600 hover:underline flex items-center gap-1"
+            >
+              <span>DashScope Console (Qwen Key)</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
           </div>
 
-          {aiTestResult && (
-            <div className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${
-              aiTestResult.success
-                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-800'
-                : 'bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/30 dark:text-rose-300 dark:border-rose-800'
+          <form onSubmit={handleSaveQwenKey} className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="sm:col-span-1 space-y-1">
+                <label className="text-[11px] font-semibold text-slate-600 dark:text-zinc-400">Qwen Modeli Seçin:</label>
+                <select
+                  value={qwenSelectedModel}
+                  onChange={(e) => setQwenSelectedModel(e.target.value)}
+                  className="w-full border border-slate-200 dark:border-zinc-700 rounded-xl p-2.5 text-xs font-bold bg-white dark:bg-zinc-900 text-[#14171A] dark:text-white"
+                >
+                  <option value="qwen-max">qwen-max (En Yüksek Akıl Yürütme)</option>
+                  <option value="qwen-plus">qwen-plus (Dengeli Hız & Kalite)</option>
+                  <option value="qwen-turbo">qwen-turbo (Ultra Hızlı)</option>
+                  <option value="qwen2.5-72b-instruct">qwen2.5-72b-instruct (Açık Model)</option>
+                  <option value="qwen-vl-max">qwen-vl-max (Görselle Ürün Analizi)</option>
+                </select>
+              </div>
+
+              <div className="sm:col-span-2 space-y-1">
+                <label className="text-[11px] font-semibold text-slate-600 dark:text-zinc-400">Qwen / DashScope API Key:</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="password"
+                    value={qwenApiKeyInput}
+                    onChange={(e) => setQwenApiKeyInput(e.target.value)}
+                    placeholder={qwenConfig.isConfigured ? `Kayıtlı: ${qwenConfig.maskedKey} (Yeni anahtar girin)` : "sk-..."}
+                    className="flex-1 border border-slate-200 dark:border-zinc-700 focus:border-amber-600 rounded-xl p-2.5 text-xs font-mono focus:outline-none bg-white dark:bg-zinc-900 text-[#14171A] dark:text-white"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isSavingQwenKey || !qwenApiKeyInput.trim()}
+                    className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+                  >
+                    {isSavingQwenKey ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Test Ediliyor...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Qwen Kaydet</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {qwenTestResult && (
+              <div className={`p-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+                qwenTestResult.success ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/30' : 'bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/30'
+              }`}>
+                {qwenTestResult.success ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />}
+                <span>{qwenTestResult.message}</span>
+              </div>
+            )}
+          </form>
+        </div>
+
+        <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-zinc-400 pt-1">
+          <Info className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+          <span>
+            API anahtarları ve model seçimleri veritabanına (cnt_db_config) ve sisteme güvenle kaydedilir. Aktif olarak seçilen AI motoru tüm e-ticaret analizlerinde ve sourcing işlemlerinde otomatik olarak kullanılır.
+          </span>
+        </div>
+      </div>
+
+      {/* 1.6. MySQL Canlı Veritabanı Yönetimi & Bağlantı Ayarları (Production / Live DB) */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-2xs space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-zinc-800 pb-4">
+          <div className="flex items-center gap-2.5">
+            <div className={`p-2 rounded-xl border ${
+              dbStatus?.isConnected
+                ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
+                : 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800'
             }`}>
-              {aiTestResult.success ? (
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <Database className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-sm font-bold text-[#14171A] dark:text-zinc-100">
+                  MySQL Canlı Veritabanı Yönetimi & Bağlantı Ayarları
+                </h2>
+                {dbStatus?.isConnected ? (
+                  <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-800">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Canlı MySQL Bağlı ({dbStatus.serverVersion || '8.0'} · {dbStatus.latencyMs ?? 15}ms · {dbStatus.totalRecords} Kayıt)
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800">
+                    <AlertTriangle className="w-3 h-3 text-amber-600" />
+                    Bağlantı Bekliyor / Çevrimdışı ({dbConfig.source === 'env' ? 'AI Studio Secrets' : 'data/db_config.json'})
+                  </span>
+                )}
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-mono bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400">
+                  Önek: {dbForm.prefix || 'cnt_'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                Ürün kataloğu (cnt_products), pazaryeri teklifleri (cnt_offers), siparişler ve API kimlikleri bu veritabanında saklanır. Canlı sunucu bilgilerinizi buradan veya sol Secrets sekmesinden yapılandırabilirsiniz.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={fetchDbConfigAndStatus}
+              disabled={isRefreshingDbStatus}
+              title="Veritabanı durumunu ve tablo sayaçlarını yenile"
+              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingDbStatus ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Durumu Yenile</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowSecretsHelp(prev => !prev)}
+              className="px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+              <span>AI Studio Secrets</span>
+              {showSecretsHelp ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+        </div>
+
+        {/* AI Studio Secrets Helper Banner (Corresponding to user's uploaded Secrets screenshot) */}
+        {showSecretsHelp && (
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-50/70 to-indigo-50/70 dark:from-purple-950/20 dark:to-indigo-950/20 border border-purple-200/80 dark:border-purple-800/60 space-y-3">
+            <div className="flex items-start gap-2.5">
+              <KeyRound className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <h3 className="text-xs font-bold text-purple-900 dark:text-purple-200">
+                  AI Studio "Secrets" Sekmesi ile Kalıcı Ortam Değişkeni Tanımlama
+                </h3>
+                <p className="text-[11px] text-purple-800/80 dark:text-purple-300/80 leading-relaxed">
+                  Sol paneldeki <strong>Secrets</strong> sekmesine (yüklediğiniz ekran görüntüsündeki "+ Add secret" butonuyla) aşağıdaki değişkenleri eklediğinizde, veritabanı ayarlarınız sunucu yeniden başlasa dahi korunur:
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 pt-1">
+              {[
+                { key: 'DB_HOST', val: dbForm.host || '127.0.0.1', desc: 'MySQL Sunucu IP veya Host' },
+                { key: 'DB_PORT', val: dbForm.port || '3306', desc: 'MySQL Port' },
+                { key: 'DB_NAME', val: dbForm.database || 'u162532946_connect', desc: 'Veritabanı Adı' },
+                { key: 'DB_USER', val: dbForm.user || 'u162532946_connect', desc: 'Kullanıcı Adı' },
+                { key: 'DB_PASSWORD', val: '••••••••', desc: 'Veritabanı Şifresi' },
+                { key: 'DB_PREFIX', val: dbForm.prefix || 'cnt_', desc: 'Tablo Öneki' },
+                { key: 'DB_SSL', val: dbForm.ssl ? 'true' : 'false', desc: 'SSL (true/false)' },
+                { key: 'DATABASE_URL', val: `mysql://${dbForm.user || 'user'}:pass@${dbForm.host || 'host'}:${dbForm.port || 3306}/${dbForm.database || 'db'}`, desc: 'Tek Satır URI Alternatifi' },
+              ].map(sec => (
+                <div
+                  key={sec.key}
+                  className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-purple-100 dark:border-zinc-800 flex items-center justify-between gap-1 shadow-2xs"
+                >
+                  <div className="min-w-0">
+                    <span className="block text-[11px] font-mono font-bold text-[#14171A] dark:text-zinc-200 truncate">
+                      {sec.key}
+                    </span>
+                    <span className="block text-[9px] text-slate-400 dark:text-zinc-400 truncate">
+                      {sec.desc}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCopySecret(sec.key)}
+                    className="p-1 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-950/50 text-purple-600 dark:text-purple-400 cursor-pointer shrink-0 transition-colors"
+                    title={`${sec.key} adını kopyala`}
+                  >
+                    {copiedSecret === sec.key ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Quick Connection URL Parser (Optional Fast Input) */}
+        <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-700/80 space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
+              <Terminal className="w-3.5 h-3.5 text-slate-500" />
+              <span>Hızlı Bağlantı URL ile Otomatik Doldur (Opsiyonel):</span>
+            </label>
+            <span className="text-[10px] text-slate-400 font-mono">
+              mysql://user:pass@host:3306/dbname
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={quickDbUrl}
+              onChange={(e) => setQuickDbUrl(e.target.value)}
+              placeholder="mysql://u162532946_connect:sifre@127.0.0.1:3306/u162532946_connect"
+              className="flex-1 border border-slate-200 dark:border-zinc-700 focus:border-emerald-500 rounded-xl p-2 text-xs font-mono focus:outline-none bg-white dark:bg-zinc-900 text-[#14171A] dark:text-white"
+            />
+            <button
+              type="button"
+              onClick={handleApplyQuickUrl}
+              disabled={!quickDbUrl.trim()}
+              className="px-3.5 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 disabled:opacity-50 text-slate-800 dark:text-zinc-200 font-bold text-xs transition-colors cursor-pointer shrink-0"
+            >
+              Alanlara Aktar
+            </button>
+          </div>
+        </div>
+
+        {/* Database Configuration Form */}
+        <form onSubmit={handleSaveDbConfig} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {/* Host */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 flex items-center gap-1">
+                <span>Sunucu IP / Host Adresi:</span>
+                <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={dbForm.host}
+                onChange={(e) => setDbForm(prev => ({ ...prev, host: e.target.value }))}
+                placeholder="127.0.0.1 veya Hostinger IP"
+                className="w-full border border-slate-200 dark:border-zinc-700 focus:border-emerald-500 rounded-xl p-2.5 text-xs font-mono focus:outline-none bg-slate-50 dark:bg-zinc-800 text-[#14171A] dark:text-white"
+              />
+              <span className="text-[10px] text-slate-400">cPanel / Hostinger MySQL IP veya localhost</span>
+            </div>
+
+            {/* Port */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 flex items-center gap-1">
+                <span>Port:</span>
+                <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="number"
+                required
+                value={dbForm.port}
+                onChange={(e) => setDbForm(prev => ({ ...prev, port: e.target.value }))}
+                placeholder="3306"
+                className="w-full border border-slate-200 dark:border-zinc-700 focus:border-emerald-500 rounded-xl p-2.5 text-xs font-mono focus:outline-none bg-slate-50 dark:bg-zinc-800 text-[#14171A] dark:text-white"
+              />
+              <span className="text-[10px] text-slate-400">Varsayılan: 3306</span>
+            </div>
+
+            {/* Database Name */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 flex items-center gap-1">
+                <span>Veritabanı Adı (Database):</span>
+                <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={dbForm.database}
+                onChange={(e) => setDbForm(prev => ({ ...prev, database: e.target.value }))}
+                placeholder="u162532946_connect"
+                className="w-full border border-slate-200 dark:border-zinc-700 focus:border-emerald-500 rounded-xl p-2.5 text-xs font-mono focus:outline-none bg-slate-50 dark:bg-zinc-800 text-[#14171A] dark:text-white"
+              />
+              <span className="text-[10px] text-slate-400">Örn: u162532946_connect</span>
+            </div>
+
+            {/* User */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 flex items-center gap-1">
+                <span>Kullanıcı Adı (User):</span>
+                <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={dbForm.user}
+                onChange={(e) => setDbForm(prev => ({ ...prev, user: e.target.value }))}
+                placeholder="u162532946_connect"
+                className="w-full border border-slate-200 dark:border-zinc-700 focus:border-emerald-500 rounded-xl p-2.5 text-xs font-mono focus:outline-none bg-slate-50 dark:bg-zinc-800 text-[#14171A] dark:text-white"
+              />
+              <span className="text-[10px] text-slate-400">MySQL kullanıcısı</span>
+            </div>
+
+            {/* Password */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 flex items-center justify-between">
+                <span>Veritabanı Şifresi:</span>
+                {dbConfig.hasPassword && !dbForm.password && (
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-normal">
+                    Kayıtlı: {dbConfig.maskedPassword}
+                  </span>
+                )}
+              </label>
+              <div className="relative">
+                <input
+                  type={showDbPassword ? "text" : "password"}
+                  value={dbForm.password}
+                  onChange={(e) => setDbForm(prev => ({ ...prev, password: e.target.value }))}
+                  placeholder={dbConfig.hasPassword ? "Mevcut şifre kayıtlı (Değiştirmek için yeni şifre girin)" : "MySQL kullanıcı şifresi"}
+                  className="w-full border border-slate-200 dark:border-zinc-700 focus:border-emerald-500 rounded-xl p-2.5 pr-9 text-xs font-mono focus:outline-none bg-slate-50 dark:bg-zinc-800 text-[#14171A] dark:text-white"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowDbPassword(prev => !prev)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 cursor-pointer"
+                  title={showDbPassword ? "Şifreyi Gizle" : "Şifreyi Göster"}
+                >
+                  {showDbPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+              <span className="text-[10px] text-slate-400">Boş bırakılırsa mevcut kayıtlı şifre korunur</span>
+            </div>
+
+            {/* Prefix & SSL */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 flex items-center justify-between">
+                <span>Tablo Öneki (Prefix):</span>
+                <span className="text-[10px] text-slate-400">Varsayılan: cnt_</span>
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={dbForm.prefix}
+                  onChange={(e) => setDbForm(prev => ({ ...prev, prefix: e.target.value }))}
+                  placeholder="cnt_"
+                  className="flex-1 border border-slate-200 dark:border-zinc-700 focus:border-emerald-500 rounded-xl p-2.5 text-xs font-mono focus:outline-none bg-slate-50 dark:bg-zinc-800 text-[#14171A] dark:text-white"
+                />
+                <label className="flex items-center gap-1.5 p-2.5 border border-slate-200 dark:border-zinc-700 rounded-xl bg-slate-50 dark:bg-zinc-800 cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={dbForm.ssl}
+                    onChange={(e) => setDbForm(prev => ({ ...prev, ssl: e.target.checked }))}
+                    className="w-3.5 h-3.5 rounded text-emerald-600 accent-emerald-600"
+                  />
+                  <span className="text-xs font-bold text-slate-700 dark:text-zinc-300">SSL</span>
+                </label>
+              </div>
+              <span className="text-[10px] text-slate-400">Tüm tablolar bu önekle başlar (örn: cnt_products)</span>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-slate-100 dark:border-zinc-800">
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={handleTestDbConnection}
+                disabled={isTestingDb || !dbForm.host || !dbForm.database || !dbForm.user}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {isTestingDb ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                    <span>Bağlantı Test Ediliyor...</span>
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Bağlantıyı Canlı Test Et</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleInitDbTables}
+                disabled={isRepairingDb || !dbStatus?.isConnected}
+                title="Eksik veritabanı tablolarını otomatik oluşturur veya doğrular"
+                className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {isRepairingDb ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+                    <span>Tablolar Doğrulanıyor...</span>
+                  </>
+                ) : (
+                  <>
+                    <Wrench className="w-3.5 h-3.5 text-indigo-500" />
+                    <span>Tabloları Onar / Oluştur</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSavingDb || !dbForm.host || !dbForm.database || !dbForm.user}
+              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs shrink-0"
+            >
+              {isSavingDb ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Kaydediliyor...</span>
+                </>
               ) : (
-                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <>
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Kaydet & Bağlan</span>
+                </>
               )}
-              <span>{aiTestResult.message}</span>
+            </button>
+          </div>
+
+          {/* Test / Operation Result Alert */}
+          {dbTestResult && (
+            <div className={`p-3.5 rounded-2xl text-xs font-medium flex items-start gap-2.5 border ${
+              dbTestResult.success
+                ? 'bg-emerald-50 text-emerald-900 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-200 dark:border-emerald-800'
+                : 'bg-rose-50 text-rose-900 border-rose-200 dark:bg-rose-950/30 dark:text-rose-200 dark:border-rose-800'
+            }`}>
+              {dbTestResult.success ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+              ) : (
+                <ServerCrash className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+              )}
+              <div className="space-y-1">
+                <span className="font-bold block">{dbTestResult.message}</span>
+                {dbTestResult.serverVersion && (
+                  <span className="text-[11px] block opacity-85">
+                    Sunucu: {dbTestResult.serverVersion} · Gecikme: {dbTestResult.latencyMs}ms · Tespit Edilen Tablo: {dbTestResult.totalTablesCount ?? 0}
+                  </span>
+                )}
+              </div>
             </div>
           )}
 
-          <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-zinc-400 pt-1">
-            <Info className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-            <span>
-              Girilen API anahtarı önce Google Gemini 2.5 Flash ile canlı olarak test edilir; doğrulandıktan sonra veritabanına (cnt_db_config) ve sisteme kaydedilir.
-            </span>
+          {/* Active Tables Overview Grid */}
+          {dbStatus?.tableStatuses && dbStatus.tableStatuses.length > 0 && (
+            <div className="pt-2 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Veritabanı Tabloları & Kayıt Sayıları:</span>
+                </span>
+                <span className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">
+                  Toplam {dbStatus.totalRecords} Kayıt
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                {dbStatus.tableStatuses.map(tbl => (
+                  <div
+                    key={tbl.tableName}
+                    className="p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800/80 border border-slate-200/80 dark:border-zinc-700/80 flex items-center justify-between text-xs"
+                  >
+                    <div className="min-w-0 pr-1">
+                      <span className="font-mono font-bold text-[11px] text-slate-800 dark:text-zinc-200 block truncate">
+                        {tbl.tableName}
+                      </span>
+                      <span className="text-[10px] text-slate-400 block truncate">
+                        {tbl.displayName}
+                      </span>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                      tbl.recordCount > 0
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                        : 'bg-slate-200 text-slate-600 dark:bg-zinc-700 dark:text-zinc-400'
+                    }`}>
+                      {tbl.recordCount}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Remote MySQL Firewall Hint */}
+          <div className="flex items-start gap-2 p-3 rounded-xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/60 dark:border-blue-900/40 text-[11px] text-blue-800 dark:text-blue-300">
+            <Info className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+            <div className="leading-relaxed">
+              <strong>Uzak Sunucu (cPanel / Hostinger / AWS) Bağlantı İpucu:</strong> Eğer MySQL sunucunuz uzak bir hosting üzerinde ise, cPanel veya Hostinger panelinizdeki <strong>"Remote MySQL / Uzak MySQL"</strong> bölümünden bu sunucunun IP adresine veya tüm IP'lere erişim için <code>%</code> (yüzde işareti) ekleyerek izin vermeniz gerekmektedir.
+            </div>
           </div>
         </form>
       </div>

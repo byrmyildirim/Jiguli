@@ -14,6 +14,11 @@ import {
   checkSystemStatus,
   installCompleteSystem,
   loginDatabaseUser,
+  getMySQLConfigInfo,
+  saveMySQLConfig,
+  getSavedMySQLConfig,
+  parseDatabaseUrl,
+  setDetectedPrefix,
   dbGetOffers,
   dbSaveOffer,
   dbDeleteOffer,
@@ -43,7 +48,7 @@ import {
   dbSaveConfig
 } from './src/server/mysqlBackend';
 
-dotenv.config();
+dotenv.config({ override: true });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -292,18 +297,155 @@ function buildSynthesizedProduct(targetQuery: string, imageBase64?: string, imag
   };
 }
 
-// AI Engine Configuration Endpoints (Gemini Vision)
+// --- Qwen / Alibaba DashScope AI Client Helpers ---
+async function getQwenConfig(customKey?: string): Promise<{ apiKey: string; activeModel: string }> {
+  let apiKey = (customKey || process.env.QWEN_API_KEY || process.env.DASHSCOPE_API_KEY || '').trim();
+  if (!apiKey) {
+    try {
+      const dbKey = await dbGetConfig('qwen_api_key');
+      if (dbKey && typeof dbKey === 'string' && dbKey.trim()) {
+        apiKey = dbKey.trim();
+      }
+    } catch {}
+  }
+  let activeModel = 'qwen-max';
+  try {
+    const dbModel = await dbGetConfig('qwen_model');
+    if (dbModel && typeof dbModel === 'string' && dbModel.trim()) {
+      activeModel = dbModel.trim();
+    }
+  } catch {}
+  return { apiKey, activeModel };
+}
+
+async function callQwenApi(opts: {
+  apiKey?: string;
+  model?: string;
+  prompt: string;
+  imageBase64?: string;
+  systemPrompt?: string;
+}): Promise<{ success: boolean; text: string; message?: string }> {
+  const { apiKey: key, activeModel: defaultModel } = await getQwenConfig(opts.apiKey);
+  if (!key) {
+    return { success: false, text: '', message: 'Qwen API Key (QWEN_API_KEY / DashScope) bulunamadı.' };
+  }
+
+  let model = opts.model || defaultModel || 'qwen-max';
+  if (opts.imageBase64 && !model.includes('vl')) {
+    model = 'qwen-vl-max';
+  }
+
+  const apiUrl = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions';
+
+  const messages: any[] = [];
+  if (opts.systemPrompt) {
+    messages.push({ role: 'system', content: opts.systemPrompt });
+  }
+
+  if (opts.imageBase64) {
+    let imgData = opts.imageBase64;
+    if (!imgData.startsWith('data:')) {
+      imgData = `data:image/jpeg;base64,${imgData}`;
+    }
+    messages.push({
+      role: 'user',
+      content: [
+        { type: 'image_url', image_url: { url: imgData } },
+        { type: 'text', text: opts.prompt }
+      ]
+    });
+  } else {
+    messages.push({ role: 'user', content: opts.prompt });
+  }
+
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${key}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model,
+        messages
+      })
+    });
+
+    const data = await response.json().catch(() => null);
+    if (response.ok && data?.choices?.[0]?.message?.content) {
+      return {
+        success: true,
+        text: data.choices[0].message.content
+      };
+    } else {
+      const errMsg = data?.error?.message || data?.message || `HTTP ${response.status} Qwen API Hatası`;
+      return {
+        success: false,
+        text: '',
+        message: errMsg
+      };
+    }
+  } catch (err: any) {
+    return {
+      success: false,
+      text: '',
+      message: `Qwen API Istek Hatası: ${err?.message || err}`
+    };
+  }
+}
+
+// AI Engine Configuration Endpoints (Gemini & Qwen Dual Support)
 app.get('/api/ai/config', async (_req, res) => {
-  const { apiKey } = await getAiClient();
-  const isConfigured = Boolean(apiKey && apiKey.length > 8);
-  const maskedKey = isConfigured ? `${apiKey.slice(0, 6)}...${apiKey.slice(-4)}` : '';
+  const { apiKey: geminiKey } = await getAiClient();
+  const isGeminiConfigured = Boolean(geminiKey && geminiKey.length > 8);
+  const maskedGeminiKey = isGeminiConfigured ? `${geminiKey.slice(0, 6)}...${geminiKey.slice(-4)}` : '';
+
+  const { apiKey: qwenKey, activeModel: qwenModel } = await getQwenConfig();
+  const isQwenConfigured = Boolean(qwenKey && qwenKey.length > 8);
+  const maskedQwenKey = isQwenConfigured ? `${qwenKey.slice(0, 6)}...${qwenKey.slice(-4)}` : '';
+
+  let activeProvider = 'qwen';
+  try {
+    const savedProv = await dbGetConfig('ai_provider');
+    if (savedProv === 'qwen' || savedProv === 'gemini') {
+      activeProvider = savedProv;
+    } else if (isGeminiConfigured && !isQwenConfigured) {
+      activeProvider = 'gemini';
+    }
+  } catch {}
+
+  const isConfigured = activeProvider === 'qwen' ? isQwenConfigured : isGeminiConfigured;
+  const maskedKey = activeProvider === 'qwen' ? maskedQwenKey : maskedGeminiKey;
+  const activeModel = activeProvider === 'qwen' ? qwenModel : 'gemini-2.5-flash';
+
   res.json({
     success: true,
+    activeProvider,
     isConfigured,
     maskedKey,
-    activeModel: 'gemini-2.5-flash',
-    supportedModels: ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']
+    activeModel,
+    gemini: {
+      isConfigured: isGeminiConfigured,
+      maskedKey: maskedGeminiKey,
+      activeModel: 'gemini-2.5-flash',
+      supportedModels: ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']
+    },
+    qwen: {
+      isConfigured: isQwenConfigured,
+      maskedKey: maskedQwenKey,
+      activeModel: qwenModel,
+      supportedModels: ['qwen-max', 'qwen-plus', 'qwen-turbo', 'qwen2.5-72b-instruct', 'qwen-vl-max', 'qwen2.5-vl-72b-instruct']
+    }
   });
+});
+
+app.post('/api/ai/provider', async (req, res) => {
+  const { provider } = req.body || {};
+  if (provider !== 'gemini' && provider !== 'qwen') {
+    return res.status(400).json({ success: false, message: 'Geçersiz AI Sağlayıcısı (gemini veya qwen olmalı).' });
+  }
+  await dbSaveConfig('ai_provider', provider, 'Active AI Engine Provider');
+  return res.json({ success: true, activeProvider: provider, message: `Aktif AI Sağlayıcısı ${provider === 'qwen' ? 'Alibaba Qwen' : 'Google Gemini'} olarak güncellendi.` });
 });
 
 app.post('/api/ai/config', async (req, res) => {
@@ -313,19 +455,16 @@ app.post('/api/ai/config', async (req, res) => {
   }
   const cleanKey = apiKey.trim();
   try {
-    // Validate live with gemini-2.5-flash
     const testAi = new GoogleGenAI({ apiKey: cleanKey });
     await testAi.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: [{ text: 'Respond with OK' }]
     });
 
-    // Save to runtime, DB and .env
     process.env.GEMINI_API_KEY = cleanKey;
     cachedAiClient = { ai: testAi, key: cleanKey };
     await dbSaveConfig('gemini_api_key', cleanKey, 'Google Gemini AI API Key for Vision');
 
-    // Also persist to .env
     const envPath = path.resolve(process.cwd(), '.env');
     let envContent = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf-8') : '';
     const regex = /^GEMINI_API_KEY=.*$/m;
@@ -345,6 +484,103 @@ app.post('/api/ai/config', async (req, res) => {
       success: false,
       message: `Gemini API Anahtarı doğrulanamadı: ${err?.message || err}`
     });
+  }
+});
+
+app.post('/api/ai/qwen/config', async (req, res) => {
+  const { apiKey, model = 'qwen-max' } = req.body || {};
+  if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length < 8) {
+    return res.status(400).json({ success: false, message: 'Geçersiz Qwen (DashScope) API Anahtarı.' });
+  }
+  const cleanKey = apiKey.trim();
+  const cleanModel = (model || 'qwen-max').trim();
+
+  const testRes = await callQwenApi({
+    apiKey: cleanKey,
+    model: cleanModel,
+    prompt: 'Respond with OK'
+  });
+
+  if (!testRes.success) {
+    return res.status(400).json({
+      success: false,
+      message: `Qwen API Anahtarı doğrulanamadı: ${testRes.message}`
+    });
+  }
+
+  process.env.QWEN_API_KEY = cleanKey;
+  await dbSaveConfig('qwen_api_key', cleanKey, 'Alibaba Qwen / DashScope API Key');
+  await dbSaveConfig('qwen_model', cleanModel, 'Selected Qwen Model');
+
+  const envPath = path.resolve(process.cwd(), '.env');
+  let envContent = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf-8') : '';
+  const regex = /^QWEN_API_KEY=.*$/m;
+  if (regex.test(envContent)) {
+    envContent = envContent.replace(regex, `QWEN_API_KEY="${cleanKey}"`);
+  } else {
+    envContent += `\nQWEN_API_KEY="${cleanKey}"`;
+  }
+  fs.writeFileSync(envPath, envContent.trim() + '\n', 'utf-8');
+
+  return res.json({
+    success: true,
+    activeModel: cleanModel,
+    message: `Alibaba Qwen API anahtarı (${cleanModel}) başarıyla doğrulandı ve kaydedildi!`
+  });
+});
+
+app.post('/api/ai/generate', async (req, res) => {
+  const { prompt, imageBase64, provider: reqProvider, model: reqModel } = req.body || {};
+  if (!prompt || typeof prompt !== 'string') {
+    return res.status(400).json({ success: false, message: 'Prompt alanı zorunludur.' });
+  }
+
+  let provider = reqProvider;
+  if (!provider) {
+    const savedProv = await dbGetConfig('ai_provider').catch(() => null);
+    provider = savedProv === 'gemini' ? 'gemini' : 'qwen';
+  }
+
+  if (provider === 'qwen') {
+    const result = await callQwenApi({
+      prompt,
+      imageBase64,
+      model: reqModel
+    });
+    if (result.success) {
+      return res.json({ success: true, provider: 'qwen', text: result.text });
+    } else {
+      return res.status(400).json({ success: false, provider: 'qwen', message: result.message });
+    }
+  } else {
+    const { ai: aiClient } = await getAiClient();
+    if (!aiClient) {
+      return res.status(400).json({ success: false, provider: 'gemini', message: 'Gemini API Key yapılandırılmamış.' });
+    }
+    try {
+      const parts: any[] = [];
+      if (imageBase64) {
+        let clean = imageBase64;
+        let mime = 'image/jpeg';
+        const match = imageBase64.match(/^data:([^;]+);base64,(.+)$/s);
+        if (match) {
+          mime = match[1];
+          clean = match[2];
+        } else {
+          clean = imageBase64.replace(/^data:[^;]+;base64,/, '');
+        }
+        parts.push({ inlineData: { mimeType: mime, data: clean } });
+      }
+      parts.push({ text: prompt });
+
+      const aiRes = await aiClient.models.generateContent({
+        model: reqModel || 'gemini-2.5-flash',
+        contents: parts
+      });
+      return res.json({ success: true, provider: 'gemini', text: aiRes.text });
+    } catch (err: any) {
+      return res.status(400).json({ success: false, provider: 'gemini', message: err?.message || err });
+    }
   }
 });
 
@@ -387,31 +623,22 @@ app.post('/api/sourcing/aliexpress-search', async (req, res) => {
     }
   }
 
-  // Attempt Gemini Vision AI if API key is configured or provided
-  const { ai: aiClient, apiKey: activeKey } = await getAiClient(reqKey);
+  // Determine active AI provider and keys
+  const savedProv = await dbGetConfig('ai_provider').catch(() => null);
+  const { apiKey: qwenKey, activeModel: qwenModel } = await getQwenConfig(reqKey);
+  const { ai: aiClient, apiKey: activeGeminiKey } = await getAiClient(reqKey);
 
-  if (aiClient && (cleanBase64 || searchTargetQuery)) {
-    try {
-      let parsedProduct: any = null;
-      let detectedSearchTerm = searchTargetQuery;
+  const isQwenActive = savedProv === 'qwen' || (!savedProv && Boolean(qwenKey)) || (Boolean(qwenKey) && !activeGeminiKey);
 
-      const parts: any[] = [];
-
-      if (cleanBase64) {
-        parts.push({
-          inlineData: {
-            mimeType: mimeType || 'image/jpeg',
-            data: cleanBase64
-          }
-        });
-      }
-
-      const singlePrompt = `You are a cross-border e-commerce intelligence engine connecting AliExpress suppliers with Allegro and eMAG sellers.
+  const singlePrompt = `You are a cross-border e-commerce intelligence engine connecting AliExpress suppliers with Allegro and eMAG sellers.
 Analyze ${cleanBase64 ? 'the provided product image' : 'the product query'} "${searchTargetQuery || 'product'}".
 Identify the exact product, functionality, materials and market segment.
+Check if this appears to be a unique, custom-made, or brand-specific product that might not have an exact 1:1 match on AliExpress.
 Format real AliExpress sourcing data as a JSON object:
 {
-  "detectedSearchQuery": "best 4-7 word search query in English for AliExpress describing this exact product",
+  "detectedSearchQuery": "best 4-7 word search query in English for AliExpress describing this exact product category or item",
+  "isCustomOrUniqueProduct": true_if_custom_or_proprietary_product_otherwise_false,
+  "sourcingNote": "Short Turkish note explaining whether exact match or generic similar category match was found for custom item",
   "titleEn": "Full commercial English title on AliExpress with key specifications",
   "titlePl": "Polish title strictly <= 72 characters compliant with Allegro standards (no symbols like !?, uppercase only when proper noun)",
   "categoryName": "Allegro category hierarchy (e.g. Elektronika > Akcesoria telefoniczne > Ładowarki)",
@@ -451,6 +678,117 @@ Format real AliExpress sourcing data as a JSON object:
 }
 Ensure priceUsd and shippingUsd are numbers only. Return JSON ONLY.`;
 
+  // 1. Attempt Qwen AI Vision if Qwen is active or configured
+  if (isQwenActive && Boolean(qwenKey) && (cleanBase64 || searchTargetQuery)) {
+    try {
+      const qwenRes = await callQwenApi({
+        prompt: singlePrompt,
+        imageBase64: cleanBase64 ? imageBase64 : undefined,
+        apiKey: reqKey,
+        model: 'qwen-vl-max'
+      });
+
+      if (qwenRes.success && qwenRes.text) {
+        let parsedProduct: any = null;
+        try {
+          parsedProduct = JSON.parse(qwenRes.text);
+        } catch {
+          const match = qwenRes.text.match(/\{[\s\S]*\}/);
+          if (match) parsedProduct = JSON.parse(match[0]);
+        }
+
+        if (parsedProduct && (parsedProduct.titleEn || parsedProduct.titlePl || parsedProduct.detectedSearchQuery)) {
+          const detectedSearchTerm = parsedProduct.detectedSearchQuery || searchTargetQuery || 'trending electronics';
+          const safePrice = typeof parsedProduct?.priceUsd === 'number' && !isNaN(parsedProduct.priceUsd)
+            ? parsedProduct.priceUsd
+            : parseFloat(String(parsedProduct?.priceUsd || '').replace(/[^0-9.]/g, '')) || 14.80;
+
+          const safeShipping = typeof parsedProduct?.shippingUsd === 'number' && !isNaN(parsedProduct.shippingUsd)
+            ? parsedProduct.shippingUsd
+            : parseFloat(String(parsedProduct?.shippingUsd || '').replace(/[^0-9.]/g, '')) || 0;
+
+          const safeCandidates = Array.isArray(parsedProduct?.candidateProducts)
+            ? parsedProduct.candidateProducts.map((cand: any) => ({
+                titleEn: String(cand?.titleEn || 'Alternatywny wariant AliExpress'),
+                priceUsd: typeof cand?.priceUsd === 'number' && !isNaN(cand.priceUsd)
+                  ? cand.priceUsd
+                  : parseFloat(String(cand?.priceUsd || '').replace(/[^0-9.]/g, '')) || (safePrice + 2.0),
+                supplierName: String(cand?.supplierName || 'AliExpress Choice Store')
+              }))
+            : [];
+
+          const liveDirectSearchUrl = `https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(detectedSearchTerm)}`;
+
+          const finalProduct = {
+            id: `ali-qwen-${Date.now()}`,
+            sourceUrl: liveDirectSearchUrl,
+            directSearchUrl: liveDirectSearchUrl,
+            titleEn: parsedProduct?.titleEn || `${detectedSearchTerm} High-Performance Edition`,
+            titlePl: (parsedProduct?.titlePl || detectedSearchTerm).slice(0, 72),
+            categoryName: parsedProduct?.categoryName || 'Elektronika > Akcesoria i gadżety',
+            allegroCategoryId: parsedProduct?.allegroCategoryId || '124921',
+            priceUsd: safePrice,
+            shippingUsd: safeShipping,
+            supplierName: parsedProduct?.supplierName || 'AliExpress Qwen Supplier Store',
+            supplierRating: typeof parsedProduct?.supplierRating === 'number' ? parsedProduct.supplierRating : 4.92,
+            deliveryDays: parsedProduct?.deliveryDays || '7-10 dni roboczych',
+            stockAvailable: typeof parsedProduct?.stockAvailable === 'number' ? parsedProduct.stockAvailable : 950,
+            primaryImage: sourceImagePreview || (imageBase64 && imageBase64.startsWith('data:') ? imageBase64 : 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80'),
+            specifications: {
+              brand: parsedProduct?.specifications?.brand || 'QwenTech Global',
+              model: parsedProduct?.specifications?.model || `QWN-${Date.now().toString().slice(-5)}`,
+              ean: parsedProduct?.specifications?.ean || `590${Math.floor(1000000000 + Math.random() * 9000000000)}`,
+              condition: 'Nowy',
+              material: parsedProduct?.specifications?.material || 'Aluminium + ABS',
+              color: parsedProduct?.specifications?.color || 'Czarny'
+            },
+            features: Array.isArray(parsedProduct?.features) ? parsedProduct.features : [
+              'Alibaba Qwen AI ile doğrulandı',
+              'Szybkie ładowanie i wysoka jakość',
+              'Gwarancja 24 miesiące'
+            ],
+            isCustomOrUniqueProduct: Boolean(parsedProduct?.isCustomOrUniqueProduct),
+            sourcingNote: parsedProduct?.sourcingNote || (parsedProduct?.isCustomOrUniqueProduct ? "Özel / özgün tasarım ürün tespiti: AliExpress üzerinde benzer kategorideki muadil ürünler ve tahmini tedarik maliyeti listelenmiştir." : null),
+            descriptionPl: parsedProduct?.descriptionPl || `<h2>Produkt z AliExpress przeanalizowany przez Alibaba Qwen AI</h2><p>Nowoczesny design i gwarantowana jakość.</p>`,
+            candidateProducts: safeCandidates
+          };
+
+          return res.json({
+            success: true,
+            product: finalProduct,
+            aiVisionActive: true,
+            searchMetadata: {
+              queries: [`AliExpress Qwen search for ${detectedSearchTerm}`],
+              sources: [liveDirectSearchUrl],
+              detectedQuery: detectedSearchTerm,
+              mode: 'qwen-vl-vision-live',
+              model: 'qwen-vl-max',
+              executedAt: new Date().toISOString()
+            }
+          });
+        }
+      }
+    } catch (qwenErr: any) {
+      console.warn('[Qwen Vision Analysis Error/Fallback]:', qwenErr?.message || qwenErr);
+    }
+  }
+
+  // 2. Attempt Gemini Vision AI if configured or fallback
+  if (aiClient && (cleanBase64 || searchTargetQuery)) {
+    try {
+      let parsedProduct: any = null;
+      let detectedSearchTerm = searchTargetQuery;
+
+      const parts: any[] = [];
+
+      if (cleanBase64) {
+        parts.push({
+          inlineData: {
+            mimeType: mimeType || 'image/jpeg',
+            data: cleanBase64
+          }
+        });
+      }
       parts.push({ text: singlePrompt });
 
       const aiRes = await generateWithModelFallback(aiClient, (model) =>
@@ -524,6 +862,8 @@ Ensure priceUsd and shippingUsd are numbers only. Return JSON ONLY.`;
             'Szybkie ładowanie USB-C',
             'Gwarancja 24 miesiące'
           ],
+          isCustomOrUniqueProduct: Boolean(parsedProduct?.isCustomOrUniqueProduct),
+          sourcingNote: parsedProduct?.sourcingNote || (parsedProduct?.isCustomOrUniqueProduct ? "Özel / özgün tasarım ürün tespiti: AliExpress üzerinde benzer kategorideki muadil ürünler ve tahmini tedarik maliyeti listelenmiştir." : null),
           descriptionPl: parsedProduct?.descriptionPl || `<h2>Wysokiej jakości produkt z AliExpress</h2><p>Nowoczesny design i niezawodność.</p>`,
           candidateProducts: safeCandidates
         };
@@ -558,7 +898,7 @@ Ensure priceUsd and shippingUsd are numbers only. Return JSON ONLY.`;
       sources: [synthesized.sourceUrl],
       detectedQuery: searchTargetQuery || synthesized.titleEn,
       mode: 'smart-local-engine',
-      quotaNotice: activeKey ? 'Gemini kota sınırına ulaşıldı, akıllı yerel eşleme motoru devrede.' : 'Gemini AI Vision API Anahtarı girilmediği için akıllı yerel eşleme motoru kullanıldı.',
+      quotaNotice: (qwenKey || activeGeminiKey) ? 'AI kota sınırına ulaşıldı, akıllı yerel eşleme motoru devrede.' : 'Yapay Zeka API Anahtarı girilmediği için akıllı yerel eşleme motoru kullanıldı.',
       executedAt: new Date().toISOString()
     }
   });
@@ -721,14 +1061,25 @@ app.post('/api/emag/orders', async (req, res) => {
 
     if (isSuccess) {
       const orders = Array.isArray(data.results) ? data.results : [];
+      let dbSavedCount = 0;
+      if (orders.length > 0) {
+        try {
+          const dbRes = await dbSaveOrdersBulk(orders);
+          dbSavedCount = dbRes.count;
+          console.log(`[eMAG Orders] ${dbSavedCount} sipariş MySQL veritabanına (${getActivePrefix()}orders) kaydedildi.`);
+        } catch (dbErr: any) {
+          console.warn('[eMAG Orders DB save notice]:', dbErr?.message || dbErr);
+        }
+      }
       return res.json({
         success: true,
         count: orders.length,
+        dbSavedCount,
         durationMs,
         serverIp,
         headerPreview: maskedHeaderPreview,
         results: orders,
-        message: `eMAG (${emagDomain}) canlı API doğrulaması başarılı! ${orders.length > 0 ? `${orders.length} adet sipariş başarıyla çekildi.` : 'Bağlantı kuruldu, şu anda çekilecek yeni sipariş bulunmuyor.'} (${durationMs}ms)`
+        message: `eMAG (${emagDomain}) siparişleri çekildi ${dbSavedCount > 0 ? `ve ${dbSavedCount} tanesi MySQL veritabanına kaydedildi.` : ''} (${durationMs}ms)`
       });
     } else {
       const rawErrMsg = (data?.messages && Array.isArray(data.messages) ? data.messages.join(', ') : null) || `HTTP ${apiRes.status}`;
@@ -2072,10 +2423,8 @@ app.post('/api/emag/match-category', async (req, res) => {
     });
   }
 
-  // 2. AI (Gemini) Categorization if API key available
-  if (process.env.GEMINI_API_KEY) {
-    try {
-      const taxonomyPrompt = `You are an expert eMAG Marketplace (Romania, Bulgaria, Hungary) Taxonomy Specialist.
+  // 2. AI (Qwen & Gemini) Categorization
+  const taxonomyPrompt = `You are an expert eMAG Marketplace (Romania, Bulgaria, Hungary) Taxonomy Specialist.
 Match the following product to the official eMAG category tree and output strictly JSON. Note that eMAG category IDs must be valid positive integers <= 65535.
 
 Product Title: "${rawTitle}"
@@ -2113,6 +2462,40 @@ Output format JSON:
   "reasoning": "Turkish/English explanation"
 }`;
 
+  // Try Qwen AI first
+  try {
+    const qwenCatRes = await callQwenApi({ prompt: taxonomyPrompt });
+    if (qwenCatRes.success && qwenCatRes.text) {
+      let parsedJson: any = null;
+      try {
+        parsedJson = JSON.parse(qwenCatRes.text);
+      } catch {
+        const match = qwenCatRes.text.match(/\{[\s\S]*\}/);
+        if (match) parsedJson = JSON.parse(match[0]);
+      }
+      if (parsedJson && parsedJson.categoryId) {
+        let finalCatId = Number(parsedJson.categoryId);
+        if (finalCatId === 6001) finalCatId = 257548;
+        return res.json({
+          success: true,
+          categoryId: finalCatId,
+          categoryName: parsedJson.categoryName,
+          trName: parsedJson.trName,
+          source: 'QWEN_AI',
+          confidence: parsedJson.confidence || 0.98,
+          characteristics: parsedJson.characteristics || {},
+          reasoning: parsedJson.reasoning,
+          message: `Qwen AI ile eMAG Kategori ${finalCatId} (${parsedJson.trName}) başarıyla eşleştirildi.`
+        });
+      }
+    }
+  } catch (e: any) {
+    console.warn('Qwen categorization fallback to Gemini/rules:', e?.message || e);
+  }
+
+  // Fallback Gemini AI if API key available
+  if (process.env.GEMINI_API_KEY) {
+    try {
       const aiRes = await generateWithModelFallback(ai, (model) =>
         ai.models.generateContent({
           model,
@@ -3105,12 +3488,23 @@ app.post('/api/baselinker/orders', async (req, res) => {
 
     if (apiRes.ok && data?.status === 'SUCCESS') {
       const orders = data.orders || [];
+      let dbSavedCount = 0;
+      if (orders.length > 0) {
+        try {
+          const dbRes = await dbSaveOrdersBulk(orders);
+          dbSavedCount = dbRes.count;
+          console.log(`[BaseLinker Orders] ${dbSavedCount} sipariş MySQL veritabanına (${getActivePrefix()}orders) kaydedildi.`);
+        } catch (dbErr: any) {
+          console.warn('[BaseLinker Orders DB save notice]:', dbErr?.message || dbErr);
+        }
+      }
       return res.json({
         success: true,
         count: orders.length,
+        dbSavedCount,
         durationMs,
         orders,
-        message: `BaseLinker üzerinden ${orders.length} sipariş başarıyla çekildi (${durationMs}ms).`
+        message: `BaseLinker üzerinden ${orders.length} sipariş başarıyla çekildi ${dbSavedCount > 0 ? `ve ${dbSavedCount} tanesi MySQL veritabanına kaydedildi.` : ''} (${durationMs}ms).`
       });
     } else {
       return res.json({
@@ -3752,12 +4146,23 @@ app.post('/api/allegro/orders', async (req, res) => {
 
     if (apiRes.ok) {
       const forms = data?.checkoutForms || [];
+      let dbSavedCount = 0;
+      if (forms.length > 0) {
+        try {
+          const dbRes = await dbSaveOrdersBulk(forms);
+          dbSavedCount = dbRes.count;
+          console.log(`[Allegro Orders] ${dbSavedCount} sipariş MySQL veritabanına (${getActivePrefix()}orders) kaydedildi.`);
+        } catch (dbErr: any) {
+          console.warn('[Allegro Orders DB save notice]:', dbErr?.message || dbErr);
+        }
+      }
       return res.json({
         success: true,
         count: forms.length,
+        dbSavedCount,
         durationMs,
         checkoutForms: forms,
-        message: `Allegro (${environment}) üzerinden ${forms.length} sipariş başarıyla çekildi (${durationMs}ms).`
+        message: `Allegro (${environment}) üzerinden ${forms.length} sipariş başarıyla çekildi ${dbSavedCount > 0 ? `ve ${dbSavedCount} tanesi MySQL veritabanına kaydedildi.` : ''} (${durationMs}ms).`
       });
     } else {
       const allegroErrorMsg = data?.errors?.[0]?.userMessage || data?.errors?.[0]?.message || data?.error_description || data?.error || (data?.errors?.[0]?.code ? `Allegro Kod: ${data.errors[0].code}` : 'Siparişler çekilemedi');
@@ -4111,6 +4516,25 @@ app.post('/api/sync/live-catalog', async (req, res) => {
     } catch {}
   }
 
+  if (liveOffers.length > 0) {
+    try {
+      await dbSaveOffersBulk(liveOffers);
+      await dbSaveProductsBulk(liveOffers);
+      console.log(`[Live Catalog Sync] ${liveOffers.length} ürün MySQL veritabanına (cnt_offers & cnt_products) kaydedildi.`);
+    } catch (e: any) {
+      console.log('[Live Catalog Sync Note]:', e?.message);
+    }
+  }
+
+  if (liveOrders.length > 0) {
+    try {
+      await dbSaveOrdersBulk(liveOrders);
+      console.log(`[Live Catalog Sync] ${liveOrders.length} sipariş MySQL veritabanına (cnt_orders) kaydedildi.`);
+    } catch (e: any) {
+      console.log('[Live Order Sync Note]:', e?.message);
+    }
+  }
+
   return res.json({
     success: true,
     fetchedOffersCount: liveOffers.length,
@@ -4147,10 +4571,101 @@ app.post('/api/auth/login', async (req, res) => {
   res.json(result);
 });
 
-// Legacy / Direct MySQL Maintenance Endpoints
+// MySQL Live Database Configuration & Status Endpoints
+app.get('/api/mysql/config', async (_req, res) => {
+  try {
+    const config = getMySQLConfigInfo();
+    res.json({ success: true, config });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err?.message || String(err) });
+  }
+});
+
+app.post('/api/mysql/config', async (req, res) => {
+  try {
+    const { host, port, database, user, password, prefix, ssl, charset, databaseUrl } = req.body || {};
+    const existing = getSavedMySQLConfig();
+
+    let targetHost = host;
+    let targetPort = port ? Number(port) : existing.port;
+    let targetDb = database;
+    let targetUser = user;
+    let targetPassword = password;
+    let targetSsl = ssl !== undefined ? Boolean(ssl) : existing.ssl;
+    let targetCharset = charset || existing.charset || 'utf8mb4';
+
+    // If databaseUrl is provided, parse it
+    if (databaseUrl && typeof databaseUrl === 'string' && databaseUrl.trim()) {
+      const parsed = parseDatabaseUrl(databaseUrl.trim());
+      if (parsed) {
+        if (parsed.host) targetHost = parsed.host;
+        if (parsed.port) targetPort = parsed.port;
+        if (parsed.database) targetDb = parsed.database;
+        if (parsed.user) targetUser = parsed.user;
+        if (parsed.password !== undefined && parsed.password !== '') targetPassword = parsed.password;
+        if (parsed.ssl !== undefined) targetSsl = parsed.ssl;
+        if (parsed.charset) targetCharset = parsed.charset;
+      }
+    }
+
+    const newConfig = {
+      host: String(targetHost || existing.host || '194.59.164.74').trim(),
+      port: Number(targetPort) || 3306,
+      database: String(targetDb || existing.database || '').trim(),
+      user: String(targetUser || existing.user || '').trim(),
+      password: targetPassword !== undefined && targetPassword !== '' ? String(targetPassword) : existing.password,
+      prefix: String(prefix || existing.prefix || 'cnt_').trim(),
+      ssl: targetSsl,
+      charset: targetCharset
+    };
+
+    // Test connection
+    const testRes = await testMySQLConnection(newConfig);
+
+    // Save config so subsequent queries immediately use these credentials
+    saveMySQLConfig(newConfig);
+    if (newConfig.prefix) {
+      setDetectedPrefix(newConfig.prefix);
+    }
+
+    const currentStatus = await getMySQLDatabaseStatus(newConfig);
+
+    res.json({
+      success: true,
+      message: testRes.success
+        ? 'Veritabanı bağlantısı başarıyla kuruldu ve kaydedildi!'
+        : `Veritabanı yapılandırması kaydedildi (Test uyarısı: ${testRes.message})`,
+      testResult: testRes,
+      config: getMySQLConfigInfo(),
+      status: currentStatus
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err?.message || String(err) });
+  }
+});
+
+app.get('/api/mysql/status', async (_req, res) => {
+  try {
+    const result = await getMySQLDatabaseStatus();
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err?.message || String(err) });
+  }
+});
+
 app.post('/api/mysql/test-connection', async (req, res) => {
   const result = await testMySQLConnection(req.body);
   res.json(result);
+});
+
+app.post('/api/mysql/init-tables', async (req, res) => {
+  try {
+    const cfg = req.body && req.body.host ? req.body : getSavedMySQLConfig();
+    const result = await installMySQLDatabase(cfg);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err?.message || String(err) });
+  }
 });
 
 app.post('/api/mysql/install-database', async (req, res) => {

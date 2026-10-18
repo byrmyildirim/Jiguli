@@ -46,16 +46,61 @@ export const RepricingView: React.FC<RepricingViewProps> = ({ theme = 'light' })
   const [scanNotice, setScanNotice] = useState<string | null>(null);
   const [scanLogs, setScanLogs] = useState<any[]>([]);
 
+  const handleSyncFromOffers = () => {
+    store.syncOffersToRepricingPool();
+    const updated = store.getRepricingItems();
+    setItems(updated);
+    if (updated.length > 0) {
+      setScanNotice(`🟢 ${updated.length} adet envanter ürünü Repricer motoruna başarıyla aktarıldı.`);
+    } else {
+      setScanNotice(`⚠️ Envanterinizde henüz ürün bulunmuyor. Pazaryerinizden canlı ürün çekebilirsiniz.`);
+    }
+  };
+
+  const handleLoadSampleItems = () => {
+    const samples = store.loadSampleRepricingItems();
+    setItems(samples);
+    setScanNotice(`🟢 3 adet demo rekabet ürünü Repricer motoruna yüklendi.`);
+  };
+
+  const handleFetchLiveProducts = async () => {
+    setIsScanning(true);
+    setScanNotice(null);
+    try {
+      const emagRes = await store.fetchEmagProducts();
+      const allegroRes = await store.fetchAllegroProducts();
+      store.syncOffersToRepricingPool();
+      const updated = store.getRepricingItems();
+      setItems(updated);
+      setScanNotice(`🟢 Pazaryerlerinden ürün çekildi: eMAG (${emagRes.count}), Allegro (${allegroRes.count}). Repricer havuzunda ${updated.length} ürün listeleniyor.`);
+    } catch (e: any) {
+      setScanNotice(`⚠️ Canlı ürün çekme hatası: ${e?.message || e}`);
+    } finally {
+      setIsScanning(false);
+      setTimeout(() => setScanNotice(null), 6000);
+    }
+  };
+
   const handleScanCompetitors = async () => {
     setIsScanning(true);
     setScanNotice(null);
     try {
+      let targetItems = items;
+      if (targetItems.length === 0) {
+        store.syncOffersToRepricingPool();
+        targetItems = store.getRepricingItems();
+        if (targetItems.length === 0) {
+          targetItems = store.loadSampleRepricingItems();
+        }
+        setItems(targetItems);
+      }
+
       const emagCreds = store.getPlatformCredentials().emag;
       const res = await fetch('/api/repricer/scan-and-apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items,
+          items: targetItems,
           emagCredentials: emagCreds
         })
       });
@@ -65,7 +110,7 @@ export const RepricingView: React.FC<RepricingViewProps> = ({ theme = 'light' })
           store.applyRepriceRule(updated.id, updated.currentPrice);
         });
         setScanLogs(data.logs || []);
-        setScanNotice(`🟢 ${data.message}`);
+        setScanNotice(`🟢 ${data.message || 'Rakip fiyatlar tarandı ve eşitlendi.'}`);
       } else {
         setScanNotice(`⚠️ ${data?.message || 'Tarama tamamlanamadı'}`);
       }
@@ -113,6 +158,13 @@ export const RepricingView: React.FC<RepricingViewProps> = ({ theme = 'light' })
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleSyncFromOffers}
+            className="px-3.5 py-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer min-h-[44px]"
+          >
+            <span>📦 Envanterden Aktar</span>
+          </button>
+
           <button
             onClick={handleScanCompetitors}
             disabled={isScanning}
@@ -178,14 +230,41 @@ export const RepricingView: React.FC<RepricingViewProps> = ({ theme = 'light' })
       {/* Repricing Items List */}
       <div className="space-y-3">
         {items.length === 0 ? (
-          <div className="text-center py-12 px-4 rounded-3xl border border-slate-200 bg-white space-y-2">
-            <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-700 mx-auto flex items-center justify-center font-bold text-sm">
+          <div className="text-center py-12 px-6 rounded-3xl border border-slate-200 bg-white space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 mx-auto flex items-center justify-center font-bold text-lg">
               ⚡
             </div>
-            <div className="font-bold text-xs text-slate-800">Canlı Repricer Havuzu Boş</div>
-            <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
-              Simülasyon verileri temizlendi. eMAG veya Allegro pazar yerinizden ürün çektiğinizde, fiyat rekabeti olan ürünleriniz bu alanda anlık listelenecektir.
-            </p>
+            <div className="space-y-1">
+              <h3 className="font-bold text-sm text-slate-800">Canlı Repricer & BuyBox Havuzu Boş</h3>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                Henüz fiyat takibine alınmış ürününüz bulunmuyor. Envanterinizdeki ürünleri doğrudanRepricer'a yükleyebilir veya pazaryerinizden canlı ürün çekebilirsiniz.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
+              <button
+                onClick={handleSyncFromOffers}
+                className="px-4 py-2.5 rounded-full bg-[#14171A] hover:bg-black text-white font-bold text-xs transition-all shadow-xs cursor-pointer active:scale-95 flex items-center gap-2"
+              >
+                <span>📦 Envanterdeki Ürünleri Yükle</span>
+              </button>
+
+              <button
+                onClick={handleFetchLiveProducts}
+                disabled={isScanning}
+                className="px-4 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-xs cursor-pointer active:scale-95 flex items-center gap-2"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin' : ''}`} />
+                <span>🌐 Pazaryerinden Canlı Çek</span>
+              </button>
+
+              <button
+                onClick={handleLoadSampleItems}
+                className="px-4 py-2.5 rounded-full bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-bold text-xs transition-all cursor-pointer active:scale-95 flex items-center gap-2"
+              >
+                <span>🚀 Örnek Demo Ürünleri Yükle</span>
+              </button>
+            </div>
           </div>
         ) : (
           items.map((item) => {

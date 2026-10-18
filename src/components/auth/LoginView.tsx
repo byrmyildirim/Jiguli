@@ -25,6 +25,7 @@ export const LoginView: React.FC = () => {
 
   const brandName = store.getBrandName();
   const slogan = store.getSlogan();
+  const logoUrl = store.getLogoUrl();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,8 +97,12 @@ export const LoginView: React.FC = () => {
           }`}>
             {/* Jiguli Logo & Slogan inside card */}
             <div className="text-center space-y-1.5 mb-6">
-              <div className="flex items-center justify-center text-3xl sm:text-4xl font-black tracking-tight">
-                <span className="text-[#163300] dark:text-white mr-1.5 font-bold brand-logo-arrow">↗</span>
+              <div className="flex items-center justify-center text-3xl sm:text-4xl font-black tracking-tight gap-2">
+                {logoUrl ? (
+                  <img src={logoUrl} alt={brandName} className="w-10 h-10 object-contain rounded-xl" />
+                ) : (
+                  <span className="text-[#163300] dark:text-white mr-1.5 font-bold brand-logo-arrow">↗</span>
+                )}
                 <span className={isDark ? 'text-white' : 'text-[#14171A]'}>{brandName}</span>
               </div>
               <p className="text-xs font-semibold text-slate-400 tracking-tight">
