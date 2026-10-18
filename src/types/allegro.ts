@@ -98,6 +98,7 @@ export interface AllegroOffer {
     name: string;
   };
   primaryImage: string;
+  images?: string[];
   sellingMode: {
     format: 'BUY_NOW' | 'AUCTION';
     price: {
@@ -130,7 +131,7 @@ export interface AllegroOffer {
   };
   parameters: {
     id: string;
-    name: string;
+    name?: string;
     values: string[];
     valuesIds?: string[];
   }[];
@@ -157,6 +158,8 @@ export interface AllegroOffer {
     exchangeRateUsed?: number;
     declaredWeight?: string;
     tax?: string;
+    orderNumber?: string;
+    rawRow?: any;
   };
   aliExpressSource?: {
     id: string;
@@ -182,8 +185,19 @@ export interface AllegroOffer {
       categoryName?: string;
       shippingRateId?: string;
       description?: string;
+      descriptionLayout?: string;
       smartEligible?: boolean;
       parameters?: any;
+      customParameters?: any;
+      stock?: number;
+      handlingTime?: string;
+      location?: { country?: string; city?: string; postCode?: string };
+      invoice?: string;
+      returnPolicy?: string;
+      warranty?: string;
+      images?: string[];
+      responsibleProducer?: any;
+      safetyInformation?: any;
     };
     emag?: {
       title?: string;
@@ -193,6 +207,10 @@ export interface AllegroOffer {
       vatRate?: number;
       geniusEligible?: boolean;
       characteristics?: any;
+      country?: string;
+      status?: number;
+      vatId?: number;
+      partNumberKey?: string;
     };
     baselinker?: {
       warehouseId?: string;

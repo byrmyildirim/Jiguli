@@ -36,7 +36,17 @@ import {
   Building,
   ShieldAlert,
   Zap,
-  Maximize2
+  Maximize2,
+  Search,
+  Copy,
+  Star,
+  ShoppingBag,
+  CreditCard,
+  Clock,
+  MapPin,
+  FileCheck,
+  HelpCircle,
+  FolderTree
 } from 'lucide-react';
 import { AllegroOffer, MarketplaceId } from '../../types/allegro';
 import { store } from '../../services/marketplaceStore';
@@ -54,6 +64,14 @@ import {
   BASELINKER_WAREHOUSES,
   BASELINKER_CATEGORIES
 } from '../modals/CreateOfferModal';
+import {
+  ALLEGRO_TAXONOMY,
+  searchAllegroTaxonomy,
+  getAllegroTaxonomyCategory,
+  matchAllegroCategoryFromTitle,
+  autoFillAllegroParameters,
+  AllegroTaxonomyCategory
+} from '../../services/allegroCategoryTaxonomy';
 
 interface ProductEditViewProps {
   offer: AllegroOffer;
@@ -64,14 +82,36 @@ interface ProductEditViewProps {
 
 export type EditTabType = 'core' | 'emag' | 'allegro' | 'baselinker' | 'excel' | 'all';
 
+export const ALLEGRO_POPULAR_CATEGORIES = [
+  { id: '4228', name: 'Płyty główne (Anakartlar)', path: 'Elektronika > Komputery > Podzespoły komputerowe > Płyty główne' },
+  { id: '4227', name: 'Procesory (İşlemciler)', path: 'Elektronika > Komputery > Podzespoły > Procesory' },
+  { id: '260018', name: 'Karty graficzne (Ekran Kartları)', path: 'Elektronika > Komputery > Karty graficzne' },
+  { id: '257745', name: 'Dyski SSD i NVMe (SSD Depolama)', path: 'Elektronika > Komputery > Dyski i pamięci' },
+  { id: '257548', name: 'Smartwatche i opaski sportowe (Akıllı Saatler)', path: 'Elektronika > Smartwatche i akcesoria' },
+  { id: '66887', name: 'Słuchawki bezprzewodowe TWS (Bluetooth Kulaklıklar)', path: 'Elektronika > Sprzęt audio > Słuchawki' },
+  { id: '48973', name: 'Głośniki przenośne Bluetooth (Hoparlörler)', path: 'Elektronika > Audio > Głośniki' },
+  { id: '124921', name: 'Kable USB-C i ładowarki (Şarj & Kablo Aksesuarları)', path: 'Elektronika > Akcesoria telefoniczne' },
+  { id: '12800', name: 'Taśmy LED & Smart Oświetlenie (LED Aydınlatma)', path: 'Elektronika > Oświetlenie LED' },
+  { id: '12900', name: 'Smart Home: Czujniki & Przełączniki (Akıllı Ev Sensörleri)', path: 'Elektronika > Smart Home' },
+  { id: '165', name: 'Smartfony i telefony (Akıllı Telefonlar)', path: 'Elektronika > Telefony i Akcesoria > Smartfony' },
+  { id: '491', name: 'Laptopy i komputery (Dizüstü Bilgisayarlar)', path: 'Elektronika > Komputery > Laptopy' },
+  { id: '1531', name: 'Elektronarzędzia (Elektrikli El Aletleri)', path: 'Dom i Ogród > Narzędzia' },
+  { id: '3690', name: 'Tekstylia domowe & Pościel (Ev Tekstili / Nevresim)', path: 'Dom i Ogród > Wyposażenie > Tekstylia' },
+  { id: '67414', name: 'Ekspresy do kawy & AGD (Kahve Makineleri)', path: 'Dom i Ogród > Kuchnia > Ekspresy' },
+  { id: '1454', name: 'T-shirty męskie & Odzież (Erkek Tişört & Giyim)', path: 'Moda > Odzież męska > T-shirty' },
+  { id: '531', name: 'Obuwie sportowe (Spor Ayakkabılar)', path: 'Moda > Obuwie > Sportowe' },
+  { id: '620', name: 'Części samochodowe (Oto Yedek Parça)', path: 'Motoryzacja > Części samochodowe' },
+  { id: '11818', name: 'Zabawki edukacyjne (Eğitici Oyuncaklar)', path: 'Dziecko > Zabawki > Edukacyjne' }
+];
+
 export const ProductEditView: React.FC<ProductEditViewProps> = ({
   offer,
   onBack,
   onSaveSuccess,
   theme = 'light'
 }) => {
-  // Navigation Tab State (Core, eMAG, Allegro, BaseLinker, Excel or All)
-  const [activeTab, setActiveTab] = useState<EditTabType>('core');
+  // Navigation Tab State (Allegro priority first, then Core, eMAG, BaseLinker, Excel or All)
+  const [activeTab, setActiveTab] = useState<EditTabType>('allegro');
   const [showModalView, setShowModalView] = useState(false);
 
   // Notice Banner
@@ -223,7 +263,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
     return missing;
   }, [ean, mandatoryRequirements, emagCharacteristics]);
 
-  // --- 3. ALLEGRO ÖZEL ALANLARI ---
+  // --- 3. ALLEGRO KAPSAMLI İLAN & ÜRÜN SAYFASI ALANLARI ---
   const [allegroTitle, setAllegroTitle] = useState<string>(
     offer.channelData?.allegro?.title ||
     (offer.name && offer.name.length > 75 ? offer.name.substring(0, 75).trim() : offer.name || '')
@@ -234,9 +274,64 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
   const [allegroSmart, setAllegroSmart] = useState<boolean>(
     offer.channelData?.allegro?.smartEligible ?? offer.smartEligible ?? true
   );
-  const [allegroCategoryId, setAllegroCategoryId] = useState<string>(
-    offer.channelData?.allegro?.categoryId || offer.category?.id || '257548'
+  const [allegroCategoryId, setAllegroCategoryId] = useState<string>(() => {
+    const rawId = String(offer.channelData?.allegro?.categoryId || offer.category?.id || '').trim();
+    if (rawId && rawId !== '2713' && getAllegroTaxonomyCategory(rawId)) {
+      return rawId;
+    }
+    const matched = matchAllegroCategoryFromTitle(offer.name || '');
+    return matched ? matched.id : '4228';
+  });
+  const [allegroCategorySearchQuery, setAllegroCategorySearchQuery] = useState('');
+  const [showAllegroCategoryDropdown, setShowAllegroCategoryDropdown] = useState(false);
+
+  const currentTaxonomyCategory = useMemo(() => {
+    return getAllegroTaxonomyCategory(allegroCategoryId) || ALLEGRO_TAXONOMY[0];
+  }, [allegroCategoryId]);
+
+  const searchedTaxonomyCategories = useMemo(() => {
+    return searchAllegroTaxonomy(allegroCategorySearchQuery);
+  }, [allegroCategorySearchQuery]);
+  const [allegroStock, setAllegroStock] = useState<number>(
+    offer.channelData?.allegro?.stock ?? offer.stock?.available ?? 10
   );
+  const [allegroHandlingTime, setAllegroHandlingTime] = useState<string>(
+    offer.channelData?.allegro?.handlingTime || 'PT24H'
+  );
+  const [allegroShippingRateId, setAllegroShippingRateId] = useState<string>(
+    offer.channelData?.allegro?.shippingRateId || offer.delivery?.shippingRates?.id || 'standard-inpost'
+  );
+  const [allegroLocationCountry, setAllegroLocationCountry] = useState<string>(
+    offer.channelData?.allegro?.location?.country || 'PL'
+  );
+  const [allegroLocationCity, setAllegroLocationCity] = useState<string>(
+    offer.channelData?.allegro?.location?.city || 'Warszawa'
+  );
+  const [allegroLocationPostCode, setAllegroLocationPostCode] = useState<string>(
+    offer.channelData?.allegro?.location?.postCode || '00-001'
+  );
+  const [allegroInvoiceType, setAllegroInvoiceType] = useState<string>(
+    offer.channelData?.allegro?.invoice || 'VAT'
+  );
+  const [allegroReturnPolicy, setAllegroReturnPolicy] = useState<string>(
+    offer.channelData?.allegro?.returnPolicy || '14_DAYS'
+  );
+  const [allegroWarranty, setAllegroWarranty] = useState<string>(
+    offer.channelData?.allegro?.warranty || '24_MONTHS'
+  );
+  const [allegroDescription, setAllegroDescription] = useState<string>(
+    offer.channelData?.allegro?.description ||
+    offer.description ||
+    `<h2>${offer.name || 'Wysokiej jakości produkt'}</h2>\n<p>Fabrycznie nowy produkt marki <strong>${offer.brand || 'Generic'}</strong>. Oferowany egzemplarz jest objęty pełną gwarancją i natychmiastową wysyłką.</p>\n<h3>Specyfikacja techniczna:</h3>\n<ul>\n  <li>Gwarantowana jakość wykonania</li>\n  <li>Pełna zgodność ze standardami europejskimi</li>\n</ul>`
+  );
+  const [allegroDescriptionLayout, setAllegroDescriptionLayout] = useState<'standard' | 'fulltext' | 'imagetext'>('standard');
+  const [allegroImages, setAllegroImages] = useState<string[]>(() => {
+    if (Array.isArray(offer.channelData?.allegro?.images) && offer.channelData.allegro.images.length > 0) {
+      return offer.channelData.allegro.images;
+    }
+    return galleryImages.length > 0 ? galleryImages : (offer.primaryImage ? [offer.primaryImage] : []);
+  });
+  const [allegroNewImageUrl, setAllegroNewImageUrl] = useState('');
   const [allegroParams, setAllegroParams] = useState<Record<string, string>>(() => {
     const map: Record<string, string> = {
       '11323': offer.brand || 'Generic',
@@ -252,6 +347,26 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
     });
     return map;
   });
+  const [allegroCustomParams, setAllegroCustomParams] = useState<Array<{ key: string; value: string }>>(() => {
+    return [
+      { key: 'Gniazdo procesora (Soket)', value: 'Socket AM4' },
+      { key: 'Chipset (Yonga Seti)', value: 'AMD B450' },
+      { key: 'Format płyty', value: 'Micro ATX' },
+      { key: 'Typ pamięci RAM', value: 'DDR4' },
+      { key: 'Liczba slotów pamięci', value: '2' }
+    ];
+  });
+  const [newCustomParamKey, setNewCustomParamKey] = useState('');
+  const [newCustomParamVal, setNewCustomParamVal] = useState('');
+  const [allegroGpsrProducer, setAllegroGpsrProducer] = useState(
+    (offer.channelData?.allegro as any)?.responsibleProducer?.name || `${offer.brand || 'MACHINIST'} EU Sp. z o.o.`
+  );
+  const [allegroGpsrSafety, setAllegroGpsrSafety] = useState(
+    (offer.channelData?.allegro as any)?.safetyInformation?.description || 'Produkt bezpieczny w użytkowaniu. Używać zgodnie z dołączoną instrukcją obsługi i przeznaczeniem.'
+  );
+  const [showAllegroMockup, setShowAllegroMockup] = useState(false);
+  const [isGeneratingAllegroAi, setIsGeneratingAllegroAi] = useState(false);
+  const [isTranslatingAllegroTitle, setIsTranslatingAllegroTitle] = useState(false);
 
   // --- 4. BASELINKER ÖZEL ALANLARI ---
   const [baselinkerWarehouseId, setBaselinkerWarehouseId] = useState<string>(
@@ -473,13 +588,30 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
           allegro: {
             title: (allegroTitle || name).trim().substring(0, 75),
             categoryId: String(allegroCategoryId),
-            categoryName: emagCategoryName,
+            categoryName: ALLEGRO_POPULAR_CATEGORIES.find(c => c.id === allegroCategoryId)?.name || 'Allegro Kategori',
             smartEligible: allegroSmart,
             price: {
               amount: allegroPricePln,
               currency: 'PLN'
             },
-            parameters: allegroParams
+            stock: allegroStock,
+            handlingTime: allegroHandlingTime,
+            shippingRateId: allegroShippingRateId,
+            description: allegroDescription,
+            descriptionLayout: allegroDescriptionLayout,
+            images: allegroImages,
+            parameters: allegroParams,
+            customParameters: allegroCustomParams,
+            location: {
+              country: allegroLocationCountry,
+              city: allegroLocationCity,
+              postCode: allegroLocationPostCode
+            },
+            invoice: allegroInvoiceType,
+            returnPolicy: allegroReturnPolicy,
+            warranty: allegroWarranty,
+            responsibleProducer: { name: allegroGpsrProducer },
+            safetyInformation: { description: allegroGpsrSafety }
           },
           baselinker: {
             warehouseId: baselinkerWarehouseId,
@@ -527,13 +659,45 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
     }
   };
 
-  // Publish to Allegro
+  // Publish to Allegro with complete payload
   const handlePublishToAllegro = async () => {
     setIsPublishingAllegro(true);
     try {
-      const res = await store.publishOfferToAllegro(offer.id);
+      const combinedParams: Array<{ id: string; name?: string; values: string[] }> = Object.entries(allegroParams).map(([id, val]) => ({
+        id,
+        values: Array.isArray(val) ? val : [String(val)]
+      }));
+      allegroCustomParams.forEach((cp, idx) => {
+        if (cp.key && cp.value) {
+          combinedParams.push({
+            id: `custom_${idx}_${cp.key.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+            name: cp.key,
+            values: [cp.value]
+          });
+        }
+      });
+
+      const res = await store.publishOfferToAllegro(offer.id, {
+        title: (allegroTitle || name).trim().substring(0, 75),
+        name: (allegroTitle || name).trim().substring(0, 75),
+        categoryId: String(allegroCategoryId),
+        price: allegroPricePln,
+        stock: allegroStock,
+        currency: 'PLN',
+        ean: allegroParams['225694'] || ean,
+        sku: allegroParams['225693'] || sku,
+        primaryImage: allegroImages[0] || primaryImage,
+        images: allegroImages.length > 0 ? allegroImages : galleryImages,
+        description: allegroDescription,
+        shippingRateId: allegroShippingRateId,
+        handlingTime: allegroHandlingTime,
+        parameters: combinedParams,
+        responsibleProducer: { name: allegroGpsrProducer },
+        safetyInformation: { description: allegroGpsrSafety }
+      });
+
       if (res.success) {
-        showNotice('success', `Ürün Allegro yayınına başarıyla gönderildi!`);
+        showNotice('success', `Ürün Allegro yayınına başarıyla gönderildi! (İlan No: ${res.offerId || 'Yayınlandı'})`);
       } else {
         showNotice('error', `Allegro Hatası: ${res.message}`);
       }
@@ -542,6 +706,123 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
     } finally {
       setIsPublishingAllegro(false);
     }
+  };
+
+  // Allegro AI Polish Description Generator
+  const handleGenerateAllegroAiDescription = async () => {
+    setIsGeneratingAllegroAi(true);
+    try {
+      const res = await fetch('/api/ai/generate-description', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: allegroTitle || name,
+          brand: allegroParams['11323'] || brand,
+          category: ALLEGRO_POPULAR_CATEGORIES.find(c => c.id === allegroCategoryId)?.name || 'Elektronika',
+          sku: sku,
+          language: 'pl'
+        })
+      }).catch(() => null);
+
+      if (res && res.ok) {
+        const data = await res.json();
+        if (data?.description) {
+          setAllegroDescription(data.description);
+          showNotice('success', 'Allegro için Lehçe ürün tanıtımı oluşturuldu');
+          return;
+        }
+      }
+
+      // High quality Polish template for Allegro
+      const brandStr = allegroParams['11323'] || brand || 'MACHINIST';
+      const polishTemplate = `<h2>${allegroTitle || name}</h2>
+<p>Oryginalny, fabrycznie nowy produkt marki <strong>${brandStr}</strong>, zaprojektowany z myślą o najwyższej wydajności, stabilności pracy oraz bezproblemowym użytkowaniu.</p>
+
+<h3>Kluczowe zalety i cechy:</h3>
+<ul>
+  <li><strong>Stan:</strong> Fabrycznie nowy, oryginalne opakowanie producenta</li>
+  <li><strong>Kod producenta / Model:</strong> ${allegroParams['225693'] || sku}</li>
+  <li><strong>Kod EAN:</strong> ${allegroParams['225694'] || ean || 'Brak'}</li>
+  <li><strong>Wysoka jakość:</strong> Starannie dobrane komponenty gwarantujące długą żywotność</li>
+  <li><strong>Bezpieczna wysyłka:</strong> Profesjonalnie zabezpieczona paczka i ekspresowa wysyłka</li>
+</ul>
+
+<h3>Zawartość zestawu:</h3>
+<p>Kompletny zestaw gotowy do montażu i natychmiastowego użytkowania zgodnie z dołączoną instrukcją obsługi.</p>`;
+      setAllegroDescription(polishTemplate);
+      showNotice('success', 'Allegro için optimize edilmiş Lehçe açıklama şablonu yüklendi');
+    } catch {
+      showNotice('error', 'Lehçe açıklama oluşturulamadı');
+    } finally {
+      setIsGeneratingAllegroAi(false);
+    }
+  };
+
+  // Allegro Polish Title Generator (max 75 chars)
+  const handleOptimizeAllegroTitle = () => {
+    const raw = (allegroTitle || name).trim();
+    if (!raw) return;
+    // Polish e-commerce standard title optimization
+    let optimized = raw;
+    if (raw.length > 75) {
+      optimized = raw.substring(0, 75).trim();
+    }
+    setAllegroTitle(optimized);
+    showNotice('info', 'Lehçe başlık 75 karaktere uyarlandı');
+  };
+
+  const handleAddCustomAllegroParam = () => {
+    if (!newCustomParamKey.trim() || !newCustomParamVal.trim()) return;
+    setAllegroCustomParams(prev => [
+      ...prev,
+      { key: newCustomParamKey.trim(), value: newCustomParamVal.trim() }
+    ]);
+    setNewCustomParamKey('');
+    setNewCustomParamVal('');
+  };
+
+  const handleAddAllegroImage = () => {
+    if (!allegroNewImageUrl.trim()) return;
+    setAllegroImages(prev => [...prev, allegroNewImageUrl.trim()]);
+    setAllegroNewImageUrl('');
+  };
+
+  const handleCopyCoreImagesToAllegro = () => {
+    if (galleryImages.length === 0) return;
+    setAllegroImages(galleryImages);
+    showNotice('success', `${galleryImages.length} adet görsel Allegro galerisine aktarıldı`);
+  };
+
+  const handleSelectAllegroCategory = (cat: AllegroTaxonomyCategory) => {
+    setAllegroCategoryId(cat.id);
+    setShowAllegroCategoryDropdown(false);
+    setAllegroCategorySearchQuery('');
+    const autoFilled = autoFillAllegroParameters(cat, allegroTitle || name, allegroParams['11323'] || brand, sku, ean);
+    setAllegroParams(prev => ({
+      ...prev,
+      ...autoFilled
+    }));
+    showNotice('success', `Allegro Kategorisi Seçildi: ${cat.nameTr} (${cat.namePl}) · ID: ${cat.id}`);
+  };
+
+  const handleAutoSuggestAllegroCategory = () => {
+    const matched = matchAllegroCategoryFromTitle(allegroTitle || name);
+    if (matched) {
+      handleSelectAllegroCategory(matched);
+      showNotice('success', `Başlıktan otomatik kategori belirlendi: ${matched.nameTr} (${matched.namePl}) · ID: ${matched.id}`);
+    } else {
+      showNotice('info', 'Başlıktan eşleşen kategori bulunamadı, mevcut kategori korundu.');
+    }
+  };
+
+  const handleAutoFillCurrentCategoryParams = () => {
+    if (!currentTaxonomyCategory) return;
+    const filled = autoFillAllegroParameters(currentTaxonomyCategory, allegroTitle || name, allegroParams['11323'] || brand, sku, ean);
+    setAllegroParams(prev => ({
+      ...prev,
+      ...filled
+    }));
+    showNotice('success', `"${currentTaxonomyCategory.nameTr}" için zorunlu alanlar başlıktan dolduruldu!`);
   };
 
   // Publish to BaseLinker
@@ -612,16 +893,6 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
             </button>
 
             <button
-              onClick={handlePublishToEmag}
-              disabled={isPublishingEmag}
-              className="px-3.5 py-2 rounded-xl bg-[#005fb8] hover:bg-[#004d99] text-white font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-xs"
-              title="eMAG satıcı API'sine gönder"
-            >
-              <MarketplaceLogo platform="emag" size="xs" rounded="full" />
-              <span>{isPublishingEmag ? 'Gönderiliyor...' : "eMAG'a Gönder"}</span>
-            </button>
-
-            <button
               onClick={handlePublishToAllegro}
               disabled={isPublishingAllegro}
               className="px-3.5 py-2 rounded-xl bg-[#ff5a00] hover:bg-[#e04f00] text-white font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-xs"
@@ -629,6 +900,16 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
             >
               <MarketplaceLogo platform="allegro" size="xs" rounded="full" />
               <span>{isPublishingAllegro ? 'Gönderiliyor...' : "Allegro'ya Gönder"}</span>
+            </button>
+
+            <button
+              onClick={handlePublishToEmag}
+              disabled={isPublishingEmag}
+              className="px-3.5 py-2 rounded-xl bg-[#005fb8] hover:bg-[#004d99] text-white font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-xs"
+              title="eMAG satıcı API'sine gönder"
+            >
+              <MarketplaceLogo platform="emag" size="xs" rounded="full" />
+              <span>{isPublishingEmag ? 'Gönderiliyor...' : "eMAG'a Gönder"}</span>
             </button>
 
             <button
@@ -646,46 +927,9 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
           </div>
         </div>
 
-        {/* Çoklu Kanal Sayfa & Sekme Barı (Core, eMAG, Allegro, BaseLinker, Excel) */}
+        {/* Çoklu Kanal Sayfa & Sekme Barı (Allegro 1. Öncelikli, Core, eMAG, BaseLinker, Excel) */}
         <div className="pt-2 border-t border-slate-100 dark:border-zinc-800 flex items-center gap-2 overflow-x-auto text-xs no-scrollbar">
-          {/* Tab 1: Ortak Çekirdek */}
-          <button
-            onClick={() => setActiveTab('core')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
-              activeTab === 'core'
-                ? 'bg-slate-900 text-white shadow-2xs'
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
-            }`}
-          >
-            <Boxes className="w-3.5 h-3.5 text-sky-500" />
-            <span>1. Ortak / Temel Bilgiler</span>
-            <span className="text-[10px] font-mono opacity-80 bg-black/10 px-1.5 py-0.2 rounded">
-              Temel
-            </span>
-          </button>
-
-          {/* Tab 2: eMAG */}
-          <button
-            onClick={() => setActiveTab('emag')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
-              activeTab === 'emag'
-                ? 'bg-[#005fb8] text-white shadow-2xs'
-                : 'bg-white hover:bg-blue-50/50 text-slate-700 border border-slate-200'
-            }`}
-          >
-            <MarketplaceLogo platform="emag" size="xs" rounded="full" />
-            <span>2. eMAG ({emagCountry === 'BG' ? 'Bulgaristan' : emagCountry === 'RO' ? 'Romanya' : 'Macaristan'})</span>
-            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 font-bold">
-              {emagCurrency} • {emagSendStatus === 0 ? 'Taslak' : 'Canlı'}
-            </span>
-            {missingRequirements.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[9px] font-bold">
-                {missingRequirements.length} Eksik
-              </span>
-            )}
-          </button>
-
-          {/* Tab 3: Allegro */}
+          {/* Tab 1: Allegro (Polonya / Çekya) */}
           <button
             onClick={() => setActiveTab('allegro')}
             className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
@@ -695,10 +939,47 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
             }`}
           >
             <MarketplaceLogo platform="allegro" size="xs" rounded="full" />
-            <span>3. Allegro (Polonya)</span>
+            <span>1. Allegro (Polonya & Orta Avrupa)</span>
             <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-bold">
               PLN • {allegroSmart ? 'Smart+' : 'Standart'}
             </span>
+          </button>
+
+          {/* Tab 2: Ortak Çekirdek */}
+          <button
+            onClick={() => setActiveTab('core')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+              activeTab === 'core'
+                ? 'bg-slate-900 text-white shadow-2xs'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+            }`}
+          >
+            <Boxes className="w-3.5 h-3.5 text-sky-500" />
+            <span>2. Ortak / Temel Bilgiler</span>
+            <span className="text-[10px] font-mono opacity-80 bg-black/10 px-1.5 py-0.2 rounded">
+              Temel
+            </span>
+          </button>
+
+          {/* Tab 3: eMAG */}
+          <button
+            onClick={() => setActiveTab('emag')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+              activeTab === 'emag'
+                ? 'bg-[#005fb8] text-white shadow-2xs'
+                : 'bg-white hover:bg-blue-50/50 text-slate-700 border border-slate-200'
+            }`}
+          >
+            <MarketplaceLogo platform="emag" size="xs" rounded="full" />
+            <span>3. eMAG ({emagCountry === 'BG' ? 'Bulgaristan' : emagCountry === 'RO' ? 'Romanya' : 'Macaristan'})</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 font-bold">
+              {emagCurrency} • {emagSendStatus === 0 ? 'Taslak' : 'Canlı'}
+            </span>
+            {missingRequirements.length > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[9px] font-bold">
+                {missingRequirements.length} Eksik
+              </span>
+            )}
           </button>
 
           {/* Tab 4: BaseLinker */}
@@ -1017,7 +1298,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
               </div>
               <div>
                 <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <span>2. eMAG Pazaryeri Entegrasyonu</span>
+                  <span>3. eMAG Pazaryeri Entegrasyonu</span>
                   <span className="px-2 py-0.5 rounded-full bg-blue-100 text-[#005fb8] text-[10px] font-bold">
                     eMAG Marketplace v3
                   </span>
@@ -1313,7 +1594,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
               </div>
               <div>
                 <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <span>3. Allegro Pazaryeri Entegrasyonu (Polonya)</span>
+                  <span>1. Allegro Pazaryeri Entegrasyonu (Polonya - 1. Öncelikli Pazaryeri)</span>
                   <span className="px-2 py-0.5 rounded-full bg-orange-100 text-[#ff5a00] text-[10px] font-bold">
                     Allegro REST API
                   </span>
@@ -1363,8 +1644,301 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
               </p>
             </div>
 
-            {/* Price PLN & Smart Delivery */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-xl bg-orange-50/30 border border-orange-100">
+            {/* ============================================================== */}
+            {/* 1. ALLEGRO KATEGORİ SEÇİCİ & ÇOK DİLLİ ARAMA (TR/EN/PL)         */}
+            {/* ============================================================== */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-orange-50/40 border border-orange-200/80 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-orange-200/60 pb-3">
+                <div>
+                  <label className="text-xs font-black text-slate-900 flex items-center gap-2">
+                    <FolderTree className="w-4 h-4 text-[#ff5a00]" />
+                    <span>Allegro Kategori Seçimi & Doğrulama</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      Doğrulanmış Leaf Kategori
+                    </span>
+                  </label>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Türkçe, İngilizce veya Lehçe aratarak ürününüzün Allegro'da yayına açılacağı doğru kategoriyi seçin. (Hatalı/Geçersiz ID engellenir)
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAutoSuggestAllegroCategory}
+                  className="px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors shrink-0"
+                  title="Ürün başlığındaki kelimelerden otomatik kategori önerisi al"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Başlıktan Otomatik Kategori Bul</span>
+                </button>
+              </div>
+
+              {/* Aktif Seçili Kategori Kartı */}
+              <div className="p-3.5 rounded-xl bg-white border border-orange-200 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-2xs">
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-black text-slate-900 flex items-center gap-1">
+                      <span>🇵🇱 {currentTaxonomyCategory.namePl}</span>
+                      <span className="text-slate-400 font-normal">/</span>
+                      <span className="text-orange-700">🇹🇷 {currentTaxonomyCategory.nameTr}</span>
+                      <span className="text-slate-400 font-normal">/</span>
+                      <span className="text-slate-600 font-medium text-[11px]">🇬🇧 {currentTaxonomyCategory.nameEn}</span>
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-orange-100 text-[#ff5a00] font-mono text-[11px] font-bold">
+                      ID: {currentTaxonomyCategory.id}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1.5">
+                    <Layers className="w-3 h-3 text-slate-400" />
+                    <span>{currentTaxonomyCategory.path}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowAllegroCategoryDropdown(!showAllegroCategoryDropdown)}
+                    className="px-3 py-1.5 rounded-xl border border-slate-300 hover:border-slate-800 text-slate-700 font-bold text-xs flex items-center gap-1.5 bg-slate-50 hover:bg-white cursor-pointer transition-colors"
+                  >
+                    <Search className="w-3.5 h-3.5 text-slate-500" />
+                    <span>{showAllegroCategoryDropdown ? 'Aramayı Kapat' : 'Kategori Değiştir / Ara'}</span>
+                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showAllegroCategoryDropdown ? 'rotate-180' : ''}`} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Çok Dilli Kategori Arama ve Dropdown Paneli */}
+              {showAllegroCategoryDropdown && (
+                <div className="p-3.5 rounded-xl bg-white border border-slate-300 space-y-3 shadow-md animate-in fade-in duration-150">
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      autoFocus
+                      value={allegroCategorySearchQuery}
+                      onChange={(e) => setAllegroCategorySearchQuery(e.target.value)}
+                      placeholder="🔍 Kategori Ara... (Türkçe: 'Anakart', 'İşlemci', 'Kulaklık' | English: 'Motherboard', 'CPU' | Polski: 'Płyty główne' | ID: '4228')"
+                      className="w-full pl-9 pr-8 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs font-medium focus:outline-none focus:border-orange-500 focus:bg-white"
+                    />
+                    {allegroCategorySearchQuery && (
+                      <button
+                        onClick={() => setAllegroCategorySearchQuery('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Hızlı Kategori Rozetleri */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Hızlı Seçim:</span>
+                    {ALLEGRO_TAXONOMY.slice(0, 6).map(cat => (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => handleSelectAllegroCategory(cat)}
+                        className={`text-[11px] px-2 py-0.5 rounded-lg border transition-colors cursor-pointer ${
+                          cat.id === allegroCategoryId
+                            ? 'bg-orange-600 text-white border-orange-600 font-bold'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200 font-medium'
+                        }`}
+                      >
+                        {cat.nameTr.split('(')[0].trim()} ({cat.id})
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Arama Sonuçları Listesi */}
+                  <div className="max-h-64 overflow-y-auto space-y-1.5 divide-y divide-slate-100 pr-1">
+                    {searchedTaxonomyCategories.length === 0 ? (
+                      <div className="p-4 text-center text-xs text-slate-400">
+                        Eşleşen kategori bulunamadı. Lütfen başka bir anahtar kelime veya ID deneyin.
+                      </div>
+                    ) : (
+                      searchedTaxonomyCategories.map(cat => (
+                        <div
+                          key={cat.id}
+                          onClick={() => handleSelectAllegroCategory(cat)}
+                          className={`p-2.5 rounded-xl cursor-pointer transition-colors flex items-center justify-between gap-3 ${
+                            cat.id === allegroCategoryId
+                              ? 'bg-orange-50 border border-orange-300'
+                              : 'hover:bg-slate-50 border border-transparent'
+                          }`}
+                        >
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-slate-900">
+                                🇵🇱 {cat.namePl}
+                              </span>
+                              <span className="text-xs font-semibold text-orange-700">
+                                (🇹🇷 {cat.nameTr})
+                              </span>
+                              <span className="text-[11px] text-slate-500">
+                                / 🇬🇧 {cat.nameEn}
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-mono">
+                              {cat.path}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono text-[10px] font-bold">
+                              ID: {cat.id}
+                            </span>
+                            {cat.id === allegroCategoryId && (
+                              <CheckCircle className="w-4 h-4 text-emerald-600" />
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ============================================================== */}
+            {/* 2. KATEGORİ ZORUNLULUKLARI & PARAMETRELERİ (DİNAMİK FORM)       */}
+            {/* ============================================================== */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <Sliders className="w-4 h-4 text-orange-600" />
+                  <h3 className="text-xs font-black text-slate-900">
+                    Allegro Kategori Zorunlulukları: {currentTaxonomyCategory.namePl}
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold text-[10px]">
+                    {currentTaxonomyCategory.parameters.filter(p => p.required).length} Zorunlu Alan
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAutoFillCurrentCategoryParams}
+                  className="px-3 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Bilgilerden Zorunlu Alanları Otomatik Doldur</span>
+                </button>
+              </div>
+
+              {/* Dinamik Kategori Parametre Formu */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {currentTaxonomyCategory.parameters.map((param) => {
+                  const currentValue = allegroParams[param.id] !== undefined
+                    ? allegroParams[param.id]
+                    : (param.defaultValue || '');
+
+                  return (
+                    <div
+                      key={param.id}
+                      className={`p-3 rounded-xl border transition-colors ${
+                        param.required ? 'border-orange-200/90 bg-orange-50/20' : 'border-slate-200 bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-[11px] font-bold text-slate-800 truncate" title={`${param.trName} (${param.name})`}>
+                          <span>{param.trName}</span>
+                          <span className="text-slate-400 font-normal text-[10px] ml-1">({param.name})</span>
+                        </label>
+                        {param.required ? (
+                          <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-rose-100 text-rose-700 shrink-0">
+                            * ZORUNLU
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-medium px-1.5 py-0.2 rounded bg-slate-100 text-slate-500 shrink-0">
+                            Opsiyonel
+                          </span>
+                        )}
+                      </div>
+
+                      {param.options && param.options.length > 0 ? (
+                        <select
+                          value={currentValue}
+                          onChange={(e) => setAllegroParams(prev => ({ ...prev, [param.id]: e.target.value }))}
+                          className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-bold text-slate-800 focus:outline-none focus:border-orange-500"
+                        >
+                          <option value="">Seçiniz...</option>
+                          {param.options.map((opt, i) => (
+                            <option key={i} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          value={currentValue}
+                          onChange={(e) => setAllegroParams(prev => ({ ...prev, [param.id]: e.target.value }))}
+                          placeholder={param.trName}
+                          className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-medium text-slate-800 focus:outline-none focus:border-orange-500"
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Özel Parametre Ekleme */}
+              <div className="pt-2 border-t border-slate-100 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-700">
+                    Ek Nitelikler & Özel Parametreler ({allegroCustomParams.length})
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {allegroCustomParams.map((cp, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 text-xs font-medium border border-slate-200"
+                    >
+                      <strong className="text-slate-900">{cp.key}:</strong> {cp.value}
+                      <button
+                        type="button"
+                        onClick={() => setAllegroCustomParams(prev => prev.filter((_, i) => i !== idx))}
+                        className="text-slate-400 hover:text-rose-600"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Özellik Adı (örn: Bellek Frekansı, Renk)"
+                    value={newCustomParamKey}
+                    onChange={(e) => setNewCustomParamKey(e.target.value)}
+                    className="flex-1 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Değeri (örn: 3200 MHz, Siyah)"
+                    value={newCustomParamVal}
+                    onChange={(e) => setNewCustomParamVal(e.target.value)}
+                    className="flex-1 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCustomAllegroParam}
+                    className="px-3.5 py-1.5 rounded-xl bg-slate-900 text-white font-semibold text-xs flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Ekle</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* ============================================================== */}
+            {/* 3. FİYAT, PARA BİRİMİ, STOK & KARGO ŞABLONU                     */}
+            {/* ============================================================== */}
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Allegro Satış Fiyatı (PLN)
@@ -1384,21 +1958,37 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Allegro Kategori ID
+                  Allegro Satış Stoku (Adet)
                 </label>
                 <input
-                  type="text"
-                  value={allegroCategoryId}
-                  onChange={(e) => setAllegroCategoryId(e.target.value)}
+                  type="number"
+                  value={allegroStock}
+                  onChange={(e) => setAllegroStock(parseInt(e.target.value, 10) || 0)}
                   className="w-full px-3.5 py-2 rounded-xl bg-white border border-slate-200 font-mono text-xs font-bold text-slate-800"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Allegro Smart! Kargo Uygunluğu
+                  Kargoya Hazırlık Süresi
                 </label>
-                <div className="flex items-center gap-3 pt-1">
+                <select
+                  value={allegroHandlingTime}
+                  onChange={(e) => setAllegroHandlingTime(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-800"
+                >
+                  <option value="PT24H">24 Saat (Wysyłka w 24h - Smart)</option>
+                  <option value="PT0S">Aynı Gün (Wysyłka dzisiaj)</option>
+                  <option value="PT48H">48 Saat (Wysyłka w 2 dni)</option>
+                  <option value="P3D">3 Gün (Wysyłka w 3 dni)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Allegro Smart! Kargo
+                </label>
+                <div className="flex items-center gap-3 pt-2">
                   <label className="flex items-center gap-1.5 cursor-pointer text-xs font-medium">
                     <input
                       type="radio"
@@ -1406,7 +1996,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                       checked={allegroSmart === true}
                       onChange={() => setAllegroSmart(true)}
                     />
-                    <span>Smart+ Aktif</span>
+                    <span className="font-bold text-orange-600">Smart+ Aktif</span>
                   </label>
                   <label className="flex items-center gap-1.5 cursor-pointer text-xs font-medium">
                     <input
@@ -1421,68 +2011,236 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
               </div>
             </div>
 
-            {/* Allegro Parameters */}
-            <div className="space-y-3">
-              <h3 className="text-xs font-bold text-slate-900">
-                Allegro Parametreleri (Parametry Oferty)
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* 1. Marka */}
-                <div className="p-3 rounded-xl border border-slate-200 bg-white">
-                  <div className="text-[11px] font-bold text-slate-700 mb-1">
-                    {PARAMETER_TRANSLATIONS['11323']?.tr || 'Marka'} (Marka)
-                  </div>
-                  <input
-                    type="text"
-                    value={allegroParams['11323'] || brand}
-                    onChange={(e) => setAllegroParams(prev => ({ ...prev, '11323': e.target.value }))}
-                    className="w-full px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-medium"
-                  />
+            {/* ============================================================== */}
+            {/* 4. ALLEGRO GÖRSEL GALERİSİ & BEYAZ FON UYARISI                  */}
+            {/* ============================================================== */}
+            <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                    <ImageIcon className="w-4 h-4 text-orange-600" />
+                    <span>Allegro İlan Fotoğrafları ({allegroImages.length} Görsel)</span>
+                  </h4>
+                  <p className="text-[10px] text-slate-500">
+                    Allegro standartları: Kapak fotoğrafı <strong>%100 saf beyaz arka plan (RGB 255,255,255)</strong> ve filigransız olmalıdır.
+                  </p>
                 </div>
 
-                {/* 2. Kod Producenta */}
-                <div className="p-3 rounded-xl border border-slate-200 bg-white">
-                  <div className="text-[11px] font-bold text-slate-700 mb-1">
-                    {PARAMETER_TRANSLATIONS['225693']?.tr || 'Model Kodu'} (Kod producenta)
-                  </div>
-                  <input
-                    type="text"
-                    value={allegroParams['225693'] || sku}
-                    onChange={(e) => setAllegroParams(prev => ({ ...prev, '225693': e.target.value }))}
-                    className="w-full px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-medium"
-                  />
-                </div>
-
-                {/* 3. Stan (Ürün Durumu) */}
-                <div className="p-3 rounded-xl border border-slate-200 bg-white">
-                  <div className="text-[11px] font-bold text-slate-700 mb-1">
-                    {PARAMETER_TRANSLATIONS['213']?.tr || 'Ürün Durumu'} (Stan)
-                  </div>
-                  <select
-                    value={allegroParams['213'] || 'Nowy'}
-                    onChange={(e) => setAllegroParams(prev => ({ ...prev, '213': e.target.value }))}
-                    className="w-full px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold"
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCopyCoreImagesToAllegro}
+                    className="px-2.5 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 text-[#ff5a00] text-[11px] font-bold border border-orange-200 cursor-pointer"
                   >
-                    <option value="Nowy">Nowy (Sıfır / Yeni Ürün)</option>
-                    <option value="Używany">Używany (İkinci El)</option>
-                    <option value="Powystawowy">Powystawowy (Teşhir / Yenilenmiş)</option>
-                  </select>
-                </div>
-
-                {/* 4. EAN */}
-                <div className="p-3 rounded-xl border border-slate-200 bg-white">
-                  <div className="text-[11px] font-bold text-slate-700 mb-1">
-                    {PARAMETER_TRANSLATIONS['225694']?.tr || 'Barkod'} (EAN / GTIN)
-                  </div>
-                  <input
-                    type="text"
-                    value={allegroParams['225694'] || ean}
-                    onChange={(e) => setAllegroParams(prev => ({ ...prev, '225694': e.target.value }))}
-                    className="w-full px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-mono font-medium"
-                  />
+                    Ortak Görsellerden Aktar
+                  </button>
                 </div>
               </div>
+
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  placeholder="Yeni Allegro görsel URL'si ekleyin (https://...)"
+                  value={allegroNewImageUrl}
+                  onChange={(e) => setAllegroNewImageUrl(e.target.value)}
+                  className="flex-1 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddAllegroImage}
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-900 text-white font-semibold text-xs flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Ekle</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                {allegroImages.map((imgUrl, idx) => (
+                  <div key={idx} className="relative group rounded-xl border border-slate-200 overflow-hidden bg-slate-50 aspect-square">
+                    <img src={imgUrl} alt={`Allegro #${idx + 1}`} className="w-full h-full object-contain p-1" />
+                    {idx === 0 && (
+                      <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-orange-600 text-white text-[9px] font-bold">
+                        Kapak (Miniatura)
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setAllegroImages(prev => prev.filter((_, i) => i !== idx))}
+                      className="absolute top-1 right-1 p-1 rounded-md bg-rose-600 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      title="Görseli Sil"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ============================================================== */}
+            {/* 5. ALLEGRO LEHÇE AÇIKLAMA DÜZENLEYİCİ                           */}
+            {/* ============================================================== */}
+            <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                    <FileText className="w-4 h-4 text-orange-600" />
+                    <span>Allegro Lehçe Açıklama & Bölümler (Opis Oferty)</span>
+                  </h4>
+                  <p className="text-[10px] text-slate-500">Allegro REST API kurallarına uygun biçimlendirilmiş Lehçe ürün tanıtımı</p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleGenerateAllegroAiDescription}
+                    disabled={isGeneratingAllegroAi}
+                    className="px-2.5 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 text-[#ff5a00] text-[11px] font-bold flex items-center gap-1 cursor-pointer border border-orange-200"
+                  >
+                    <Sparkles className="w-3 h-3 text-orange-500" />
+                    <span>{isGeneratingAllegroAi ? 'Lehçe Metin Üretiliyor...' : 'AI ile Lehçe Açıklama Oluştur'}</span>
+                  </button>
+                </div>
+              </div>
+
+              <textarea
+                rows={7}
+                value={allegroDescription}
+                onChange={(e) => setAllegroDescription(e.target.value)}
+                placeholder="<h2>Tytuł</h2><p>Opis po polsku...</p>"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-mono text-xs text-slate-800"
+              />
+            </div>
+
+            {/* ============================================================== */}
+            {/* 6. CANLI ALLEGRO SAYFASI ÖNİZLEMESİ (MOCKUP NA ALLEGRO.PL)      */}
+            {/* ============================================================== */}
+            <div className="border border-orange-200 rounded-2xl overflow-hidden shadow-xs">
+              <div
+                onClick={() => setShowAllegroMockup(!showAllegroMockup)}
+                className="p-3 bg-orange-50/70 flex items-center justify-between cursor-pointer hover:bg-orange-100/70 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-[#ff5a00]" />
+                  <span className="text-xs font-bold text-slate-900">
+                    allegro.pl Ürün Sayfası Önizlemesi (Müşteri Nasıl Görecek?)
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-white text-orange-800 font-mono font-bold border border-orange-200">
+                    Canlı Mockup
+                  </span>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showAllegroMockup ? 'rotate-180' : ''}`} />
+              </div>
+
+              {showAllegroMockup && (
+                <div className="p-5 bg-[#f5f5f7] space-y-4">
+                  {/* Allegro Header Bar */}
+                  <div className="bg-[#ff5a00] p-2.5 rounded-xl flex items-center justify-between text-white">
+                    <div className="flex items-center gap-2 font-black text-sm tracking-tight">
+                      <span>allegro</span>
+                    </div>
+                    <div className="text-[11px] font-medium opacity-90">
+                      Oficjalny Sklep · Bezpieczne Zakupy
+                    </div>
+                  </div>
+
+                  {/* Product Main Showcase */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-2xl border border-slate-200">
+                    {/* Left: Gallery */}
+                    <div className="space-y-3">
+                      <div className="aspect-square rounded-2xl bg-white border border-slate-100 flex items-center justify-center p-4">
+                        <img
+                          src={allegroImages[0] || primaryImage}
+                          alt="Allegro Main"
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      </div>
+                      <div className="flex gap-2 overflow-x-auto pb-1">
+                        {allegroImages.slice(0, 5).map((img, i) => (
+                          <div key={i} className="w-14 h-14 rounded-lg border border-slate-200 p-1 shrink-0 bg-white">
+                            <img src={img} alt={`Thumb ${i}`} className="w-full h-full object-contain" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Right: Buy Box & Details */}
+                    <div className="space-y-4">
+                      <div>
+                        <div className="text-[11px] text-slate-400 font-mono">
+                          {currentTaxonomyCategory.path}
+                        </div>
+                        <h1 className="text-base font-bold text-slate-900 mt-1 leading-snug">
+                          {allegroTitle || name}
+                        </h1>
+                        <div className="flex items-center gap-2 text-xs text-amber-500 mt-1.5 font-bold">
+                          <span>★★★★★</span>
+                          <span className="text-slate-600 font-medium">4.92 (128 ocen)</span>
+                          <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded text-[10px]">
+                            99.4% poleca tego sprzedawcę
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-xl bg-orange-50/40 border border-orange-100 space-y-1">
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-2xl font-black text-[#ff5a00] font-mono">
+                            {allegroPricePln} zł
+                          </span>
+                          {allegroSmart && (
+                            <span className="text-xs font-black text-[#ff5a00] bg-orange-100 px-2 py-0.5 rounded-full">
+                              smart!
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-slate-500">
+                          lub { (parseFloat(allegroPricePln) / 10).toFixed(2) } zł x 10 rat z Allegro Pay
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="text-xs text-emerald-700 font-bold flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Kup dzisiaj do 14:00 - dostawa jutro z Allegro Smart!</span>
+                        </div>
+                        <div className="text-xs text-slate-600 flex items-center gap-1.5">
+                          <Truck className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Paczkomaty InPost, Kurier DPD, Odbiór w Punkcie (Darmowy zwrot)</span>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 flex gap-3">
+                        <button
+                          type="button"
+                          className="flex-1 py-3 rounded-xl bg-[#ff5a00] hover:bg-[#e04f00] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                        >
+                          <ShoppingBag className="w-4 h-4" />
+                          <span>DODAJ DO KOSZYKA</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="flex-1 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                        >
+                          <span>KUP TERAZ</span>
+                        </button>
+                      </div>
+
+                      {/* Parametreler Tablosu */}
+                      <div className="pt-3 border-t border-slate-100 space-y-1.5">
+                        <div className="text-xs font-bold text-slate-800">Parametry Oferty:</div>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                          {currentTaxonomyCategory.parameters.map((p) => (
+                            <div key={p.id} className="flex justify-between border-b border-slate-50 py-1">
+                              <span className="text-slate-500">{p.name}:</span>
+                              <span className="font-semibold text-slate-800">{allegroParams[p.id] || p.defaultValue || '-'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </section>

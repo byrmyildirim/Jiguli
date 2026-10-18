@@ -51,7 +51,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
   onNavigateToOffers
 }) => {
   const isDark = theme === 'dark';
-  const [activePlatformTab, setActivePlatformTab] = useState<'emag' | 'allegro'>('emag');
+  const [activePlatformTab, setActivePlatformTab] = useState<'allegro' | 'emag'>('allegro');
 
   // Allegro state
   const [allegroCategories, setAllegroCategories] = useState<AllegroCategory[]>(store.getCategories());
@@ -210,18 +210,6 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
         {/* Platform Selector Tabs */}
         <div className="flex items-center gap-2 bg-slate-100 dark:bg-zinc-800/80 p-1 rounded-2xl border border-slate-200 dark:border-zinc-700">
           <button
-            onClick={() => setActivePlatformTab('emag')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-              activePlatformTab === 'emag'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 dark:text-zinc-300 hover:text-slate-900'
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-            <span>eMAG Marketplace Taksonomisi</span>
-          </button>
-
-          <button
             onClick={() => setActivePlatformTab('allegro')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activePlatformTab === 'allegro'
@@ -229,7 +217,19 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                 : 'text-slate-600 dark:text-zinc-300 hover:text-slate-900'
             }`}
           >
+            <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
             <span>Allegro Kategori Rehberi</span>
+          </button>
+
+          <button
+            onClick={() => setActivePlatformTab('emag')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              activePlatformTab === 'emag'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 dark:text-zinc-300 hover:text-slate-900'
+            }`}
+          >
+            <span>eMAG Marketplace Taksonomisi</span>
           </button>
         </div>
       </div>

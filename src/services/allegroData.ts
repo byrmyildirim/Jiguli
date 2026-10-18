@@ -8,6 +8,23 @@ export const INITIAL_CATEGORIES: AllegroCategory[] = [
     leaf: false,
   },
   {
+    id: '4228',
+    name: 'Elektronika > Komputery > Podzespoły komputerowe > Płyty główne',
+    parentId: '42540',
+    leaf: true,
+    parameters: [
+      { id: '11323', name: 'Marka (Brand)', type: 'STRING', required: true },
+      { id: '225693', name: 'Kod producenta / Model', type: 'STRING', required: true },
+      { id: '213', name: 'Stan (Condition)', type: 'DICTIONARY', required: true, options: [{ id: '1', value: 'Nowy (Sıfır/Yeni)' }, { id: '2', value: 'Używany (İkinci El)' }, { id: '3', value: 'Powystawowy (Teşhir)' }] },
+      { id: '225694', name: 'EAN / GTIN Barkod (8-14 hane)', type: 'STRING', required: true },
+      { id: '4228_1', name: 'Gniazdo procesora (Soket)', type: 'DICTIONARY', required: true, options: [{ id: '1', value: 'Socket AM4' }, { id: '2', value: 'Socket AM5' }, { id: '3', value: 'LGA 1700' }, { id: '4', value: 'LGA 1200' }, { id: '5', value: 'LGA 1151' }] },
+      { id: '4228_2', name: 'Chipset (Yonga Seti)', type: 'DICTIONARY', required: true, options: [{ id: '1', value: 'AMD B450' }, { id: '2', value: 'AMD B550' }, { id: '3', value: 'AMD X570' }, { id: '4', value: 'Intel B760' }, { id: '5', value: 'Intel Z790' }] },
+      { id: '4228_3', name: 'Format płyty', type: 'DICTIONARY', required: true, options: [{ id: '1', value: 'Micro ATX' }, { id: '2', value: 'ATX' }, { id: '3', value: 'Mini ITX' }] },
+      { id: '4228_4', name: 'Typ pamięci RAM', type: 'DICTIONARY', required: true, options: [{ id: '1', value: 'DDR4' }, { id: '2', value: 'DDR5' }, { id: '3', value: 'DDR3' }] },
+      { id: '4228_5', name: 'Liczba slotów pamięci RAM', type: 'DICTIONARY', required: true, options: [{ id: '1', value: '2' }, { id: '2', value: '4' }] }
+    ]
+  },
+  {
     id: '257548',
     name: 'Elektronika > Smartwatche i opaski sportowe',
     parentId: '42540',

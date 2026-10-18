@@ -833,19 +833,7 @@ export const OffersView: React.FC<OffersViewProps> = ({
         </div>
 
         <div className="flex items-center gap-1.5 self-start sm:self-auto flex-wrap">
-          {/* 1. eMAG Çek */}
-          <button
-            onClick={handleFetchEmagProducts}
-            disabled={isFetchingEmag}
-            className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 font-medium text-xs transition-colors flex items-center gap-1.5 cursor-pointer min-h-[36px] shadow-2xs disabled:opacity-50"
-            title="eMAG satıcı panelinizdeki gerçek ürün tekliflerini çeker"
-          >
-            <MarketplaceLogo platform="emag" size="xs" rounded="md" />
-            <Download className={`w-3.5 h-3.5 text-slate-400 ${isFetchingEmag ? 'animate-bounce' : ''}`} />
-            <span>{isFetchingEmag ? 'Çekiliyor...' : 'eMAG'}</span>
-          </button>
-
-          {/* 2. Allegro Çek */}
+          {/* 1. Allegro Çek */}
           <button
             onClick={handleFetchAllegroProducts}
             disabled={isFetchingAllegro}
@@ -855,6 +843,18 @@ export const OffersView: React.FC<OffersViewProps> = ({
             <MarketplaceLogo platform="allegro" size="xs" rounded="md" />
             <Download className={`w-3.5 h-3.5 text-slate-400 ${isFetchingAllegro ? 'animate-bounce' : ''}`} />
             <span>{isFetchingAllegro ? 'Çekiliyor...' : 'Allegro'}</span>
+          </button>
+
+          {/* 2. eMAG Çek */}
+          <button
+            onClick={handleFetchEmagProducts}
+            disabled={isFetchingEmag}
+            className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 font-medium text-xs transition-colors flex items-center gap-1.5 cursor-pointer min-h-[36px] shadow-2xs disabled:opacity-50"
+            title="eMAG satıcı panelinizdeki gerçek ürün tekliflerini çeker"
+          >
+            <MarketplaceLogo platform="emag" size="xs" rounded="md" />
+            <Download className={`w-3.5 h-3.5 text-slate-400 ${isFetchingEmag ? 'animate-bounce' : ''}`} />
+            <span>{isFetchingEmag ? 'Çekiliyor...' : 'eMAG'}</span>
           </button>
 
           {/* 3. BaseLinker Çek */}

@@ -175,18 +175,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         <div className="flex items-center gap-1.5 flex-wrap">
-          {/* 1. eMAG Çek */}
-          <button
-            onClick={handleFetchEmag}
-            disabled={isSyncingEmag}
-            className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 font-medium text-xs transition-colors shadow-2xs cursor-pointer flex items-center gap-1.5 disabled:opacity-50 min-h-[36px]"
-            title="eMAG mağazanızdan ürün ve siparişleri çeker"
-          >
-            <MarketplaceLogo platform="emag" size="xs" rounded="md" />
-            <span>{isSyncingEmag ? 'Çekiliyor...' : 'eMAG'}</span>
-          </button>
-
-          {/* 2. Allegro Çek */}
+          {/* 1. Allegro Çek */}
           <button
             onClick={handleFetchAllegro}
             disabled={isSyncingAllegro}
@@ -195,6 +184,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           >
             <MarketplaceLogo platform="allegro" size="xs" rounded="md" />
             <span>{isSyncingAllegro ? 'Çekiliyor...' : 'Allegro'}</span>
+          </button>
+
+          {/* 2. eMAG Çek */}
+          <button
+            onClick={handleFetchEmag}
+            disabled={isSyncingEmag}
+            className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 font-medium text-xs transition-colors shadow-2xs cursor-pointer flex items-center gap-1.5 disabled:opacity-50 min-h-[36px]"
+            title="eMAG mağazanızdan ürün ve siparişleri çeker"
+          >
+            <MarketplaceLogo platform="emag" size="xs" rounded="md" />
+            <span>{isSyncingEmag ? 'Çekiliyor...' : 'eMAG'}</span>
           </button>
 
           {/* 3. BaseLinker Çek */}

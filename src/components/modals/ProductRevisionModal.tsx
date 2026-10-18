@@ -68,7 +68,7 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
   const isDark = theme === 'dark';
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<RevisionTab>('emag');
+  const [activeTab, setActiveTab] = useState<RevisionTab>('allegro');
 
   // --- CORE PRODUCT STATE ---
   const [name, setName] = useState(offer.name || '');
@@ -735,22 +735,24 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
         {/* MARKETPLACE SEGMENTED NAVIGATION BAR */}
         {/* ========================================================================= */}
         <div className={`px-6 pt-2.5 border-b flex items-center gap-1.5 overflow-x-auto shrink-0 ${c.tabsBg}`}>
-          {/* TAB 1: CORE / TEMEL */}
+          {/* TAB 1: ALLEGRO */}
           <button
             type="button"
-            onClick={() => setActiveTab('core')}
+            onClick={() => setActiveTab('allegro')}
             className={`px-4 py-2.5 rounded-t-xl text-xs font-bold flex items-center gap-2 transition-all border-b-2 cursor-pointer ${
-              activeTab === 'core'
+              activeTab === 'allegro'
                 ? isDark
-                  ? 'border-indigo-500 text-indigo-400 bg-indigo-500/10'
-                  : 'border-indigo-600 text-indigo-600 bg-white shadow-2xs'
+                  ? 'border-amber-500 text-amber-400 bg-amber-500/10'
+                  : 'border-amber-600 text-amber-600 bg-white shadow-2xs'
                 : isDark
                 ? 'border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
             }`}
           >
-            <Package className="w-4 h-4" />
-            <span>1. Temel Ürün & Envanter</span>
+            <div className="w-4 h-4 rounded bg-amber-600 flex items-center justify-center text-[10px] text-white font-black">
+              a
+            </div>
+            <span>1. Allegro (Polonya)</span>
           </button>
 
           {/* TAB 2: eMAG MARKETPLACE */}
@@ -770,7 +772,7 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
             <div className="w-4 h-4 rounded bg-rose-600 flex items-center justify-center text-[10px] text-white font-black">
               e
             </div>
-            <span>2. eMAG (Bulgaristan)</span>
+            <span>2. eMAG (Bulgaristan/Romanya)</span>
             <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
               isDark ? 'bg-rose-500/20 text-rose-300' : 'bg-rose-50 text-rose-700 border border-rose-200'
             }`}>
@@ -778,24 +780,22 @@ export const ProductRevisionModal: React.FC<ProductRevisionModalProps> = ({
             </span>
           </button>
 
-          {/* TAB 3: ALLEGRO */}
+          {/* TAB 3: CORE / TEMEL */}
           <button
             type="button"
-            onClick={() => setActiveTab('allegro')}
+            onClick={() => setActiveTab('core')}
             className={`px-4 py-2.5 rounded-t-xl text-xs font-bold flex items-center gap-2 transition-all border-b-2 cursor-pointer ${
-              activeTab === 'allegro'
+              activeTab === 'core'
                 ? isDark
-                  ? 'border-amber-500 text-amber-400 bg-amber-500/10'
-                  : 'border-amber-600 text-amber-600 bg-white shadow-2xs'
+                  ? 'border-indigo-500 text-indigo-400 bg-indigo-500/10'
+                  : 'border-indigo-600 text-indigo-600 bg-white shadow-2xs'
                 : isDark
                 ? 'border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
             }`}
           >
-            <div className="w-4 h-4 rounded bg-amber-600 flex items-center justify-center text-[10px] text-white font-black">
-              a
-            </div>
-            <span>3. Allegro (Polonya)</span>
+            <Package className="w-4 h-4" />
+            <span>3. Temel Ürün & Envanter</span>
           </button>
 
           {/* TAB 4: BASELINKER */}

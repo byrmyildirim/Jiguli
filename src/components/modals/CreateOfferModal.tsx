@@ -99,6 +99,12 @@ export const PARAMETER_TRANSLATIONS: Record<string, { tr: string; original: stri
 };
 
 export const CATEGORY_TRANSLATIONS: Record<string, { tr: string; original: string }> = {
+  '4228': { tr: 'Anakartlar (Motherboards / Płyty główne)', original: 'Elektronika > Komputery > Podzespoły komputerowe > Płyty główne' },
+  '4227': { tr: 'İşlemciler (CPUs / Procesory)', original: 'Elektronika > Komputery > Podzespoły komputerowe > Procesory' },
+  '260018': { tr: 'Ekran Kartları (GPUs / Karty graficzne)', original: 'Elektronika > Komputery > Podzespoły komputerowe > Karty graficzne' },
+  '257745': { tr: 'SSD ve NVMe M.2 Depolama (Dyski SSD)', original: 'Elektronika > Komputery > Dyski i pamięci przenośne > Dyski SSD' },
+  '491': { tr: 'Dizüstü Bilgisayarlar (Laptops / Laptopy)', original: 'Elektronika > Komputery > Laptopy' },
+  '165': { tr: 'Akıllı Telefonlar (Smartphones / Smartfony)', original: 'Elektronika > Telefony i Akcesoria > Smartfony' },
   '12800': { tr: 'LED Şerit Aydınlatma & Akıllı Işık (Tuya/Zigbee)', original: 'Elektronika > Oświetlenie LED > Taśmy LED & Smart' },
   '12900': { tr: 'Akıllı Ev, Zigbee/WiFi Sensörler & Anahtarlar', original: 'Elektronika > Smart Home > Czujniki & Przełączniki' },
   '257548': { tr: 'Akıllı Saatler & Spor Bileklikler', original: 'Elektronika > Smartwatche i opaski sportowe' },
@@ -107,7 +113,8 @@ export const CATEGORY_TRANSLATIONS: Record<string, { tr: string; original: strin
   '124921': { tr: 'USB-C Kablo & Hızlı Şarj Aksesuarları', original: 'Elektronika > Akcesoria telefoniczne > Kable USB-C' },
   '1454': { tr: 'Tişörtler & Günlük Üst Giyim', original: 'Moda > Odzież > T-shirty i koszulki' },
   '67414': { tr: 'Kahve Makineleri & Mutfak Aletleri', original: 'Dom i Ogród > Kuchnia > Ekspresy ciśnieniowe' },
-  '3690': { tr: 'Ev Tekstili, Nevresim Takımları & Pościel', original: 'Dom i Ogród > Wyposażenie > Tekstylia domowe > Pościel' }
+  '3690': { tr: 'Ev Tekstili, Nevresim Takımları & Pościel', original: 'Dom i Ogród > Wyposażenie > Tekstylia domowe > Pościel' },
+  '1531': { tr: 'Şarjlı Vidalama ve Matkaplar (Elektronarzędzia)', original: 'Dom i Ogród > Narzędzia > Elektronarzędzia > Wkrętarki' }
 };
 
 export const OPTION_TRANSLATIONS: Record<string, { tr: string; original: string }> = {
@@ -238,8 +245,8 @@ export const CreateOfferModal: React.FC<CreateOfferModalProps> = ({
   const editingId = offerToEdit?.id || initialData?.id;
   const originInfo = getModalOrigin(offerToEdit);
 
-  // Active tab management: 'core' | 'allegro' | 'emag' | 'baselinker' | 'excel'
-  const [activeTab, setActiveTab] = useState<'core' | 'allegro' | 'emag' | 'baselinker' | 'excel'>('core');
+  // Active tab management: 'allegro' | 'core' | 'emag' | 'baselinker' | 'excel'
+  const [activeTab, setActiveTab] = useState<'allegro' | 'core' | 'emag' | 'baselinker' | 'excel'>('allegro');
 
   // --- 1. CORE / ORTAK ALANLAR ---
   const [coreTitle, setCoreTitle] = useState('');

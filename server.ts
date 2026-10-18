@@ -4355,6 +4355,53 @@ app.post('/api/allegro/test-credentials', async (req, res) => {
   }
 });
 
+// Allegro Category Parameters Endpoint: GET /sale/categories/{categoryId}/parameters
+app.get('/api/allegro/category-parameters', async (req, res) => {
+  const categoryId = String(req.query.categoryId || '').trim();
+  const environment = String(req.query.environment || 'production');
+
+  if (!categoryId) {
+    return res.status(400).json({ success: false, message: 'categoryId parametresi zorunludur.' });
+  }
+
+  const apiUrl = environment === 'sandbox'
+    ? 'https://api.allegro.pl.allegrosandbox.pl'
+    : 'https://api.allegro.pl';
+
+  try {
+    const accessToken = await getValidAllegroToken();
+    if (accessToken) {
+      const apiRes = await fetch(`${apiUrl}/sale/categories/${categoryId}/parameters`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/vnd.allegro.public.v1+json',
+          'Accept-Language': 'pl-PL'
+        }
+      });
+
+      if (apiRes.ok) {
+        const data = await apiRes.json().catch(() => null);
+        if (data && Array.isArray(data.parameters)) {
+          return res.json({
+            success: true,
+            categoryId,
+            parameters: data.parameters
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Allegro Parameters Proxy Notice]:', err);
+  }
+
+  // Return fallback response
+  return res.json({
+    success: false,
+    categoryId,
+    message: 'Canlı parametreler çekilemedi, yerel taksonomi kullanılıyor.'
+  });
+});
+
 // Allegro Live Orders Fetching Endpoint (İki Yönlü: Sipariş Çekme)
 app.post('/api/allegro/orders', async (req, res) => {
   const { accessToken, environment = 'production', status = 'READY_FOR_PROCESSING' } = req.body || {};
