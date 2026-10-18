@@ -801,7 +801,43 @@ export function verifyAndMatchQwenCategory(
     };
   }
 
-  // 2. Adım: Qwen Görsel Analizi + Ürün Tipi + Başlık ile Semantik Doğrulama Katmanı
+  // 2. Adım: Yeni/Tanımsız Bir Allegro Kategori ID'si Gelirse Dinamik Taksonomi Nesnesi Oluştur
+  if (suggestedCatId && suggestedCatId !== '0') {
+    const dynamicCategory: AllegroTaxonomyCategory = {
+      id: suggestedCatId,
+      namePl: qwenData?.categoryNamePl || qwenData?.categoryNameTr || 'Kategoria Allegro',
+      nameTr: qwenData?.categoryNameTr || qwenData?.categoryNamePl || 'Allegro Kategorisi',
+      nameEn: qwenData?.categoryNameEn || qwenData?.categoryNameTr || 'Allegro Category',
+      path: qwenData?.path || `Pazaryeri > ${qwenData?.categoryNamePl || qwenData?.categoryNameTr || 'Kategori'}`,
+      keywords: [detectedType, title].filter(Boolean),
+      parameters: [
+        { id: '213', name: 'Stan', trName: 'Ürün Durumu', enName: 'Condition', required: true, type: 'DICTIONARY', options: ['Nowy', 'Używany'], defaultValue: 'Nowy' },
+        { id: '11323', name: 'Marka', trName: 'Marka', enName: 'Brand', required: true, type: 'STRING', defaultValue: brand || 'Generic' },
+        { id: '11324', name: 'Rozmiar', trName: 'Beden', enName: 'Size', required: false, type: 'STRING' },
+        { id: '2026', name: 'Kolor', trName: 'Renk', enName: 'Color', required: false, type: 'STRING' }
+      ]
+    };
+    ALLEGRO_TAXONOMY.push(dynamicCategory);
+
+    const autoFilled = autoFillAllegroParameters(dynamicCategory, title, brand, sku, ean);
+    const mergedParams = {
+      ...autoFilled,
+      ...(qwenData?.parameters || qwenData?.suggestedParameters || {})
+    };
+
+    return {
+      isValidated: true,
+      finalCategory: dynamicCategory,
+      verificationSource: 'QWEN_DIRECT_MATCH',
+      visualAnalysisText: visualAnalysis,
+      detectedType,
+      confidenceScore: confidence,
+      reasoning,
+      parameters: mergedParams
+    };
+  }
+
+  // 3. Adım: Qwen Görsel Analizi + Ürün Tipi + Başlık ile Semantik Doğrulama Katmanı
   const combinedText = `${title} ${visualAnalysis} ${detectedType} ${qwenData?.categoryNameTr || ''} ${qwenData?.categoryNamePl || ''}`.toLowerCase();
 
   let bestCat = matchAllegroCategoryFromTitle(combinedText);
