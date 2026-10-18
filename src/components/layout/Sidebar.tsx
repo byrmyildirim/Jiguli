@@ -46,14 +46,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [allegroConfig, setAllegroConfig] = useState<AllegroConfig>(store.getAllegroConfig());
   const [brandName, setBrandName] = useState<string>(store.getBrandName());
   const [slogan, setSlogan] = useState<string>(store.getSlogan());
-  const [logoUrl, setLogoUrl] = useState<string>(store.getLogoUrl());
+  const [logoUrl, setLogoUrl] = useState<string>(() => (typeof store.getLogoUrl === 'function' ? store.getLogoUrl() : ''));
 
   useEffect(() => {
     return store.subscribe(() => {
       setAllegroConfig(store.getAllegroConfig());
       setBrandName(store.getBrandName());
       setSlogan(store.getSlogan());
-      setLogoUrl(store.getLogoUrl());
+      setLogoUrl(typeof store.getLogoUrl === 'function' ? store.getLogoUrl() : '');
     });
   }, []);
 

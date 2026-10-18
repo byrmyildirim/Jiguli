@@ -4262,18 +4262,32 @@ app.post('/api/db/company-info', async (req, res) => {
   res.json({ success });
 });
 
-// System Branding (Marka Adı & Slogan)
+// System Branding (Marka Adı, Slogan & Logo)
 app.get('/api/db/branding', async (_req, res) => {
   const branding = await dbGetConfig('system_branding', {
     brandName: 'Jiguli',
-    slogan: 'Az yakar, çok satar.'
+    slogan: 'Az yakar, çok satar.',
+    logoUrl: ''
   });
   res.json({ success: true, branding });
 });
 
 app.post('/api/db/branding', async (req, res) => {
-  const success = await dbSaveConfig('system_branding', req.body, 'Panel Marka Adı ve Slogan');
-  res.json({ success });
+  try {
+    const current = await dbGetConfig('system_branding', {
+      brandName: 'Jiguli',
+      slogan: 'Az yakar, çok satar.',
+      logoUrl: ''
+    });
+    const updated = {
+      ...current,
+      ...(req.body || {})
+    };
+    const success = await dbSaveConfig('system_branding', updated, 'Panel Marka Adı, Slogan ve Logo');
+    res.json({ success: true, branding: updated });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err?.message || String(err) });
+  }
 });
 
 // Categories

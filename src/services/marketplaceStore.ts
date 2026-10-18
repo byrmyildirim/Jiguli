@@ -50,6 +50,7 @@ const STORAGE_KEYS = {
   AUTOMATION_RULES: 'omni_prod_v1_automation_rules',
   SLOGAN: 'omni_prod_v1_slogan',
   BRAND_NAME: 'omni_prod_v1_brand_name',
+  LOGO_URL: 'omni_prod_v1_logo_url',
   COMPANY_TAX_INFO: 'omni_prod_v1_company_tax_info',
   PLATFORM_CREDENTIALS: 'omni_prod_v1_platform_credentials'
 };
@@ -272,6 +273,7 @@ export class MarketplaceStore {
   private activeCurrency: SupportedCurrency = 'TRY';
   private brandName: string;
   private slogan: string;
+  private logoUrl: string = '';
   private companyTaxInfo: CompanyTaxInfo;
   private liveExchangeRates: Record<string, number> = { ...EXCHANGE_RATES };
   private tcmbMetadata: any = null;
@@ -394,6 +396,7 @@ export class MarketplaceStore {
     this.activeCurrency = this.loadFromStorage(STORAGE_KEYS.ACTIVE_CURRENCY, 'TRY');
     this.brandName = this.loadFromStorage(STORAGE_KEYS.BRAND_NAME, 'Jiguli');
     this.slogan = this.loadFromStorage(STORAGE_KEYS.SLOGAN, 'Küresel Pazaryeri Entegrasyon & Otomasyon Suite');
+    this.logoUrl = this.loadFromStorage(STORAGE_KEYS.LOGO_URL, '');
     this.companyTaxInfo = this.loadFromStorage(STORAGE_KEYS.COMPANY_TAX_INFO, DEFAULT_COMPANY_TAX_INFO);
 
     // 100% Live Mode: Only retain real orders
@@ -548,6 +551,10 @@ export class MarketplaceStore {
             this.slogan = bData.branding.slogan;
             this.saveToStorage(STORAGE_KEYS.SLOGAN, this.slogan);
           }
+          if (bData.branding.logoUrl !== undefined) {
+            this.logoUrl = bData.branding.logoUrl;
+            this.saveToStorage(STORAGE_KEYS.LOGO_URL, this.logoUrl);
+          }
         }
       }
 
@@ -620,8 +627,54 @@ export class MarketplaceStore {
     fetch('/api/db/branding', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ brandName: this.brandName, slogan })
+      body: JSON.stringify({ brandName: this.brandName, slogan, logoUrl: this.logoUrl })
     }).catch(() => {});
+  }
+
+  public getLogoUrl(): string {
+    return this.logoUrl || '';
+  }
+
+  public setLogoUrl(logoUrl: string) {
+    this.logoUrl = logoUrl;
+    this.saveToStorage(STORAGE_KEYS.LOGO_URL, logoUrl);
+    this.notify();
+    fetch('/api/db/branding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ brandName: this.brandName, slogan: this.slogan, logoUrl })
+    }).catch(() => {});
+  }
+
+  public async setBranding(payload: { brandName?: string; slogan?: string; logoUrl?: string }) {
+    if (payload.brandName !== undefined) {
+      this.brandName = payload.brandName;
+      this.saveToStorage(STORAGE_KEYS.BRAND_NAME, this.brandName);
+    }
+    if (payload.slogan !== undefined) {
+      this.slogan = payload.slogan;
+      this.saveToStorage(STORAGE_KEYS.SLOGAN, this.slogan);
+    }
+    if (payload.logoUrl !== undefined) {
+      this.logoUrl = payload.logoUrl;
+      this.saveToStorage(STORAGE_KEYS.LOGO_URL, this.logoUrl);
+    }
+    this.notify();
+    try {
+      const res = await fetch('/api/db/branding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          brandName: this.brandName,
+          slogan: this.slogan,
+          logoUrl: this.logoUrl
+        })
+      });
+      return await res.json();
+    } catch (e: any) {
+      console.warn('[Branding save error]:', e);
+      return { success: false, message: e?.message };
+    }
   }
 
   // Company & E-Invoice Tax Info
@@ -1184,6 +1237,21 @@ export class MarketplaceStore {
       return offer;
     });
 
+    this.saveToStorage(STORAGE_KEYS.OFFERS, this.offers);
+    this.notify();
+  }
+
+  public updateOffer(offerId: string, updates: Partial<AllegroOffer>) {
+    this.offers = this.offers.map((offer) => {
+      if (offer.id === offerId) {
+        return {
+          ...offer,
+          ...updates,
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return offer;
+    });
     this.saveToStorage(STORAGE_KEYS.OFFERS, this.offers);
     this.notify();
   }
