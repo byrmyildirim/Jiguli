@@ -775,7 +775,7 @@ app.post('/api/ai/classify-category', async (req, res) => {
 
   const systemPrompt = `Sen e-ticaret pazaryerleri (Allegro, eMAG) taksonomi ve ürün kategori sınıflandırma uzmanı yapay zeka asistanısın. Görevin verilen ürün bilgilerini ve görsellerini analiz ederek sağlanan taksonomi listesinden EN UYGUN kategori ID'sini seçmek ve kategorinin zorunlu parametrelerini doldurmaktır. Yanıtın SADECE geçerli bir JSON objesi olmalıdır.`;
 
-  const prompt = `Aşağıdaki e-ticaret ürün bilgilerini ve görsel verilerini incele:
+  const prompt = `Aşağıdaki e-ticaret ürün bilgilerini ve görsel verilerini dikkatle incele:
 
 Ürün Başlığı: ${title || 'Bilinmiyor'}
 Marka / Üretici: ${brand || 'Generic'}
@@ -789,19 +789,20 @@ ${JSON.stringify((taxonomyList && taxonomyList.length > 0 ? taxonomyList : []).m
   id: String(c.id),
   nameTr: c.nameTr,
   namePl: c.namePl,
-  nameEn: c.nameEn,
   path: c.path,
   keywords: c.keywords,
   parameters: (c.parameters || []).map((p: any) => ({ id: p.id, name: p.name, trName: p.trName, options: p.options, required: p.required }))
 })), null, 2)}
 
-Aşağıdaki JSON şemasına BİREBİR UYGUN yanıt ver (başka metin ekleme, doğrudan JSON yaz):
+Aşağıdaki JSON şemasına BİREBİR UYGUN yanıt ver (başka hiçbir metin veya açıklama ekleme, doğrudan geçerli JSON yaz):
 {
   "categoryId": "Seçilen Kategori ID",
   "categoryNameTr": "Seçilen Kategori Türkçe Adı",
   "categoryNamePl": "Seçilen Kategori Lehçe Adı",
+  "visualAnalysis": "Ürün resminden tespit edilen görsel özellikler (renk, kumaş/materyal türü, ürün tipi)",
+  "detectedType": "Tespit edilen ana ürün türü (ör: Bere, Kulaklık, Tişört, Elbise, Anakart)",
   "confidence": 0.98,
-  "reasoning": "Ürün başlığı ve niteliklerinden hareketle kategorinin neden seçildiğine dair 1 cümlelik Türkçe gerekçe",
+  "reasoning": "Ürün görseli ve başlığından hareketle bu kategorinin neden seçildiğine dair 1 cümlelik Türkçe gerekçe",
   "parameters": {
     "PARAM_ID": "PARAM_VALUE"
   }

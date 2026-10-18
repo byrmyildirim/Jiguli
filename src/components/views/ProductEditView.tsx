@@ -73,7 +73,9 @@ import {
   autoFillAllegroParameters,
   formatAllegroOptionLabel,
   getAllegroMainCategoryGroups,
-  AllegroTaxonomyCategory
+  AllegroTaxonomyCategory,
+  verifyAndMatchQwenCategory,
+  QwenCategoryVerificationResult
 } from '../../services/allegroCategoryTaxonomy';
 
 interface ProductEditViewProps {
@@ -362,13 +364,21 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
     return map;
   });
   const [allegroCustomParams, setAllegroCustomParams] = useState<Array<{ key: string; value: string }>>(() => {
-    return [
-      { key: 'Gniazdo procesora (Soket)', value: 'Socket AM4' },
-      { key: 'Chipset (Yonga Seti)', value: 'AMD B450' },
-      { key: 'Format płyty', value: 'Micro ATX' },
-      { key: 'Typ pamięci RAM', value: 'DDR4' },
-      { key: 'Liczba slotów pamięci', value: '2' }
-    ];
+    if (allegroCategoryId === '4228') {
+      return [
+        { key: 'Gniazdo procesora (Soket)', value: 'Socket AM4' },
+        { key: 'Chipset (Yonga Seti)', value: 'AMD B450' },
+        { key: 'Format płyty', value: 'Micro ATX' },
+        { key: 'Typ pamięci RAM', value: 'DDR4' }
+      ];
+    } else if (allegroCategoryId === '1457') {
+      return [
+        { key: 'Fason / Kesim', value: 'Luźny / Bokserki Męskie' },
+        { key: 'Skład materiału', value: '95% Bawełna, 5% Elastan' },
+        { key: 'Pakowanie', value: 'Wielopak (Zestaw 3 sztuki)' }
+      ];
+    }
+    return [];
   });
   const [newCustomParamKey, setNewCustomParamKey] = useState('');
   const [newCustomParamVal, setNewCustomParamVal] = useState('');
@@ -816,10 +826,22 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
       ...prev,
       ...autoFilled
     }));
+
+    if (cat.id === '1457') {
+      setAllegroCustomParams([
+        { key: 'Fason / Kesim', value: 'Luźny / Bokserki Męskie' },
+        { key: 'Skład materiału', value: '95% Bawełna, 5% Elastan' },
+        { key: 'Pakowanie', value: 'Wielopak (Zestaw 3 sztuki)' }
+      ]);
+    } else if (cat.id !== '4228') {
+      setAllegroCustomParams([]);
+    }
+
     showNotice('success', `Allegro Kategorisi Seçildi: ${cat.nameTr} (${cat.namePl}) · ID: ${cat.id}`);
   };
 
   const [isClassifyingWithQwen, setIsClassifyingWithQwen] = useState(false);
+  const [qwenVerificationReport, setQwenVerificationReport] = useState<QwenCategoryVerificationResult | null>(null);
 
   const handleQwenAiClassifyCategory = async () => {
     setIsClassifyingWithQwen(true);
@@ -842,23 +864,27 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
 
       if (res && res.ok) {
         const result = await res.json();
-        if (result?.data?.categoryId) {
-          const aiCatId = String(result.data.categoryId).trim();
-          const taxonomyMatch = getAllegroTaxonomyCategory(aiCatId) || matchAllegroCategoryFromTitle(allegroTitle || name);
-          
-          setAllegroCategoryId(taxonomyMatch.id);
-          if (result.data.parameters && typeof result.data.parameters === 'object') {
-            setAllegroParams(prev => ({
-              ...prev,
-              ...result.data.parameters
-            }));
-          } else {
-            const filled = autoFillAllegroParameters(taxonomyMatch, allegroTitle || name, brand, sku, ean);
-            setAllegroParams(prev => ({ ...prev, ...filled }));
-          }
+        if (result?.data) {
+          const verified = verifyAndMatchQwenCategory(
+            result.data,
+            allegroTitle || name,
+            brand,
+            sku,
+            ean
+          );
 
-          const confidencePct = Math.round((result.data.confidence || 0.98) * 100);
-          showNotice('success', `🤖 Qwen AI Eşleştirmesi (%${confidencePct} Doğruluk): "${taxonomyMatch.nameTr}" (ID: ${taxonomyMatch.id}) kategorisi atandı! ${result.data.reasoning ? '— ' + result.data.reasoning : ''}`);
+          setQwenVerificationReport(verified);
+          setAllegroCategoryId(verified.finalCategory.id);
+          setAllegroParams(prev => ({
+            ...prev,
+            ...verified.parameters
+          }));
+
+          const confidencePct = Math.round(verified.confidenceScore * 100);
+          showNotice(
+            'success',
+            `🤖 Qwen AI Doğrulama Katmanından Geçti (%${confidencePct} Güven): "${verified.finalCategory.nameTr}" (ID: ${verified.finalCategory.id})`
+          );
           setIsClassifyingWithQwen(false);
           return;
         }
@@ -1812,6 +1838,48 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                   </button>
                 </div>
               </div>
+
+              {/* Qwen AI Görsel Analiz & Doğrulama Katmanı Raporu */}
+              {qwenVerificationReport && (
+                <div className="p-3.5 rounded-xl bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border border-indigo-200 space-y-2 animate-in fade-in duration-200">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-indigo-100 pb-2">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-purple-600" />
+                      <span className="text-xs font-black text-indigo-950 uppercase tracking-wider">
+                        🤖 Qwen AI Görsel Analiz & Doğrulama Katmanı
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        <span>✓ Doğrulandı (%{Math.round(qwenVerificationReport.confidenceScore * 100)} Güven)</span>
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono text-purple-700 bg-purple-100 px-2 py-0.5 rounded font-bold">
+                      Kategori ID: {qwenVerificationReport.finalCategory.id}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    {qwenVerificationReport.visualAnalysisText && (
+                      <div className="bg-white/80 p-2 rounded-lg border border-indigo-100">
+                        <strong className="text-indigo-900 block text-[10px] uppercase font-mono">🖼️ Görsel Analiz Tespiti:</strong>
+                        <p className="text-slate-700 text-[11px] font-medium leading-relaxed">{qwenVerificationReport.visualAnalysisText}</p>
+                      </div>
+                    )}
+                    {qwenVerificationReport.detectedType && (
+                      <div className="bg-white/80 p-2 rounded-lg border border-indigo-100">
+                        <strong className="text-indigo-900 block text-[10px] uppercase font-mono">🏷️ Tespit Edilen Ürün Türü:</strong>
+                        <p className="text-slate-800 font-bold text-[11px]">{qwenVerificationReport.detectedType}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {qwenVerificationReport.reasoning && (
+                    <p className="text-[11px] text-indigo-900 font-medium bg-white/60 p-2 rounded-lg border border-indigo-100/60 italic">
+                      💡 <strong>Eşleştirme Gerekçesi:</strong> {qwenVerificationReport.reasoning}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Çok Dilli Kategori Arama ve Dropdown Paneli */}
               {showAllegroCategoryDropdown && (
