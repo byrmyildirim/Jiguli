@@ -53,6 +53,7 @@ import { EmagIpWhitelistHelper } from './EmagIpWhitelistHelper';
 import { AllegroConnectionHelper } from './AllegroConnectionHelper';
 import { BaseLinkerConnectionHelper } from './BaseLinkerConnectionHelper';
 import { EmagTaxonomySyncPanel } from '../common/EmagTaxonomySyncPanel';
+import { AllegroTaxonomySyncPanel } from '../common/AllegroTaxonomySyncPanel';
 import {
   AllegroConfig,
   SupportedCurrency,
@@ -3135,6 +3136,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ theme: propTheme, on
               </button>
             </div>
           </form>
+
+          {/* Allegro Kategori Şeması & Parametre Senkronizasyon Paneli */}
+          <AllegroTaxonomySyncPanel theme={currentAppTheme} />
         </div>
       )}
 
