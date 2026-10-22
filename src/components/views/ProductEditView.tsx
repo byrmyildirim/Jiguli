@@ -70,6 +70,7 @@ import {
   searchAllegroTaxonomy,
   getAllegroTaxonomyCategory,
   matchAllegroCategoryFromTitle,
+  matchAllegroCategoryAsync,
   autoFillAllegroParameters,
   formatAllegroOptionLabel,
   getAllegroMainCategoryGroups,
@@ -890,10 +891,15 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
         }
       }
 
-      // Fallback local rule matching
-      const matched = matchAllegroCategoryFromTitle(allegroTitle || name);
+      // Fallback: Allegro Live Matching API + 22k Taksonomi Eşleştirme
+      const matched = await matchAllegroCategoryAsync({
+        title: allegroTitle || name,
+        brand,
+        sku,
+        ean
+      });
       handleSelectAllegroCategory(matched);
-      showNotice('success', `Akıllı Eşleştirme: "${matched.nameTr}" (ID: ${matched.id}) kategorisine atandı.`);
+      showNotice('success', `Allegro Taksonomi Eşleştirme: "${matched.nameTr || matched.namePl}" (ID: ${matched.id}) kategorisine atandı.`);
     } catch {
       const matched = matchAllegroCategoryFromTitle(allegroTitle || name);
       handleSelectAllegroCategory(matched);
@@ -908,13 +914,26 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
     }
   }, [offer.id]);
 
-  const handleAutoSuggestAllegroCategory = () => {
-    const matched = matchAllegroCategoryFromTitle(allegroTitle || name);
-    if (matched) {
+  const handleAutoSuggestAllegroCategory = async () => {
+    setIsClassifyingWithQwen(true);
+    try {
+      const matched = await matchAllegroCategoryAsync({
+        title: allegroTitle || name,
+        brand,
+        sku,
+        ean
+      });
+      if (matched) {
+        handleSelectAllegroCategory(matched);
+        showNotice('success', `Allegro API Akıllı Eşleştirme: "${matched.nameTr || matched.namePl}" (ID: ${matched.id}) başarıyla belirlendi.`);
+      } else {
+        showNotice('info', 'Eşleşen kategori bulunamadı, mevcut kategori korundu.');
+      }
+    } catch {
+      const matched = matchAllegroCategoryFromTitle(allegroTitle || name);
       handleSelectAllegroCategory(matched);
-      showNotice('success', `Başlıktan otomatik kategori belirlendi: ${matched.nameTr} (${matched.namePl}) · ID: ${matched.id}`);
-    } else {
-      showNotice('info', 'Başlıktan eşleşen kategori bulunamadı, mevcut kategori korundu.');
+    } finally {
+      setIsClassifyingWithQwen(false);
     }
   };
 

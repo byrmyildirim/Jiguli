@@ -52,6 +52,7 @@ import {
   EmagCharacteristicDef
 } from '../../services/marketplaceAttributes';
 import { emagTaxonomySyncService, EmagCategoryItem } from '../../services/emagTaxonomySyncService';
+import { allegroTaxonomySyncService } from '../../services/allegroTaxonomySyncService';
 import { EmagCategorySelector } from '../common/EmagCategorySelector';
 import { matchProductToEmagCategory } from '../../services/excelCategoryMatcher';
 
@@ -388,6 +389,17 @@ export const CreateOfferModal: React.FC<CreateOfferModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setCategories(store.getCategories());
+      allegroTaxonomySyncService.loadAllCategoriesFromBackend().then((cats) => {
+        if (cats && cats.length > 0) {
+          const mapped: AllegroCategory[] = cats.map(c => ({
+            id: c.id,
+            name: c.trName ? `${c.trName} (${c.name})` : c.name,
+            parentId: c.parentId,
+            leaf: c.leaf
+          }));
+          setCategories(mapped);
+        }
+      });
       setCreatedSuccess(false);
       setToastNotice(null);
       setPublishOnSave(false);
@@ -495,12 +507,29 @@ export const CreateOfferModal: React.FC<CreateOfferModalProps> = ({
           categoryName: offerToEdit.excelMetadata?.emagCategoryName || offerToEdit.category?.name
         });
 
-        let targetAllegroCatId = offerToEdit.channelData?.allegro?.categoryId || autoDetected.allegroCategoryId || '12800';
+        let targetAllegroCatId = offerToEdit.channelData?.allegro?.categoryId || autoDetected.allegroCategoryId;
         let targetEmagCatId = String(matchedCat.categoryId);
         let hasClashFixed = true;
         let clashReason = `${matchedCat.categoryName} (#${matchedCat.categoryId}) [${matchedCat.matchDetail || matchedCat.source}]`;
 
-        setAllegroCategoryId(targetAllegroCatId || '12800');
+        if (targetAllegroCatId && targetAllegroCatId !== '12800') {
+          setAllegroCategoryId(targetAllegroCatId);
+        } else {
+          // Canlı Allegro API ve 22k Taksonomi üzerinden akıllı eşleştirme
+          allegroTaxonomySyncService.matchCategory({
+            title: nameVal,
+            sku: targetSku,
+            ean: targetEan
+          }).then((res) => {
+            if (res.success && res.category) {
+              setAllegroCategoryId(res.category.id);
+            } else {
+              setAllegroCategoryId(targetAllegroCatId || '12800');
+            }
+          }).catch(() => {
+            setAllegroCategoryId(targetAllegroCatId || '12800');
+          });
+        }
         setEmagCategoryId(targetEmagCatId);
 
         setCategoryDiagnosis({

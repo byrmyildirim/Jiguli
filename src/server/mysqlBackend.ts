@@ -70,6 +70,35 @@ export function getSavedMySQLConfig(): MySQLConfigPayload {
   };
 }
 
+export function getMySQLConfigInfo(): any {
+  const cfg = getSavedMySQLConfig();
+  return {
+    host: cfg.host,
+    port: cfg.port || 3306,
+    database: cfg.database,
+    user: cfg.user,
+    hasPassword: Boolean(cfg.password),
+    ssl: Boolean(cfg.ssl),
+    prefix: cfg.prefix || 'cnt_',
+    charset: cfg.charset || 'utf8mb4'
+  };
+}
+
+export function parseDatabaseUrl(urlStr: string): Partial<MySQLConfigPayload> | null {
+  try {
+    const url = new URL(urlStr);
+    return {
+      host: url.hostname,
+      port: url.port ? Number(url.port) : 3306,
+      database: url.pathname.replace(/^\//, ''),
+      user: decodeURIComponent(url.username),
+      password: decodeURIComponent(url.password)
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function saveMySQLConfig(cfg: MySQLConfigPayload): void {
   try {
     const dir = path.dirname(CONFIG_FILE_PATH);
@@ -724,8 +753,9 @@ export async function installMySQLDatabase(cfg: MySQLConfigPayload, customSql?: 
   };
 }
 
-export async function getMySQLDatabaseStatus(cfg: MySQLConfigPayload) {
-  const prefix = getActivePrefix(cfg);
+export async function getMySQLDatabaseStatus(cfg?: MySQLConfigPayload) {
+  const activeCfg = cfg || getSavedMySQLConfig();
+  const prefix = getActivePrefix(activeCfg);
   const tableList = [
     { name: `${prefix}db_config`, display: 'Sistem Yapılandırması', desc: 'Genel ayarlar ve sürüm bilgisi', pk: 'id' },
     { name: `${prefix}users`, display: 'Kullanıcılar & Yetkiler', desc: 'Yönetici ve personel hesapları', pk: 'id' },
@@ -747,7 +777,7 @@ export async function getMySQLDatabaseStatus(cfg: MySQLConfigPayload) {
   let totalRecords = 0;
 
   try {
-    const pool = createOrGetPool(cfg);
+    const pool = createOrGetPool(activeCfg);
     const startTime = Date.now();
     const conn = await pool.getConnection();
     const [vRows]: any = await conn.query('SELECT VERSION() as v');
@@ -799,7 +829,7 @@ export async function getMySQLDatabaseStatus(cfg: MySQLConfigPayload) {
   }
 
   return {
-    isConfigured: !!cfg.host && !!cfg.database,
+    isConfigured: !!activeCfg.host && !!activeCfg.database,
     isConnected,
     isInstalled: tableStatuses.some(t => t.status === 'ready'),
     serverVersion,

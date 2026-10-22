@@ -658,17 +658,17 @@ export function matchAllegroCategoryFromTitle(title: string): AllegroTaxonomyCat
   }
 
   // Token tabanlı skorlama ile en yakın kategoriyi bulma
-  let bestMatch = ALLEGRO_TAXONOMY[0];
+  let bestMatch: AllegroTaxonomyCategory | null = null;
   let maxScore = 0;
 
   for (const cat of ALLEGRO_TAXONOMY) {
     let score = 0;
-    for (const kw of cat.keywords) {
+    for (const kw of (cat.keywords || [])) {
       if (t.includes(kw.toLowerCase())) {
         score += 3;
       }
     }
-    if (t.includes(cat.nameTr.toLowerCase()) || t.includes(cat.namePl.toLowerCase()) || t.includes(cat.nameEn.toLowerCase())) {
+    if (t.includes(cat.nameTr.toLowerCase()) || t.includes(cat.namePl.toLowerCase()) || (cat.nameEn && t.includes(cat.nameEn.toLowerCase()))) {
       score += 5;
     }
     if (score > maxScore) {
@@ -677,7 +677,72 @@ export function matchAllegroCategoryFromTitle(title: string): AllegroTaxonomyCat
     }
   }
 
-  return bestMatch;
+  if (bestMatch && maxScore > 0) {
+    return bestMatch;
+  }
+
+  // Akıllı fallback: Başlıkta geçen genel sektör ipuçlarına göre doğru ana dala yönlendir
+  if (t.includes('moda') || t.includes('elbise') || t.includes('giyim') || t.includes('şort') || t.includes('ceket') || t.includes('etek')) {
+    return getAllegroTaxonomyCategory('1454') || getAllegroTaxonomyCategory('76221') || ALLEGRO_TAXONOMY[0];
+  }
+  if (t.includes('elektronik') || t.includes('cihaz') || t.includes('şarj') || t.includes('adaptör') || t.includes('kablo') || t.includes('usb')) {
+    return getAllegroTaxonomyCategory('4228') || getAllegroTaxonomyCategory('66887') || ALLEGRO_TAXONOMY[5];
+  }
+  if (t.includes('ev') || t.includes('bahçe') || t.includes('mutfak') || t.includes('oda') || t.includes('dekorasyon') || t.includes('aydınlatma')) {
+    return getAllegroTaxonomyCategory('12800') || getAllegroTaxonomyCategory('3690') || ALLEGRO_TAXONOMY[9];
+  }
+
+  return bestMatch || getAllegroTaxonomyCategory('12800') || ALLEGRO_TAXONOMY[0];
+}
+
+/**
+ * Canlı Allegro API ve 22,634 Taksonomi Veritabanı ile Asenkron Kategori Eşleme
+ */
+export async function matchAllegroCategoryAsync(params: {
+  title: string;
+  brand?: string;
+  sku?: string;
+  ean?: string;
+  categoryName?: string;
+}): Promise<AllegroTaxonomyCategory> {
+  try {
+    const res = await fetch('/api/allegro/taxonomy/match', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.success && data?.category) {
+        const cat = data.category;
+        const mappedCat: AllegroTaxonomyCategory = {
+          id: String(cat.id),
+          namePl: cat.namePl || cat.name,
+          nameTr: cat.trName || cat.name,
+          nameEn: cat.name,
+          path: data.fullPath || cat.path,
+          keywords: [cat.name, cat.trName, params.title].filter(Boolean),
+          parameters: (data.parameters || []).map((p: any) => ({
+            id: String(p.id),
+            name: p.name,
+            trName: p.name,
+            enName: p.name,
+            required: Boolean(p.required),
+            type: p.type === 'dictionary' ? 'DICTIONARY' : (p.type === 'float' || p.type === 'integer') ? 'NUMBER' : 'STRING',
+            options: (p.dictionary || []).map((d: any) => d.value)
+          }))
+        };
+
+        // Taksonomi listesine ekle
+        if (!ALLEGRO_TAXONOMY.find(c => String(c.id) === String(mappedCat.id))) {
+          ALLEGRO_TAXONOMY.push(mappedCat);
+        }
+        return mappedCat;
+      }
+    }
+  } catch {}
+
+  return matchAllegroCategoryFromTitle(params.title);
 }
 
 /**

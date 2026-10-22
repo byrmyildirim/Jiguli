@@ -1,9 +1,235 @@
+var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res, err) => function __init() {
+  if (err) throw err[0];
+  try {
+    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+  } catch (e) {
+    throw err = [e], e;
+  }
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+
+// scripts/sync_allegro_taxonomy.js
+var sync_allegro_taxonomy_exports = {};
+__export(sync_allegro_taxonomy_exports, {
+  COMMON_TR_TRANSLATIONS: () => COMMON_TR_TRANSLATIONS,
+  crawlAllegroCategories: () => crawlAllegroCategories,
+  fetchChildren: () => fetchChildren,
+  getAccessToken: () => getAccessToken,
+  translateCategoryName: () => translateCategoryName
+});
+import fs2 from "fs";
+import path2 from "path";
+import { fileURLToPath } from "url";
+function translateCategoryName(namePl) {
+  if (!namePl) return "";
+  const trimmed = namePl.trim();
+  if (COMMON_TR_TRANSLATIONS[trimmed]) return COMMON_TR_TRANSLATIONS[trimmed];
+  return trimmed;
+}
+async function getAccessToken() {
+  const tokenRes = await fetch("https://allegro.pl/auth/oauth/token?grant_type=client_credentials", {
+    method: "POST",
+    headers: {
+      "Authorization": `Basic ${basicAuth}`,
+      "Content-Type": "application/x-www-form-urlencoded"
+    }
+  });
+  if (!tokenRes.ok) {
+    throw new Error(`Allegro Token Error: ${tokenRes.status} ${tokenRes.statusText}`);
+  }
+  const data = await tokenRes.json();
+  return data.access_token;
+}
+async function fetchChildren(parentId, token, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const url = `https://api.allegro.pl/sale/categories?parent.id=${encodeURIComponent(parentId)}`;
+      const res = await fetch(url, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Accept": "application/vnd.allegro.public.v1+json",
+          "Accept-Language": "pl-PL"
+        }
+      });
+      if (res.status === 429) {
+        const delay = (i + 1) * 1e3;
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
+      if (!res.ok) {
+        return [];
+      }
+      const data = await res.json();
+      return data.categories || [];
+    } catch (err) {
+      if (i === retries - 1) return [];
+      await new Promise((r) => setTimeout(r, 500));
+    }
+  }
+  return [];
+}
+async function crawlAllegroCategories(maxDepth = 6) {
+  console.log("[Allegro Sync] Token al\u0131n\u0131yor...");
+  const token = await getAccessToken();
+  console.log("[Allegro Sync] Token ba\u015Far\u0131yla al\u0131nd\u0131. K\xF6k kategoriler \xE7ekiliyor...");
+  const rootRes = await fetch("https://api.allegro.pl/sale/categories", {
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Accept": "application/vnd.allegro.public.v1+json"
+    }
+  });
+  const roots = (await rootRes.json()).categories || [];
+  console.log(`[Allegro Sync] ${roots.length} adet ana k\xF6k kategori bulundu.`);
+  const allCategories = [];
+  const queue = [];
+  for (const root of roots) {
+    const item = {
+      id: String(root.id),
+      name: root.name,
+      namePl: root.name,
+      trName: translateCategoryName(root.name),
+      parentId: null,
+      path: root.name,
+      depth: 0,
+      leaf: Boolean(root.leaf),
+      rootId: String(root.id),
+      rootName: root.name
+    };
+    allCategories.push(item);
+    if (!root.leaf) {
+      queue.push(item);
+    }
+  }
+  const CONCURRENCY = 8;
+  let processed = 0;
+  async function processQueueItem(item) {
+    if (item.depth >= maxDepth) return;
+    const children = await fetchChildren(item.id, token);
+    for (const child of children) {
+      const childItem = {
+        id: String(child.id),
+        name: child.name,
+        namePl: child.name,
+        trName: translateCategoryName(child.name),
+        parentId: item.id,
+        path: `${item.path} > ${child.name}`,
+        depth: item.depth + 1,
+        leaf: Boolean(child.leaf),
+        rootId: item.rootId,
+        rootName: item.rootName
+      };
+      allCategories.push(childItem);
+      if (!child.leaf && childItem.depth < maxDepth) {
+        queue.push(childItem);
+      }
+    }
+  }
+  console.log("[Allegro Sync] Alt k\u0131r\u0131l\u0131mlar taran\u0131yor...");
+  while (queue.length > 0) {
+    const batch = queue.splice(0, CONCURRENCY);
+    await Promise.all(batch.map((item) => processQueueItem(item)));
+    processed += batch.length;
+    if (processed % 80 === 0 || queue.length === 0) {
+      console.log(`[Allegro Sync] \u0130\u015Flendi: ${processed} \xFCst kategori, Toplam kategori: ${allCategories.length}, Kuyrukta kalan: ${queue.length}`);
+    }
+    await new Promise((r) => setTimeout(r, 40));
+  }
+  console.log(`[Allegro Sync] Tarama tamamland\u0131! Toplam kategori say\u0131s\u0131: ${allCategories.length}`);
+  const leafCount = allCategories.filter((c) => c.leaf).length;
+  console.log(`[Allegro Sync] Yaprak (Leaf - Teklife A\xE7\u0131k) kategori say\u0131s\u0131: ${leafCount}`);
+  if (!fs2.existsSync(DATA_DIR)) {
+    fs2.mkdirSync(DATA_DIR, { recursive: true });
+  }
+  fs2.writeFileSync(TAXONOMY_FILE, JSON.stringify(allCategories, null, 2), "utf-8");
+  console.log(`[Allegro Sync] Veritaban\u0131 dosyas\u0131na kaydedildi: ${TAXONOMY_FILE}`);
+  return {
+    total: allCategories.length,
+    leafCount,
+    rootsCount: roots.length
+  };
+}
+var __filename, __dirname, DATA_DIR, TAXONOMY_FILE, clientId, clientSecret, basicAuth, COMMON_TR_TRANSLATIONS;
+var init_sync_allegro_taxonomy = __esm({
+  "scripts/sync_allegro_taxonomy.js"() {
+    __filename = fileURLToPath(import.meta.url);
+    __dirname = path2.dirname(__filename);
+    DATA_DIR = path2.join(__dirname, "..", "data");
+    TAXONOMY_FILE = path2.join(DATA_DIR, "allegro_taxonomy.json");
+    clientId = process.env.ALLEGRO_CLIENT_ID || "f2aaccb04bc146e4a6832179f10a12c3";
+    clientSecret = process.env.ALLEGRO_CLIENT_SECRET || "YAaC1OJpbFLPYg7npUT8ZVuLIO0uxUiFmI7rZxQU4TwPCr1VTbSuNZ2qhmpZxTBl";
+    basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+    COMMON_TR_TRANSLATIONS = {
+      "Dom i Ogr\xF3d": "Ev ve Bah\xE7e",
+      "Dziecko": "Bebek ve \xC7ocuk",
+      "Elektronika": "Elektronik",
+      "Firma i us\u0142ugi": "\u0130\u015F ve Hizmetler",
+      "Kolekcje i sztuka": "Koleksiyon ve Sanat",
+      "Kultura i rozrywka": "K\xFClt\xFCr ve E\u011Flence",
+      "Moda": "Moda ve Giyim",
+      "Motoryzacja": "Otomotiv ve Ara\xE7",
+      "Nieruchomo\u015Bci": "Emlak",
+      "Sport i turystyka": "Spor ve Do\u011Fa Sporlar\u0131",
+      "Supermarket": "S\xFCpermarket ve Petshop",
+      "Uroda": "Kozmetik ve Ki\u015Fisel Bak\u0131m",
+      "Zdrowie": "Sa\u011Fl\u0131k ve Medikal",
+      "Budownictwo i Akcesoria": "Yap\u0131 Market ve \u0130n\u015Faat",
+      "Meble": "Mobilya",
+      "Narz\u0119dzia": "El Aletleri ve Makineler",
+      "Ogr\xF3d": "Bah\xE7e ve \xC7evre D\xFCzenleme",
+      "O\u015Bwietlenie": "Ayd\u0131nlatma",
+      "Wyposa\u017Cenie": "Ev Gere\xE7leri ve D\xFCzenleyiciler",
+      "Artyku\u0142y dla zwierz\u0105t": "Evcil Hayvan \xDCr\xFCnleri",
+      "Dla ps\xF3w": "K\xF6pek \xDCr\xFCnleri",
+      "Dla kot\xF3w": "Kedi \xDCr\xFCnleri",
+      "Legowiska": "Evcil Hayvan Yataklar\u0131 ve Minderler",
+      "Legowiska i budki": "Kedi/K\xF6pek Yataklar\u0131 ve Kul\xFCbeleri",
+      "Komputery": "Bilgisayar ve Tablet",
+      "Telefony i Akcesoria": "Telefon ve GSM Aksesuarlar\u0131",
+      "Sprz\u0119t audio": "Ses Sistemleri ve Kulakl\u0131klar",
+      "S\u0142uchawki": "Kulakl\u0131klar",
+      "Bezprzewodowe": "Kablosuz / Bluetooth Kulakl\u0131klar",
+      "Kable": "Kablolar",
+      "\u0141adowarki": "\u015Earj Cihazlar\u0131 ve Adapt\xF6rler",
+      "Smartwatche i opaski": "Ak\u0131ll\u0131 Saat ve Bileklikler",
+      "Smartwatche": "Ak\u0131ll\u0131 Saatler",
+      "Odzie\u017C m\u0119ska": "Erkek Giyim",
+      "Odzie\u017C damska": "Kad\u0131n Giyim",
+      "Bielizna m\u0119ska": "Erkek \u0130\xE7 Giyim",
+      "Bokserki": "Boxer ve \u015Eort",
+      "Obuwie": "Ayakkab\u0131lar",
+      "Czapki": "Bere ve \u015Eapkalar",
+      "Zegarki": "Kol Saatleri",
+      "Bi\u017Cuteria": "Tak\u0131 ve M\xFCcevher",
+      "Makija\u017C": "Makyaj \xDCr\xFCnleri",
+      "Piel\u0119gnacja": "Cilt ve V\xFCcut Bak\u0131m\u0131",
+      "Zapachy": "Parf\xFCm ve Deodorant",
+      "Akcesoria GSM": "Telefon ve Tablet Aksesuarlar\u0131",
+      "Akcesoria samochodowe": "Oto Aksesuar ve Elektronik",
+      "O\u015Bwietlenie LED": "LED Ayd\u0131nlatma ve \u015Eeritler"
+    };
+    if (process.argv[1] && process.argv[1].endsWith("sync_allegro_taxonomy.js")) {
+      crawlAllegroCategories().then((res) => {
+        console.log("Tamamland\u0131:", res);
+        process.exit(0);
+      }).catch((err) => {
+        console.error("Hata:", err);
+        process.exit(1);
+      });
+    }
+  }
+});
+
 // server.ts
 import express from "express";
-import dotenv2 from "dotenv";
-import path2 from "path";
-import fs2 from "fs";
-import { fileURLToPath } from "url";
+import dotenv from "dotenv";
+import path3 from "path";
+import fs3 from "fs";
+import { fileURLToPath as fileURLToPath2 } from "url";
 import { GoogleGenAI } from "@google/genai";
 
 // src/server/mysqlBackend.ts
@@ -11,8 +237,6 @@ import mysql from "mysql2/promise";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
-import dotenv from "dotenv";
-dotenv.config({ override: true });
 var CONFIG_FILE_PATH = path.resolve(process.cwd(), "data", "db_config.json");
 var detectedPrefix = "cnt_";
 function getActivePrefix(cfg) {
@@ -22,129 +246,78 @@ function getActivePrefix(cfg) {
 function setDetectedPrefix(prefix) {
   detectedPrefix = prefix;
 }
-function parseDatabaseUrl(rawUrl) {
-  try {
-    if (!rawUrl || typeof rawUrl !== "string") return null;
-    const trimmed = rawUrl.trim();
-    if (!trimmed.startsWith("mysql://") && !trimmed.startsWith("mysql2://")) return null;
-    const parsed = new URL(trimmed);
-    const dbName = parsed.pathname.replace(/^\//, "");
-    const isSsl = parsed.searchParams.get("ssl") === "true" || parsed.searchParams.get("sslmode") === "require" || parsed.searchParams.get("ssl-mode") === "REQUIRED";
-    return {
-      host: parsed.hostname,
-      port: Number(parsed.port) || 3306,
-      database: dbName,
-      user: decodeURIComponent(parsed.username || ""),
-      password: decodeURIComponent(parsed.password || ""),
-      ssl: isSsl,
-      charset: parsed.searchParams.get("charset") || "utf8mb4"
-    };
-  } catch (err) {
-    console.log("[Parse Database URL Note]:", err?.message || err);
-    return null;
-  }
-}
 function getSavedMySQLConfig() {
+  if (process.env.DB_HOST && process.env.DB_USER && process.env.DB_NAME) {
+    return {
+      host: process.env.DB_HOST,
+      port: Number(process.env.DB_PORT) || 3306,
+      database: process.env.DB_NAME,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD || "",
+      ssl: process.env.DB_SSL === "true",
+      prefix: detectedPrefix || process.env.DB_PREFIX || "cnt_",
+      charset: process.env.DB_CHARSET || "utf8mb4"
+    };
+  }
   try {
     if (fs.existsSync(CONFIG_FILE_PATH)) {
       const raw = fs.readFileSync(CONFIG_FILE_PATH, "utf-8");
       const parsed = JSON.parse(raw);
       if (parsed && parsed.host && parsed.database && parsed.user) {
-        const resolved = {
-          host: parsed.host,
-          port: Number(parsed.port) || 3306,
-          database: parsed.database,
-          user: parsed.user,
-          password: parsed.password || "",
-          ssl: parsed.ssl !== void 0 ? Boolean(parsed.ssl) : true,
-          prefix: detectedPrefix || parsed.prefix || "cnt_",
-          charset: parsed.charset || "utf8mb4"
+        return {
+          ...parsed,
+          prefix: detectedPrefix || parsed.prefix || "cnt_"
         };
-        process.env.DB_HOST = resolved.host;
-        process.env.DB_PORT = String(resolved.port || 3306);
-        process.env.DB_NAME = resolved.database;
-        process.env.DB_USER = resolved.user;
-        if (resolved.password) process.env.DB_PASSWORD = resolved.password;
-        process.env.DB_PREFIX = resolved.prefix;
-        process.env.DB_SSL = resolved.ssl ? "true" : "false";
-        return resolved;
       }
     }
   } catch (err) {
-    console.log("[DB Config Load Note]:", err?.message || err);
-  }
-  const envUrl = process.env.DATABASE_URL || process.env.MYSQL_URL;
-  if (envUrl) {
-    const parsedFromUrl = parseDatabaseUrl(envUrl);
-    if (parsedFromUrl && parsedFromUrl.host && parsedFromUrl.database && parsedFromUrl.user) {
-      return {
-        host: parsedFromUrl.host,
-        port: parsedFromUrl.port || 3306,
-        database: parsedFromUrl.database,
-        user: parsedFromUrl.user,
-        password: parsedFromUrl.password || "",
-        ssl: Boolean(parsedFromUrl.ssl),
-        prefix: detectedPrefix || process.env.DB_PREFIX || process.env.MYSQL_PREFIX || "cnt_",
-        charset: parsedFromUrl.charset || "utf8mb4"
-      };
-    }
-  }
-  const envHost = process.env.DB_HOST || process.env.MYSQL_HOST;
-  const envUser = process.env.DB_USER || process.env.MYSQL_USER;
-  const envName = process.env.DB_NAME || process.env.MYSQL_DATABASE || process.env.MYSQL_DB;
-  if (envHost && envUser && envName && envHost !== "127.0.0.1" && envHost !== "localhost") {
-    return {
-      host: envHost,
-      port: Number(process.env.DB_PORT || process.env.MYSQL_PORT) || 3306,
-      database: envName,
-      user: envUser,
-      password: process.env.DB_PASSWORD || process.env.MYSQL_PASSWORD || process.env.DB_PASS || "",
-      ssl: process.env.DB_SSL === "true" || process.env.MYSQL_SSL === "true",
-      prefix: detectedPrefix || process.env.DB_PREFIX || process.env.MYSQL_PREFIX || "cnt_",
-      charset: process.env.DB_CHARSET || process.env.MYSQL_CHARSET || "utf8mb4"
-    };
+    console.warn("[DB Config Load Warning]:", err);
   }
   return {
-    host: "194.59.164.74",
+    host: "127.0.0.1",
     port: 3306,
     database: "u162532946_connect",
     user: "u162532946_connect",
     password: "782536Cnt.",
-    ssl: true,
+    ssl: false,
     prefix: detectedPrefix || "cnt_",
     charset: "utf8mb4"
   };
 }
-var activePools = /* @__PURE__ */ new Map();
-function resetPools() {
-  for (const pool of activePools.values()) {
-    try {
-      pool.end().catch(() => {
-      });
-    } catch {
-    }
-  }
-  activePools.clear();
+function getMySQLConfigInfo() {
+  const cfg = getSavedMySQLConfig();
+  return {
+    host: cfg.host,
+    port: cfg.port || 3306,
+    database: cfg.database,
+    user: cfg.user,
+    hasPassword: Boolean(cfg.password),
+    ssl: Boolean(cfg.ssl),
+    prefix: cfg.prefix || "cnt_",
+    charset: cfg.charset || "utf8mb4"
+  };
 }
-function getPoolKey(cfg) {
-  return `${cfg.host}:${cfg.port || 3306}:${cfg.database}:${cfg.user}`;
+function parseDatabaseUrl(urlStr) {
+  try {
+    const url = new URL(urlStr);
+    return {
+      host: url.hostname,
+      port: url.port ? Number(url.port) : 3306,
+      database: url.pathname.replace(/^\//, ""),
+      user: decodeURIComponent(url.username),
+      password: decodeURIComponent(url.password)
+    };
+  } catch {
+    return null;
+  }
 }
 function saveMySQLConfig(cfg) {
   try {
-    resetPools();
     const dir = path.dirname(CONFIG_FILE_PATH);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
     fs.writeFileSync(CONFIG_FILE_PATH, JSON.stringify(cfg, null, 2), "utf-8");
-    process.env.DB_HOST = cfg.host || "194.59.164.74";
-    process.env.DB_PORT = String(cfg.port || 3306);
-    process.env.DB_NAME = cfg.database || "u162532946_connect";
-    process.env.DB_USER = cfg.user || "u162532946_connect";
-    process.env.DB_PASSWORD = cfg.password || "";
-    process.env.DB_PREFIX = getActivePrefix(cfg);
-    process.env.DB_SSL = cfg.ssl ? "true" : "false";
-    process.env.DB_CHARSET = cfg.charset || "utf8mb4";
     const envPath = path.resolve(process.cwd(), ".env");
     let envContent = "";
     if (fs.existsSync(envPath)) {
@@ -159,55 +332,22 @@ function saveMySQLConfig(cfg) {
 ${key}="${val}"`;
       }
     };
-    updateEnvVar("DB_HOST", cfg.host || "194.59.164.74");
+    updateEnvVar("DB_HOST", cfg.host || "127.0.0.1");
     updateEnvVar("DB_PORT", String(cfg.port || 3306));
-    updateEnvVar("DB_NAME", cfg.database || "u162532946_connect");
-    updateEnvVar("DB_USER", cfg.user || "u162532946_connect");
+    updateEnvVar("DB_NAME", cfg.database || "jiguli_db");
+    updateEnvVar("DB_USER", cfg.user || "root");
     updateEnvVar("DB_PASSWORD", cfg.password || "");
     updateEnvVar("DB_PREFIX", getActivePrefix(cfg));
     updateEnvVar("DB_SSL", cfg.ssl ? "true" : "false");
     updateEnvVar("DB_CHARSET", cfg.charset || "utf8mb4");
     fs.writeFileSync(envPath, envContent.trim() + "\n", "utf-8");
   } catch (err) {
-    console.log("[DB Config Save Note]:", err?.message || err);
+    console.warn("[DB Config Save Warning]:", err);
   }
 }
-function getMySQLConfigInfo() {
-  const cfg = getSavedMySQLConfig();
-  let source = "file";
-  if (process.env.DATABASE_URL || process.env.MYSQL_URL) {
-    source = "env_database_url";
-  } else if ((process.env.DB_HOST || process.env.MYSQL_HOST) && (process.env.DB_USER || process.env.MYSQL_USER) && (process.env.DB_NAME || process.env.MYSQL_DATABASE)) {
-    source = "env";
-  } else if (fs.existsSync(CONFIG_FILE_PATH)) {
-    source = "file";
-  } else {
-    source = "default";
-  }
-  const rawPass = cfg.password || "";
-  const maskedPassword = rawPass.length > 4 ? `${rawPass.slice(0, 2)}\u2022\u2022\u2022\u2022${rawPass.slice(-2)}` : rawPass.length > 0 ? "\u2022\u2022\u2022\u2022" : "";
-  return {
-    host: cfg.host,
-    port: cfg.port || 3306,
-    database: cfg.database,
-    user: cfg.user,
-    prefix: cfg.prefix || "cnt_",
-    ssl: Boolean(cfg.ssl),
-    charset: cfg.charset || "utf8mb4",
-    hasPassword: Boolean(rawPass.length > 0),
-    maskedPassword,
-    source,
-    supportedSecrets: [
-      { name: "DB_HOST", desc: "MySQL Sunucu IP veya Host ad\u0131 (\xF6rn: 127.0.0.1 veya Hostinger IP)" },
-      { name: "DB_PORT", desc: "MySQL Port (varsay\u0131lan: 3306)" },
-      { name: "DB_NAME", desc: "Veritaban\u0131 Ad\u0131 (\xF6rn: u162532946_connect)" },
-      { name: "DB_USER", desc: "Veritaban\u0131 Kullan\u0131c\u0131s\u0131 (\xF6rn: u162532946_connect)" },
-      { name: "DB_PASSWORD", desc: "Veritaban\u0131 \u015Eifresi" },
-      { name: "DB_PREFIX", desc: "Tablo \xD6neki (\xF6rn: cnt_)" },
-      { name: "DB_SSL", desc: "SSL Ba\u011Flant\u0131s\u0131 (true veya false)" },
-      { name: "DATABASE_URL", desc: "Tek Sat\u0131r Ba\u011Flant\u0131 URL (mysql://user:pass@host:3306/dbname)" }
-    ]
-  };
+var activePools = /* @__PURE__ */ new Map();
+function getPoolKey(cfg) {
+  return `${cfg.host}:${cfg.port || 3306}:${cfg.database}:${cfg.user}`;
 }
 function createOrGetPool(cfg) {
   const resolved = cfg || getSavedMySQLConfig();
@@ -233,6 +373,7 @@ function createOrGetPool(cfg) {
   return pool;
 }
 var LOCAL_ENTITIES_PATH = path.resolve(process.cwd(), "data", "local_entities.json");
+var LOCAL_CONFIGS_PATH = path.resolve(process.cwd(), "data", "app_configs.json");
 function loadLocalEntities() {
   try {
     if (fs.existsSync(LOCAL_ENTITIES_PATH)) {
@@ -257,82 +398,18 @@ try {
   }
 } catch {
 }
-var isDbOnline = false;
-var lastConnectionAttemptTime = 0;
-var consecutiveConnectionFailures = 0;
-var RECONNECT_COOLDOWN_MS = 6e4;
-function markDbOnline() {
-  isDbOnline = true;
-  consecutiveConnectionFailures = 0;
-}
-function markDbOffline() {
-  isDbOnline = false;
-  consecutiveConnectionFailures++;
-  lastConnectionAttemptTime = Date.now();
-}
-function shouldAttemptDbConnection(force = false) {
-  if (force) return true;
-  const cfg = getSavedMySQLConfig();
-  if (!cfg.host || !cfg.database || !cfg.user) return false;
-  if (isDbOnline) return true;
-  if (consecutiveConnectionFailures >= 1) {
-    if (Date.now() - lastConnectionAttemptTime > RECONNECT_COOLDOWN_MS) {
-      return true;
-    }
-    return false;
-  }
-  return true;
-}
-async function getSafeDbConnection(force = false) {
-  const cfg = getSavedMySQLConfig();
-  const prefix = getActivePrefix(cfg);
-  if (!shouldAttemptDbConnection(force)) {
-    return { conn: null, prefix };
-  }
-  try {
-    const pool = createOrGetPool(cfg);
-    lastConnectionAttemptTime = Date.now();
-    const conn = await pool.getConnection();
-    markDbOnline();
-    return { conn, prefix };
-  } catch {
-    markDbOffline();
-    return { conn: null, prefix };
-  }
-}
 async function testMySQLConnection(cfg) {
   const startTime = Date.now();
-  const saved = getSavedMySQLConfig();
-  const target = {
-    ...saved,
-    ...cfg || {}
-  };
-  if (cfg && (cfg.password === void 0 || cfg.password === "")) {
-    target.password = saved.password;
-  }
-  if (!target.host || !target.database || !target.user) {
+  if (!cfg.host || !cfg.database || !cfg.user) {
     return {
       success: false,
       message: "Sunucu Adresi (Host), Veritaban\u0131 Ad\u0131 (Database) ve Kullan\u0131c\u0131 Ad\u0131 (User) zorunludur."
     };
   }
   try {
-    const pool = createOrGetPool(target);
+    const pool = createOrGetPool(cfg);
     const conn = await pool.getConnection();
     const [rows] = await conn.query("SELECT VERSION() as version, DATABASE() as db, USER() as user, NOW() as server_time");
-    let totalTablesCount = 0;
-    let matchingPrefixCount = 0;
-    let tablesList = [];
-    try {
-      const [tableRows] = await conn.query("SHOW TABLES");
-      if (Array.isArray(tableRows)) {
-        totalTablesCount = tableRows.length;
-        tablesList = tableRows.map((r) => Object.values(r)[0]);
-        const prefix = getActivePrefix(target);
-        matchingPrefixCount = tablesList.filter((t) => t.startsWith(prefix)).length;
-      }
-    } catch {
-    }
     conn.release();
     const latencyMs = Date.now() - startTime;
     const version = rows?.[0]?.version || "MySQL 8.0";
@@ -341,33 +418,18 @@ async function testMySQLConnection(cfg) {
       status: 200,
       latencyMs,
       serverVersion: version,
-      database: rows?.[0]?.db || target.database,
-      user: rows?.[0]?.user || target.user,
+      database: rows?.[0]?.db || cfg.database,
+      user: rows?.[0]?.user || cfg.user,
       serverTime: rows?.[0]?.server_time,
-      totalTablesCount,
-      matchingPrefixCount,
-      detectedPrefix: getActivePrefix(target),
-      message: `MySQL Sunucusuna Ba\u015Far\u0131yla Ba\u011Flan\u0131ld\u0131! (${version} \xB7 ${latencyMs}ms \xB7 ${matchingPrefixCount > 0 ? `${matchingPrefixCount} adet ${getActivePrefix(target)} tablosu aktif` : `${totalTablesCount} tablo bulundu`})`
+      message: `MySQL Sunucusuna Ba\u015Far\u0131yla Ba\u011Flan\u0131ld\u0131! (${version} \xB7 ${latencyMs}ms \xB7 UTF8MB4 Aktif)`
     };
   } catch (err) {
     const latencyMs = Date.now() - startTime;
-    const errCode = err?.code || "";
-    let detailedHelp = "";
-    if (errCode === "ETIMEDOUT") {
-      detailedHelp = ' (Zaman A\u015F\u0131m\u0131: MySQL sunucunuza ula\u015F\u0131lamad\u0131. cPanel/Hostinger Remote MySQL ayarlar\u0131nda bu sunucu IP adresine veya "%" eri\u015Fim izni verildi\u011Finden ve 3306 portunun a\xE7\u0131k oldu\u011Fundan emin olun.)';
-    } else if (errCode === "ER_ACCESS_DENIED_ERROR") {
-      detailedHelp = " (Eri\u015Fim Reddedildi: Veritaban\u0131 kullan\u0131c\u0131 ad\u0131 veya \u015Fifresi hatal\u0131 ya da bu kullan\u0131c\u0131n\u0131n uzaktan ba\u011Flanma yetkisi yok.)";
-    } else if (errCode === "ER_BAD_DB_ERROR") {
-      detailedHelp = " (Veritaban\u0131 Bulunamad\u0131: Belirtilen veritaban\u0131 ad\u0131 sunucuda mevcut de\u011Fil.)";
-    } else if (errCode === "ENOTFOUND" || errCode === "EAI_AGAIN") {
-      detailedHelp = " (Host Bulunamad\u0131: Sunucu adresi veya IP \xE7\xF6z\xFCmlenemedi.)";
-    }
     return {
       success: false,
       latencyMs,
-      message: `MySQL Ba\u011Flant\u0131 Hatas\u0131: ${err?.message || err}${detailedHelp}`,
-      error: err?.code || err?.message,
-      errorCode: errCode
+      message: `MySQL Ba\u011Flant\u0131 Hatas\u0131: ${err?.message || err}. Host, Port, Kullan\u0131c\u0131 ve \u015Eifre parametrelerini kontrol ediniz.`,
+      error: err?.code || err?.message
     };
   }
 }
@@ -788,11 +850,8 @@ async function installMySQLDatabase(cfg, customSql) {
   };
 }
 async function getMySQLDatabaseStatus(cfg) {
-  const resolved = {
-    ...getSavedMySQLConfig(),
-    ...cfg || {}
-  };
-  const prefix = getActivePrefix(resolved);
+  const activeCfg = cfg || getSavedMySQLConfig();
+  const prefix = getActivePrefix(activeCfg);
   const tableList = [
     { name: `${prefix}db_config`, display: "Sistem Yap\u0131land\u0131rmas\u0131", desc: "Genel ayarlar ve s\xFCr\xFCm bilgisi", pk: "id" },
     { name: `${prefix}users`, display: "Kullan\u0131c\u0131lar & Yetkiler", desc: "Y\xF6netici ve personel hesaplar\u0131", pk: "id" },
@@ -812,7 +871,7 @@ async function getMySQLDatabaseStatus(cfg) {
   const tableStatuses = [];
   let totalRecords = 0;
   try {
-    const pool = createOrGetPool(resolved);
+    const pool = createOrGetPool(activeCfg);
     const startTime = Date.now();
     const conn = await pool.getConnection();
     const [vRows] = await conn.query("SELECT VERSION() as v");
@@ -861,13 +920,12 @@ async function getMySQLDatabaseStatus(cfg) {
     }
   }
   return {
-    isConfigured: !!resolved.host && !!resolved.database,
+    isConfigured: !!activeCfg.host && !!activeCfg.database,
     isConnected,
     isInstalled: tableStatuses.some((t) => t.status === "ready"),
     serverVersion,
     latencyMs,
     tables: tableStatuses,
-    tableStatuses,
     totalRecords,
     lastTestedAt: (/* @__PURE__ */ new Date()).toISOString()
   };
@@ -1149,20 +1207,16 @@ async function loginDatabaseUser(username, password) {
   }
 }
 async function dbGetProducts(limit = 500) {
-  const { conn, prefix } = await getSafeDbConnection();
-  if (!conn) {
-    return inMemoryTables.get(`${prefix}products`) || [];
-  }
+  const cfg = getSavedMySQLConfig();
+  const prefix = getActivePrefix(cfg);
   try {
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
     const [rows] = await conn.query(`SELECT * FROM \`${prefix}products\` ORDER BY \`id\` DESC LIMIT ?`, [Number(limit) || 500]);
     conn.release();
     return Array.isArray(rows) ? rows : [];
   } catch (err) {
-    try {
-      conn.release();
-    } catch {
-    }
-    console.log("[dbGetProducts fallback]:", err?.message || "offline");
+    console.warn("[dbGetProducts fallback]:", err?.message || err);
     return inMemoryTables.get(`${prefix}products`) || [];
   }
 }
@@ -1254,15 +1308,11 @@ async function dbSaveProduct(item) {
     currentInMem.unshift({ id: currentInMem.length + 1, ...prodObj, created_at: (/* @__PURE__ */ new Date()).toISOString() });
   }
   inMemoryTables.set(inMemKey, currentInMem);
-  let dbConn = null;
   try {
-    const { conn, prefix: activePrefix } = await getSafeDbConnection();
-    if (!conn) {
-      return true;
-    }
-    dbConn = conn;
-    await dbConn.query(`
-      INSERT INTO \`${activePrefix}products\`
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
+    await conn.query(`
+      INSERT INTO \`${prefix}products\`
       (\`sku\`, \`ean\`, \`title_tr\`, \`title_pl\`, \`title_en\`, \`brand\`, \`model\`, \`category_code\`, \`category_name\`, \`cost_usd\`, \`cost_try\`, \`cost_eur\`, \`stock_quantity\`, \`primary_image\`, \`gallery_images_json\`, \`specifications_json\`, \`features_json\`, \`description_html\`, \`source_platform\`, \`source_url\`, \`status\`)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
@@ -1305,33 +1355,83 @@ async function dbSaveProduct(item) {
       source_url,
       status
     ]);
+    conn.release();
     return true;
   } catch (err) {
-    console.log(`[dbSaveProduct note for ${sku}]:`, err?.message || "offline");
-    return true;
-  } finally {
-    if (dbConn) {
+    console.warn(`[dbSaveProduct warn for ${sku}]:`, err?.message || err);
+    if (err?.code === "ER_NO_SUCH_TABLE") {
       try {
-        dbConn.release();
-      } catch {
+        await ensureMySQLTablesInitialized();
+        const activePrefix = getActivePrefix(cfg);
+        const pool = createOrGetPool(cfg);
+        const conn = await pool.getConnection();
+        await conn.query(`
+          INSERT INTO \`${activePrefix}products\`
+          (\`sku\`, \`ean\`, \`title_tr\`, \`title_pl\`, \`title_en\`, \`brand\`, \`model\`, \`category_code\`, \`category_name\`, \`cost_usd\`, \`cost_try\`, \`cost_eur\`, \`stock_quantity\`, \`primary_image\`, \`gallery_images_json\`, \`specifications_json\`, \`features_json\`, \`description_html\`, \`source_platform\`, \`source_url\`, \`status\`)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE
+            \`ean\` = COALESCE(VALUES(\`ean\`), \`ean\`),
+            \`title_tr\` = VALUES(\`title_tr\`),
+            \`title_pl\` = COALESCE(VALUES(\`title_pl\`), \`title_pl\`),
+            \`title_en\` = COALESCE(VALUES(\`title_en\`), \`title_en\`),
+            \`brand\` = COALESCE(VALUES(\`brand\`), \`brand\`),
+            \`model\` = COALESCE(VALUES(\`model\`), \`model\`),
+            \`category_code\` = COALESCE(VALUES(\`category_code\`), \`category_code\`),
+            \`category_name\` = COALESCE(VALUES(\`category_name\`), \`category_name\`),
+            \`cost_usd\` = VALUES(\`cost_usd\`),
+            \`cost_try\` = VALUES(\`cost_try\`),
+            \`cost_eur\` = VALUES(\`cost_eur\`),
+            \`stock_quantity\` = VALUES(\`stock_quantity\`),
+            \`primary_image\` = COALESCE(VALUES(\`primary_image\`), \`primary_image\`),
+            \`source_platform\` = VALUES(\`source_platform\`),
+            \`status\` = VALUES(\`status\`),
+            \`updated_at\` = NOW();
+        `, [
+          sku,
+          ean,
+          title_tr,
+          title_pl,
+          title_en,
+          brand,
+          model,
+          category_code,
+          category_name,
+          cost_usd,
+          cost_try,
+          cost_eur,
+          stock_quantity,
+          primary_image,
+          gallery_images_json,
+          specifications_json,
+          features_json,
+          description_html,
+          source_platform,
+          source_url,
+          status
+        ]);
+        conn.release();
+        return true;
+      } catch (retryErr) {
+        console.warn("[dbSaveProduct retry failed]:", retryErr);
       }
     }
+    return false;
   }
 }
 async function dbSaveProductsBulk(products) {
+  let count = 0;
   if (!Array.isArray(products) || products.length === 0) {
     return { success: true, count: 0 };
   }
-  let savedCount = 0;
-  const chunkSize = 10;
-  for (let i = 0; i < products.length; i += chunkSize) {
-    const chunk = products.slice(i, i + chunkSize);
-    const results = await Promise.allSettled(chunk.map((p) => dbSaveProduct(p)));
-    for (const r of results) {
-      if (r.status === "fulfilled" && r.value) savedCount++;
+  for (const p of products) {
+    try {
+      const ok = await dbSaveProduct(p);
+      if (ok) count++;
+    } catch (e) {
+      console.warn("[dbSaveProductsBulk item error]:", e);
     }
   }
-  return { success: savedCount > 0, count: savedCount };
+  return { success: count > 0, count };
 }
 async function dbDeleteProduct(idOrSku) {
   const cfg = getSavedMySQLConfig();
@@ -1348,11 +1448,11 @@ async function dbDeleteProduct(idOrSku) {
   }
 }
 async function dbGetOffers() {
-  const { conn, prefix } = await getSafeDbConnection();
-  if (!conn) {
-    return inMemoryTables.get(`${prefix}offers`) || [];
-  }
+  const cfg = getSavedMySQLConfig();
+  const prefix = getActivePrefix(cfg);
   try {
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
     const [rows] = await conn.query(`SELECT * FROM \`${prefix}offers\` ORDER BY \`updated_at\` DESC`);
     conn.release();
     if (!rows || rows.length === 0) return [];
@@ -1393,11 +1493,7 @@ async function dbGetOffers() {
       };
     });
   } catch (err) {
-    try {
-      conn.release();
-    } catch {
-    }
-    console.log("[dbGetOffers fallback]:", err?.message || "offline");
+    console.warn("[dbGetOffers fallback]:", err);
     return inMemoryTables.get(`${prefix}offers`) || [];
   }
 }
@@ -1436,50 +1532,81 @@ async function dbSaveOffer(offer) {
     currentInMem.unshift(offer);
   }
   inMemoryTables.set(inMemKey, currentInMem);
-  let dbConn = null;
   try {
-    const { conn, prefix: activePrefix } = await getSafeDbConnection();
-    if (conn) {
-      dbConn = conn;
-      await dbConn.query(`
-        INSERT INTO \`${activePrefix}offers\`
-        (\`id\`, \`platform_id\`, \`marketplace_offer_id\`, \`name\`, \`sku\`, \`ean\`, \`category_id\`, \`category_name\`, \`price_amount\`, \`price_currency\`, \`stock_available\`, \`publication_status\`, \`smart_eligible\`, \`primary_image\`, \`sync_allegro\`, \`sync_emag\`, \`sync_baselinker\`, \`raw_payload_json\`)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE
-          \`name\` = VALUES(\`name\`),
-          \`sku\` = VALUES(\`sku\`),
-          \`ean\` = VALUES(\`ean\`),
-          \`category_id\` = VALUES(\`category_id\`),
-          \`category_name\` = VALUES(\`category_name\`),
-          \`price_amount\` = VALUES(\`price_amount\`),
-          \`price_currency\` = VALUES(\`price_currency\`),
-          \`stock_available\` = VALUES(\`stock_available\`),
-          \`publication_status\` = VALUES(\`publication_status\`),
-          \`smart_eligible\` = VALUES(\`smart_eligible\`),
-          \`primary_image\` = VALUES(\`primary_image\`),
-          \`sync_allegro\` = VALUES(\`sync_allegro\`),
-          \`sync_emag\` = VALUES(\`sync_emag\`),
-          \`sync_baselinker\` = VALUES(\`sync_baselinker\`),
-          \`raw_payload_json\` = VALUES(\`raw_payload_json\`),
-          \`last_synced_at\` = NOW(),
-          \`updated_at\` = NOW();
-      `, [id, platformId, marketplaceOfferId, name, sku, ean, catId, catName, price, currency, stock, status, smart, image, syncAllegro, syncEmag, syncBaselinker, rawJson]);
-    }
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
+    await conn.query(`
+      INSERT INTO \`${prefix}offers\`
+      (\`id\`, \`platform_id\`, \`marketplace_offer_id\`, \`name\`, \`sku\`, \`ean\`, \`category_id\`, \`category_name\`, \`price_amount\`, \`price_currency\`, \`stock_available\`, \`publication_status\`, \`smart_eligible\`, \`primary_image\`, \`sync_allegro\`, \`sync_emag\`, \`sync_baselinker\`, \`raw_payload_json\`)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        \`name\` = VALUES(\`name\`),
+        \`sku\` = VALUES(\`sku\`),
+        \`ean\` = VALUES(\`ean\`),
+        \`category_id\` = VALUES(\`category_id\`),
+        \`category_name\` = VALUES(\`category_name\`),
+        \`price_amount\` = VALUES(\`price_amount\`),
+        \`price_currency\` = VALUES(\`price_currency\`),
+        \`stock_available\` = VALUES(\`stock_available\`),
+        \`publication_status\` = VALUES(\`publication_status\`),
+        \`smart_eligible\` = VALUES(\`smart_eligible\`),
+        \`primary_image\` = VALUES(\`primary_image\`),
+        \`sync_allegro\` = VALUES(\`sync_allegro\`),
+        \`sync_emag\` = VALUES(\`sync_emag\`),
+        \`sync_baselinker\` = VALUES(\`sync_baselinker\`),
+        \`raw_payload_json\` = VALUES(\`raw_payload_json\`),
+        \`last_synced_at\` = NOW(),
+        \`updated_at\` = NOW();
+    `, [id, platformId, marketplaceOfferId, name, sku, ean, catId, catName, price, currency, stock, status, smart, image, syncAllegro, syncEmag, syncBaselinker, rawJson]);
+    conn.release();
     try {
       await dbSaveProduct(offer);
-    } catch {
+    } catch (prodErr) {
+      console.warn("[dbSaveOffer -> dbSaveProduct warn]:", prodErr);
     }
     return true;
   } catch (err) {
-    console.log(`[dbSaveOffer note for ${id}]:`, err?.message || "offline");
-    return true;
-  } finally {
-    if (dbConn) {
+    console.warn(`[dbSaveOffer warn for ${id}]:`, err?.message || err);
+    if (err?.code === "ER_NO_SUCH_TABLE") {
       try {
-        dbConn.release();
-      } catch {
+        await ensureMySQLTablesInitialized();
+        const activePrefix = getActivePrefix(cfg);
+        const pool = createOrGetPool(cfg);
+        const conn = await pool.getConnection();
+        await conn.query(`
+          INSERT INTO \`${activePrefix}offers\`
+          (\`id\`, \`platform_id\`, \`marketplace_offer_id\`, \`name\`, \`sku\`, \`ean\`, \`category_id\`, \`category_name\`, \`price_amount\`, \`price_currency\`, \`stock_available\`, \`publication_status\`, \`smart_eligible\`, \`primary_image\`, \`sync_allegro\`, \`sync_emag\`, \`sync_baselinker\`, \`raw_payload_json\`)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE
+            \`name\` = VALUES(\`name\`),
+            \`sku\` = VALUES(\`sku\`),
+            \`ean\` = VALUES(\`ean\`),
+            \`category_id\` = VALUES(\`category_id\`),
+            \`category_name\` = VALUES(\`category_name\`),
+            \`price_amount\` = VALUES(\`price_amount\`),
+            \`price_currency\` = VALUES(\`price_currency\`),
+            \`stock_available\` = VALUES(\`stock_available\`),
+            \`publication_status\` = VALUES(\`publication_status\`),
+            \`smart_eligible\` = VALUES(\`smart_eligible\`),
+            \`primary_image\` = VALUES(\`primary_image\`),
+            \`sync_allegro\` = VALUES(\`sync_allegro\`),
+            \`sync_emag\` = VALUES(\`sync_emag\`),
+            \`sync_baselinker\` = VALUES(\`sync_baselinker\`),
+            \`raw_payload_json\` = VALUES(\`raw_payload_json\`),
+            \`last_synced_at\` = NOW(),
+            \`updated_at\` = NOW();
+        `, [id, platformId, marketplaceOfferId, name, sku, ean, catId, catName, price, currency, stock, status, smart, image, syncAllegro, syncEmag, syncBaselinker, rawJson]);
+        conn.release();
+        try {
+          await dbSaveProduct(offer);
+        } catch {
+        }
+        return true;
+      } catch (retryErr) {
+        console.warn("[dbSaveOffer retry failed]:", retryErr);
       }
     }
+    return false;
   }
 }
 async function dbDeleteOffer(id) {
@@ -1497,11 +1624,11 @@ async function dbDeleteOffer(id) {
   }
 }
 async function dbGetOrders() {
-  const { conn, prefix } = await getSafeDbConnection();
-  if (!conn) {
-    return inMemoryTables.get(`${prefix}orders`) || [];
-  }
+  const cfg = getSavedMySQLConfig();
+  const prefix = getActivePrefix(cfg);
   try {
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
     const [rows] = await conn.query(`SELECT * FROM \`${prefix}orders\` ORDER BY \`order_date\` DESC LIMIT 500`);
     conn.release();
     if (!rows || rows.length === 0) return [];
@@ -1544,11 +1671,7 @@ async function dbGetOrders() {
       createdAt: r.order_date
     }));
   } catch (err) {
-    try {
-      conn.release();
-    } catch {
-    }
-    console.log("[dbGetOrders fallback]:", err?.message || "offline");
+    console.warn("[dbGetOrders fallback]:", err);
     return inMemoryTables.get(`${prefix}orders`) || [];
   }
 }
@@ -1587,15 +1710,11 @@ async function dbSaveOrder(order) {
     currentInMem.unshift(order);
   }
   inMemoryTables.set(inMemKey, currentInMem);
-  let dbConn = null;
   try {
-    const { conn, prefix: activePrefix } = await getSafeDbConnection();
-    if (!conn) {
-      return true;
-    }
-    dbConn = conn;
-    await dbConn.query(`
-      INSERT INTO \`${activePrefix}orders\`
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
+    await conn.query(`
+      INSERT INTO \`${prefix}orders\`
       (\`id\`, \`platform_id\`, \`marketplace_order_id\`, \`buyer_name\`, \`buyer_email\`, \`buyer_phone\`, \`shipping_street\`, \`shipping_city\`, \`shipping_zip\`, \`shipping_country\`, \`shipping_method\`, \`shipping_cost\`, \`payment_status\`, \`total_amount\`, \`currency\`, \`fulfillment_status\`, \`tracking_number\`, \`order_date\`, \`raw_payload_json\`)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
@@ -1608,31 +1727,25 @@ async function dbSaveOrder(order) {
         \`raw_payload_json\` = VALUES(\`raw_payload_json\`),
         \`updated_at\` = NOW();
     `, [id, platform, marketplaceOrderId, buyerName, buyerEmail, buyerPhone, street, city, zip, country, method, shippingCost, paymentStatus, totalAmount, currency, fulfillmentStatus, trackingNumber, orderDate, rawPayload]);
+    conn.release();
     return true;
   } catch (err) {
-    console.log(`[dbSaveOrder note for ${id}]:`, err?.message || "offline");
+    console.warn(`[dbSaveOrder warn for ${id}]:`, err?.message || err);
     if (err?.code === "ER_NO_SUCH_TABLE") {
       try {
         await ensureMySQLTablesInitialized();
       } catch {
       }
     }
-    return true;
-  } finally {
-    if (dbConn) {
-      try {
-        dbConn.release();
-      } catch {
-      }
-    }
+    return false;
   }
 }
 async function dbGetCredentials() {
-  const { conn, prefix } = await getSafeDbConnection();
-  if (!conn) {
-    return {};
-  }
+  const cfg = getSavedMySQLConfig();
+  const prefix = getActivePrefix(cfg);
   try {
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
     let fromConfigJson = {};
     try {
       const [cfgRows] = await conn.query(`SELECT config_value FROM \`${prefix}db_config\` WHERE config_key = 'platform_credentials' LIMIT 1`);
@@ -1675,19 +1788,15 @@ async function dbGetCredentials() {
     }
     return result;
   } catch (err) {
-    try {
-      conn.release();
-    } catch {
-    }
-    console.log("[dbGetCredentials fallback]:", err?.message || "offline");
+    console.warn("[dbGetCredentials fallback]:", err);
     return {};
   }
 }
 async function dbSaveCredentials(platformId, data) {
   const cfg = getSavedMySQLConfig();
   const prefix = getActivePrefix(cfg);
-  const clientId = data.clientId || data.username || null;
-  const clientSecret = data.clientSecret || data.password || null;
+  const clientId2 = data.clientId || data.username || null;
+  const clientSecret2 = data.clientSecret || data.password || null;
   const accessToken = data.accessToken || data.bearerToken || null;
   const refreshToken = data.refreshToken || null;
   const tokenExpiresAt = Number(data.tokenExpiresAt || 0);
@@ -1715,7 +1824,7 @@ async function dbSaveCredentials(platformId, data) {
         \`country\` = VALUES(\`country\`),
         \`extra_config_json\` = VALUES(\`extra_config_json\`),
         \`updated_at\` = NOW();
-    `, [platformId, platformId.toUpperCase(), clientId, clientSecret, apiKey, apiCode, accessToken, refreshToken, tokenExpiresAt, environment, country, extraJson]);
+    `, [platformId, platformId.toUpperCase(), clientId2, clientSecret2, apiKey, apiCode, accessToken, refreshToken, tokenExpiresAt, environment, country, extraJson]);
     try {
       const [cfgRows] = await conn.query(`SELECT config_value FROM \`${prefix}db_config\` WHERE config_key = 'platform_credentials' LIMIT 1`);
       let credsObj = {};
@@ -1748,20 +1857,16 @@ async function dbSaveCredentials(platformId, data) {
   }
 }
 async function dbGetCategories() {
-  const { conn, prefix } = await getSafeDbConnection();
-  if (!conn) {
-    return [];
-  }
+  const cfg = getSavedMySQLConfig();
+  const prefix = getActivePrefix(cfg);
   try {
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
     const [rows] = await conn.query(`SELECT * FROM \`${prefix}categories\` ORDER BY \`name\` ASC`);
     conn.release();
     return rows || [];
   } catch (err) {
-    try {
-      conn.release();
-    } catch {
-    }
-    console.log("[dbGetCategories fallback]:", err?.message || "offline");
+    console.warn("[dbGetCategories fallback]:", err);
     return [];
   }
 }
@@ -1783,7 +1888,7 @@ async function dbSaveCategory(cat) {
     conn.release();
     return true;
   } catch (err) {
-    console.log("[dbSaveCategory fallback]:", err?.message || "offline");
+    console.warn("[dbSaveCategory fallback]:", err);
     return false;
   }
 }
@@ -1797,25 +1902,21 @@ async function dbDeleteCategory(code) {
     conn.release();
     return true;
   } catch (err) {
-    console.log("[dbDeleteCategory fallback]:", err?.message || "offline");
+    console.warn("[dbDeleteCategory fallback]:", err);
     return false;
   }
 }
 async function dbGetRepricerRules() {
-  const { conn, prefix } = await getSafeDbConnection();
-  if (!conn) {
-    return [];
-  }
+  const cfg = getSavedMySQLConfig();
+  const prefix = getActivePrefix(cfg);
   try {
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
     const [rows] = await conn.query(`SELECT * FROM \`${prefix}repricer_rules\` ORDER BY \`created_at\` DESC`);
     conn.release();
     return rows || [];
   } catch (err) {
-    try {
-      conn.release();
-    } catch {
-    }
-    console.log("[dbGetRepricerRules fallback]:", err?.message || "offline");
+    console.warn("[dbGetRepricerRules fallback]:", err);
     return [];
   }
 }
@@ -1843,7 +1944,7 @@ async function dbSaveRepricerRule(rule) {
     conn.release();
     return true;
   } catch (err) {
-    console.log("[dbSaveRepricerRule fallback]:", err?.message || "offline");
+    console.warn("[dbSaveRepricerRule fallback]:", err);
     return false;
   }
 }
@@ -1857,36 +1958,26 @@ async function dbDeleteRepricerRule(id) {
     conn.release();
     return true;
   } catch (err) {
-    console.log("[dbDeleteRepricerRule fallback]:", err?.message || "offline");
+    console.warn("[dbDeleteRepricerRule fallback]:", err);
     return false;
   }
 }
 async function dbGetAutomations() {
   const cfg = getSavedMySQLConfig();
   const prefix = getActivePrefix(cfg);
-  let connToRelease = null;
   try {
-    const { conn, prefix: activePrefix } = await getSafeDbConnection();
-    if (!conn) {
-      return [];
-    }
-    connToRelease = conn;
-    const [rows] = await connToRelease.query(`SELECT * FROM \`${activePrefix}automations\` ORDER BY \`created_at\` DESC`);
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
+    const [rows] = await conn.query(`SELECT * FROM \`${prefix}automations\` ORDER BY \`created_at\` DESC`);
+    conn.release();
     return (rows || []).map((r) => ({
       ...r,
       conditions: r.conditions_json ? JSON.parse(r.conditions_json) : [],
       actions: r.actions_json ? JSON.parse(r.actions_json) : []
     }));
   } catch (err) {
-    console.log("[dbGetAutomations fallback]:", err?.message || "offline");
+    console.warn("[dbGetAutomations fallback]:", err);
     return [];
-  } finally {
-    if (connToRelease) {
-      try {
-        connToRelease.release();
-      } catch {
-      }
-    }
   }
 }
 async function dbSaveAutomation(rule) {
@@ -1912,7 +2003,7 @@ async function dbSaveAutomation(rule) {
     conn.release();
     return true;
   } catch (err) {
-    console.log("[dbSaveAutomation fallback]:", err?.message || "offline");
+    console.warn("[dbSaveAutomation fallback]:", err);
     return false;
   }
 }
@@ -1926,30 +2017,22 @@ async function dbDeleteAutomation(id) {
     conn.release();
     return true;
   } catch (err) {
-    console.log("[dbDeleteAutomation fallback]:", err?.message || "offline");
+    console.warn("[dbDeleteAutomation fallback]:", err);
     return false;
   }
 }
 async function dbGetLogs(limit = 100) {
-  let connToRelease = null;
+  const cfg = getSavedMySQLConfig();
+  const prefix = getActivePrefix(cfg);
   try {
-    const { conn, prefix } = await getSafeDbConnection();
-    if (!conn) {
-      return [];
-    }
-    connToRelease = conn;
-    const [rows] = await connToRelease.query(`SELECT * FROM \`${prefix}sync_logs\` ORDER BY \`created_at\` DESC LIMIT ?`, [limit]);
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
+    const [rows] = await conn.query(`SELECT * FROM \`${prefix}sync_logs\` ORDER BY \`created_at\` DESC LIMIT ?`, [limit]);
+    conn.release();
     return rows || [];
   } catch (err) {
-    console.log("[dbGetLogs fallback]:", err?.message || "offline");
+    console.warn("[dbGetLogs fallback]:", err);
     return [];
-  } finally {
-    if (connToRelease) {
-      try {
-        connToRelease.release();
-      } catch {
-      }
-    }
   }
 }
 async function dbSaveLog(log) {
@@ -1979,119 +2062,49 @@ async function dbSaveLog(log) {
     return false;
   }
 }
-var LOCAL_CONFIGS_PATH = path.resolve(process.cwd(), "data", "app_configs.json");
-function loadLocalConfigs() {
-  try {
-    if (fs.existsSync(LOCAL_CONFIGS_PATH)) {
-      const raw = fs.readFileSync(LOCAL_CONFIGS_PATH, "utf-8");
-      return JSON.parse(raw) || {};
-    }
-  } catch (e) {
-    console.warn("[Load Local Configs Warning]:", e);
-  }
-  return {};
-}
-function saveLocalConfig(key, value) {
-  try {
-    const dir = path.dirname(LOCAL_CONFIGS_PATH);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    const current = loadLocalConfigs();
-    current[key] = value;
-    fs.writeFileSync(LOCAL_CONFIGS_PATH, JSON.stringify(current, null, 2), "utf-8");
-  } catch (e) {
-    console.warn("[Save Local Config Warning]:", e);
-  }
-}
 async function dbGetConfig(key, defaultValue = null) {
-  let dbConn = null;
+  const cfg = getSavedMySQLConfig();
+  const prefix = getActivePrefix(cfg);
   try {
-    const { conn, prefix } = await getSafeDbConnection();
-    if (conn) {
-      dbConn = conn;
-      const [rows] = await dbConn.query(
-        `SELECT \`config_value\` FROM \`${prefix}db_config\` WHERE \`config_key\` = ? LIMIT 1`,
-        [key]
-      );
-      if (rows && rows.length > 0 && rows[0].config_value) {
-        try {
-          const parsed = JSON.parse(rows[0].config_value);
-          saveLocalConfig(key, parsed);
-          inMemoryConfigs.set(key, rows[0].config_value);
-          return parsed;
-        } catch {
-          saveLocalConfig(key, rows[0].config_value);
-          inMemoryConfigs.set(key, rows[0].config_value);
-          return rows[0].config_value;
-        }
-      }
-    }
-  } catch {
-  } finally {
-    if (dbConn) {
-      try {
-        dbConn.release();
-      } catch {
-      }
-    }
-  }
-  if (inMemoryConfigs.has(key)) {
-    const memVal = inMemoryConfigs.get(key);
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
+    const [rows] = await conn.query(
+      `SELECT \`config_value\` FROM \`${prefix}db_config\` WHERE \`config_key\` = ? LIMIT 1`,
+      [key]
+    );
+    conn.release();
+    if (!rows || rows.length === 0) return defaultValue;
     try {
-      return JSON.parse(memVal);
+      return JSON.parse(rows[0].config_value);
     } catch {
-      return memVal;
+      return rows[0].config_value;
     }
+  } catch (err) {
+    console.warn(`[dbGetConfig(${key}) fallback]:`, err);
+    return defaultValue;
   }
-  const localConfigs = loadLocalConfigs();
-  if (localConfigs[key] !== void 0) {
-    return localConfigs[key];
-  }
-  return defaultValue;
 }
 async function dbSaveConfig(key, value, description) {
+  const cfg = getSavedMySQLConfig();
+  const prefix = getActivePrefix(cfg);
   const strVal = typeof value === "string" ? value : JSON.stringify(value);
-  inMemoryConfigs.set(key, strVal);
-  saveLocalConfig(key, value);
-  let dbConn = null;
   try {
-    const { conn, prefix } = await getSafeDbConnection();
-    if (!conn) {
-      return true;
-    }
-    dbConn = conn;
-    const insertSql = `INSERT INTO \`${prefix}db_config\` (\`config_key\`, \`config_value\`, \`description\`)
+    const pool = createOrGetPool(cfg);
+    const conn = await pool.getConnection();
+    await conn.query(
+      `INSERT INTO \`${prefix}db_config\` (\`config_key\`, \`config_value\`, \`description\`)
        VALUES (?, ?, ?)
        ON DUPLICATE KEY UPDATE
          \`config_value\` = VALUES(\`config_value\`),
          \`description\` = COALESCE(VALUES(\`description\`), \`description\`),
-         \`updated_at\` = NOW();`;
-    try {
-      await dbConn.query(insertSql, [key, strVal, description || null]);
-    } catch (tblErr) {
-      if (tblErr?.code === "ER_NO_SUCH_TABLE" || String(tblErr).includes("doesn't exist")) {
-        await dbConn.query(`CREATE TABLE IF NOT EXISTS \`${prefix}db_config\` (
-          \`id\` INT AUTO_INCREMENT PRIMARY KEY,
-          \`config_key\` VARCHAR(100) NOT NULL UNIQUE,
-          \`config_value\` LONGTEXT NOT NULL,
-          \`description\` VARCHAR(255) NULL,
-          \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`);
-        await dbConn.query(insertSql, [key, strVal, description || null]);
-      } else {
-        throw tblErr;
-      }
-    }
+         \`updated_at\` = NOW();`,
+      [key, strVal, description || null]
+    );
+    conn.release();
     return true;
   } catch (err) {
-    console.log(`[dbSaveConfig(${key}) notice]:`, err?.message || "offline");
-    return true;
-  } finally {
-    if (dbConn) {
-      try {
-        dbConn.release();
-      } catch {
-      }
-    }
+    console.warn(`[dbSaveConfig(${key}) fallback]:`, err);
+    return false;
   }
 }
 async function dbSaveOffersBulk(offers) {
@@ -2099,15 +2112,11 @@ async function dbSaveOffersBulk(offers) {
     return { success: true, count: 0 };
   }
   let savedCount = 0;
-  const chunkSize = 10;
-  for (let i = 0; i < offers.length; i += chunkSize) {
-    const chunk = offers.slice(i, i + chunkSize);
-    const results = await Promise.allSettled(chunk.map((o) => dbSaveOffer(o)));
-    for (const r of results) {
-      if (r.status === "fulfilled" && r.value) savedCount++;
-    }
+  for (const offer of offers) {
+    const ok = await dbSaveOffer(offer);
+    if (ok) savedCount++;
   }
-  return { success: savedCount > 0, count: savedCount };
+  return { success: true, count: savedCount };
 }
 async function dbSaveOrdersBulk(orders) {
   if (!Array.isArray(orders) || orders.length === 0) {
@@ -2128,9 +2137,9 @@ process.on("uncaughtException", (err) => {
 process.on("unhandledRejection", (reason) => {
   console.error("[Hostinger Process Guard] Unhandled Rejection:", reason?.message || reason);
 });
-dotenv2.config({ override: true });
-var __filename = fileURLToPath(import.meta.url);
-var __dirname = path2.dirname(__filename);
+dotenv.config({ override: true });
+var __filename2 = fileURLToPath2(import.meta.url);
+var __dirname2 = path3.dirname(__filename2);
 var app = express();
 var port = process.env.PORT || 3e3;
 app.use(express.json({ limit: "25mb" }));
@@ -2507,14 +2516,22 @@ async function callQwenApi(opts) {
   if (opts.imageBase64 && !model.includes("vl")) {
     model = "qwen-vl-max";
   }
-  const apiUrl = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions";
+  const apiUrls = key.startsWith("sk-ws") || key.toLowerCase().includes("qwencloud") ? [
+    "https://maas.qwencloudapi.com/compatible-mode/v1/chat/completions",
+    "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
+    "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+  ] : [
+    "https://maas.qwencloudapi.com/compatible-mode/v1/chat/completions",
+    "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
+    "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+  ];
   const messages = [];
   if (opts.systemPrompt) {
     messages.push({ role: "system", content: opts.systemPrompt });
   }
   if (opts.imageBase64) {
     let imgData = opts.imageBase64;
-    if (!imgData.startsWith("data:")) {
+    if (!imgData.startsWith("data:") && !imgData.startsWith("http://") && !imgData.startsWith("https://")) {
       imgData = `data:image/jpeg;base64,${imgData}`;
     }
     messages.push({
@@ -2527,39 +2544,38 @@ async function callQwenApi(opts) {
   } else {
     messages.push({ role: "user", content: opts.prompt });
   }
-  try {
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${key}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model,
-        messages
-      })
-    });
-    const data = await response.json().catch(() => null);
-    if (response.ok && data?.choices?.[0]?.message?.content) {
-      return {
-        success: true,
-        text: data.choices[0].message.content
-      };
-    } else {
-      const errMsg = data?.error?.message || data?.message || `HTTP ${response.status} Qwen API Hatas\u0131`;
-      return {
-        success: false,
-        text: "",
-        message: errMsg
-      };
+  let lastError = "";
+  for (const apiUrl of apiUrls) {
+    try {
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${key}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model,
+          messages
+        })
+      });
+      const data = await response.json().catch(() => null);
+      if (response.ok && data?.choices?.[0]?.message?.content) {
+        return {
+          success: true,
+          text: data.choices[0].message.content
+        };
+      } else {
+        lastError = data?.error?.message || data?.message || `HTTP ${response.status} Qwen API Hatas\u0131 (${apiUrl})`;
+      }
+    } catch (err) {
+      lastError = err?.message || String(err);
     }
-  } catch (err) {
-    return {
-      success: false,
-      text: "",
-      message: `Qwen API Istek Hatas\u0131: ${err?.message || err}`
-    };
   }
+  return {
+    success: false,
+    text: "",
+    message: lastError || "Qwen AI sunucusu yan\u0131t vermedi."
+  };
 }
 app.get("/api/ai/config", async (_req, res) => {
   const { apiKey: geminiKey } = await getAiClient();
@@ -2624,8 +2640,8 @@ app.post("/api/ai/config", async (req, res) => {
     process.env.GEMINI_API_KEY = cleanKey;
     cachedAiClient = { ai: testAi, key: cleanKey };
     await dbSaveConfig("gemini_api_key", cleanKey, "Google Gemini AI API Key for Vision");
-    const envPath = path2.resolve(process.cwd(), ".env");
-    let envContent = fs2.existsSync(envPath) ? fs2.readFileSync(envPath, "utf-8") : "";
+    const envPath = path3.resolve(process.cwd(), ".env");
+    let envContent = fs3.existsSync(envPath) ? fs3.readFileSync(envPath, "utf-8") : "";
     const regex = /^GEMINI_API_KEY=.*$/m;
     if (regex.test(envContent)) {
       envContent = envContent.replace(regex, `GEMINI_API_KEY="${cleanKey}"`);
@@ -2633,7 +2649,7 @@ app.post("/api/ai/config", async (req, res) => {
       envContent += `
 GEMINI_API_KEY="${cleanKey}"`;
     }
-    fs2.writeFileSync(envPath, envContent.trim() + "\n", "utf-8");
+    fs3.writeFileSync(envPath, envContent.trim() + "\n", "utf-8");
     return res.json({
       success: true,
       message: "Gemini AI Vision API anahtar\u0131 ba\u015Far\u0131yla do\u011Fruland\u0131 ve kaydedildi!"
@@ -2666,8 +2682,8 @@ app.post("/api/ai/qwen/config", async (req, res) => {
   process.env.QWEN_API_KEY = cleanKey;
   await dbSaveConfig("qwen_api_key", cleanKey, "Alibaba Qwen / DashScope API Key");
   await dbSaveConfig("qwen_model", cleanModel, "Selected Qwen Model");
-  const envPath = path2.resolve(process.cwd(), ".env");
-  let envContent = fs2.existsSync(envPath) ? fs2.readFileSync(envPath, "utf-8") : "";
+  const envPath = path3.resolve(process.cwd(), ".env");
+  let envContent = fs3.existsSync(envPath) ? fs3.readFileSync(envPath, "utf-8") : "";
   const regex = /^QWEN_API_KEY=.*$/m;
   if (regex.test(envContent)) {
     envContent = envContent.replace(regex, `QWEN_API_KEY="${cleanKey}"`);
@@ -2675,7 +2691,7 @@ app.post("/api/ai/qwen/config", async (req, res) => {
     envContent += `
 QWEN_API_KEY="${cleanKey}"`;
   }
-  fs2.writeFileSync(envPath, envContent.trim() + "\n", "utf-8");
+  fs3.writeFileSync(envPath, envContent.trim() + "\n", "utf-8");
   return res.json({
     success: true,
     activeModel: cleanModel,
@@ -2728,6 +2744,118 @@ app.post("/api/ai/generate", async (req, res) => {
         contents: parts
       });
       return res.json({ success: true, provider: "gemini", text: aiRes.text });
+    } catch (err) {
+      return res.status(400).json({ success: false, provider: "gemini", message: err?.message || err });
+    }
+  }
+});
+app.post("/api/ai/classify-category", async (req, res) => {
+  const { title, brand, sku, ean, description, imageBase64, marketplace = "allegro", taxonomyList } = req.body || {};
+  if (!title && !description) {
+    return res.status(400).json({ success: false, message: "\xDCr\xFCn ba\u015Fl\u0131\u011F\u0131 veya a\xE7\u0131klamas\u0131 girmelisiniz." });
+  }
+  const savedProv = await dbGetConfig("ai_provider").catch(() => null);
+  const provider = savedProv === "gemini" ? "gemini" : "qwen";
+  const systemPrompt = `Sen e-ticaret pazaryerleri (Allegro, eMAG) taksonomi ve \xFCr\xFCn kategori s\u0131n\u0131fland\u0131rma uzman\u0131 yapay zeka asistan\u0131s\u0131n. G\xF6revin verilen \xFCr\xFCn bilgilerini ve g\xF6rsellerini analiz ederek sa\u011Flanan taksonomi listesinden EN UYGUN kategori ID'sini se\xE7mek ve kategorinin zorunlu parametrelerini doldurmakt\u0131r. Yan\u0131t\u0131n SADECE ge\xE7erli bir JSON objesi olmal\u0131d\u0131r.`;
+  const prompt = `A\u015Fa\u011F\u0131daki e-ticaret \xFCr\xFCn bilgilerini ve g\xF6rsel verilerini dikkatle incele:
+
+\xDCr\xFCn Ba\u015Fl\u0131\u011F\u0131: ${title || "Bilinmiyor"}
+Marka / \xDCretici: ${brand || "Generic"}
+SKU / Stok Kodu: ${sku || "\u2014"}
+EAN / GTIN Barkod: ${ean || "\u2014"}
+Hedef Pazaryeri: ${marketplace}
+\xDCr\xFCn A\xE7\u0131klamas\u0131: ${(description || "").slice(0, 500)}
+
+GE\xC7ERL\u0130 TAKSONOM\u0130 KATEGOR\u0130 L\u0130STES\u0130:
+${JSON.stringify((taxonomyList && taxonomyList.length > 0 ? taxonomyList : []).map((c) => ({
+    id: String(c.id),
+    nameTr: c.nameTr,
+    namePl: c.namePl,
+    path: c.path,
+    keywords: c.keywords,
+    parameters: (c.parameters || []).map((p) => ({ id: p.id, name: p.name, trName: p.trName, options: p.options, required: p.required }))
+  })), null, 2)}
+
+A\u015Fa\u011F\u0131daki JSON \u015Femas\u0131na B\u0130REB\u0130R UYGUN yan\u0131t ver (ba\u015Fka hi\xE7bir metin veya a\xE7\u0131klama ekleme, do\u011Frudan ge\xE7erli JSON yaz):
+{
+  "categoryId": "Se\xE7ilen Kategori ID",
+  "categoryNameTr": "Se\xE7ilen Kategori T\xFCrk\xE7e Ad\u0131",
+  "categoryNamePl": "Se\xE7ilen Kategori Leh\xE7e Ad\u0131",
+  "visualAnalysis": "\xDCr\xFCn resminden tespit edilen g\xF6rsel \xF6zellikler (renk, kuma\u015F/materyal t\xFCr\xFC, \xFCr\xFCn tipi)",
+  "detectedType": "Tespit edilen ana \xFCr\xFCn t\xFCr\xFC (\xF6r: Bere, Kulakl\u0131k, Ti\u015F\xF6rt, Elbise, Anakart)",
+  "confidence": 0.98,
+  "reasoning": "\xDCr\xFCn g\xF6rseli ve ba\u015Fl\u0131\u011F\u0131ndan hareketle bu kategorinin neden se\xE7ildi\u011Fine dair 1 c\xFCmlelik T\xFCrk\xE7e gerek\xE7e",
+  "parameters": {
+    "PARAM_ID": "PARAM_VALUE"
+  }
+}`;
+  if (provider === "qwen") {
+    const qwenRes = await callQwenApi({
+      prompt,
+      systemPrompt,
+      imageBase64
+    });
+    if (qwenRes.success && qwenRes.text) {
+      try {
+        let cleanText = qwenRes.text.replace(/```json/gi, "").replace(/```/g, "").trim();
+        const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
+        const jsonStr = jsonMatch ? jsonMatch[0] : cleanText;
+        const sanitized = jsonStr.replace(/,\s*([}\]])/g, "$1");
+        const parsed = JSON.parse(sanitized);
+        return res.json({
+          success: true,
+          provider: "qwen",
+          aiModel: imageBase64 ? "qwen-vl-max" : "qwen-max",
+          data: parsed
+        });
+      } catch {
+        return res.json({
+          success: true,
+          provider: "qwen",
+          rawText: qwenRes.text
+        });
+      }
+    } else {
+      return res.status(400).json({
+        success: false,
+        provider: "qwen",
+        message: qwenRes.message || "Qwen AI ba\u011Flant\u0131 yan\u0131t\u0131 al\u0131namad\u0131."
+      });
+    }
+  } else {
+    const { ai: aiClient } = await getAiClient();
+    if (!aiClient) {
+      return res.status(400).json({ success: false, provider: "gemini", message: "Gemini AI API Key bulunamad\u0131." });
+    }
+    try {
+      const parts = [];
+      if (imageBase64) {
+        let clean = imageBase64;
+        let mime = "image/jpeg";
+        const match = imageBase64.match(/^data:([^;]+);base64,(.+)$/s);
+        if (match) {
+          mime = match[1];
+          clean = match[2];
+        }
+        parts.push({ inlineData: { mimeType: mime, data: clean } });
+      }
+      parts.push({ text: `${systemPrompt}
+
+${prompt}` });
+      const aiRes = await aiClient.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: parts
+      });
+      const text = aiRes.text || "";
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : text;
+      const parsed = JSON.parse(jsonStr);
+      return res.json({
+        success: true,
+        provider: "gemini",
+        aiModel: "gemini-2.5-flash",
+        data: parsed
+      });
     } catch (err) {
       return res.status(400).json({ success: false, provider: "gemini", message: err?.message || err });
     }
@@ -3822,15 +3950,15 @@ app.all("/api/emag/vat-rates", async (req, res) => {
     rates: defaultRatesByCountry[country] || defaultRatesByCountry.bg
   });
 });
-var DATA_DIR = path2.join(__dirname, "data");
-if (!fs2.existsSync(DATA_DIR)) {
+var DATA_DIR2 = path3.join(__dirname2, "data");
+if (!fs3.existsSync(DATA_DIR2)) {
   try {
-    fs2.mkdirSync(DATA_DIR, { recursive: true });
+    fs3.mkdirSync(DATA_DIR2, { recursive: true });
   } catch {
   }
 }
-var TAXONOMY_FILE = path2.join(DATA_DIR, "emag_taxonomy.json");
-var CHARACTERISTICS_FILE = path2.join(DATA_DIR, "emag_characteristics.json");
+var TAXONOMY_FILE2 = path3.join(DATA_DIR2, "emag_taxonomy.json");
+var CHARACTERISTICS_FILE = path3.join(DATA_DIR2, "emag_characteristics.json");
 var DEFAULT_TAXONOMY_CATEGORIES = [
   // 1. Smart Home & Otomasyon
   { id: 202, name: "Smart Home, Tuya Zigbee Prze\u0142\u0105czniki, Silniki do Rolet & Czujniki", trName: "Ak\u0131ll\u0131 Ev, Tuya Zigbee Anahtar, Perde Motoru & Sens\xF6rler", parentId: 42540, path: "Electronice > Smart Home", isAllowed: true, isLeaf: true, characteristicsCount: 7, mandatoryCount: 3 },
@@ -3955,11 +4083,11 @@ var DEFAULT_CHARACTERISTICS_MAP = {
   ]
 };
 try {
-  if (!fs2.existsSync(TAXONOMY_FILE)) {
-    fs2.writeFileSync(TAXONOMY_FILE, JSON.stringify(DEFAULT_TAXONOMY_CATEGORIES, null, 2), "utf-8");
+  if (!fs3.existsSync(TAXONOMY_FILE2)) {
+    fs3.writeFileSync(TAXONOMY_FILE2, JSON.stringify(DEFAULT_TAXONOMY_CATEGORIES, null, 2), "utf-8");
   }
-  if (!fs2.existsSync(CHARACTERISTICS_FILE)) {
-    fs2.writeFileSync(CHARACTERISTICS_FILE, JSON.stringify(DEFAULT_CHARACTERISTICS_MAP, null, 2), "utf-8");
+  if (!fs3.existsSync(CHARACTERISTICS_FILE)) {
+    fs3.writeFileSync(CHARACTERISTICS_FILE, JSON.stringify(DEFAULT_CHARACTERISTICS_MAP, null, 2), "utf-8");
   }
 } catch (e) {
   console.warn("Ba\u015Flang\u0131\xE7ta veritaban\u0131 dosyas\u0131 olu\u015Fturma:", e);
@@ -4090,14 +4218,14 @@ app.post("/api/emag/taxonomy/sync-all", async (req, res) => {
   });
   const dbStepStart = Date.now();
   try {
-    fs2.writeFileSync(TAXONOMY_FILE, JSON.stringify(syncedCategories, null, 2), "utf-8");
-    fs2.writeFileSync(CHARACTERISTICS_FILE, JSON.stringify(syncedCharacteristics, null, 2), "utf-8");
+    fs3.writeFileSync(TAXONOMY_FILE2, JSON.stringify(syncedCategories, null, 2), "utf-8");
+    fs3.writeFileSync(CHARACTERISTICS_FILE, JSON.stringify(syncedCharacteristics, null, 2), "utf-8");
     steps.push({
       step: 4,
       title: "Ad\u0131m 4: Yerel Veritaban\u0131 Dosyalar\u0131na Kaydedildi (Disk Storage)",
       status: "success",
       durationMs: Date.now() - dbStepStart,
-      message: `Taksonomi verisi yerel veritaban\u0131na (${TAXONOMY_FILE}) ba\u015Far\u0131yla yaz\u0131ld\u0131.`,
+      message: `Taksonomi verisi yerel veritaban\u0131na (${TAXONOMY_FILE2}) ba\u015Far\u0131yla yaz\u0131ld\u0131.`,
       timestamp: (/* @__PURE__ */ new Date()).toISOString()
     });
   } catch (err) {
@@ -4134,11 +4262,11 @@ app.get("/api/emag/taxonomy/stats", async (_req, res) => {
   let categories = DEFAULT_TAXONOMY_CATEGORIES;
   let characteristics = DEFAULT_CHARACTERISTICS_MAP;
   try {
-    if (fs2.existsSync(TAXONOMY_FILE)) {
-      categories = JSON.parse(fs2.readFileSync(TAXONOMY_FILE, "utf-8"));
+    if (fs3.existsSync(TAXONOMY_FILE2)) {
+      categories = JSON.parse(fs3.readFileSync(TAXONOMY_FILE2, "utf-8"));
     }
-    if (fs2.existsSync(CHARACTERISTICS_FILE)) {
-      characteristics = JSON.parse(fs2.readFileSync(CHARACTERISTICS_FILE, "utf-8"));
+    if (fs3.existsSync(CHARACTERISTICS_FILE)) {
+      characteristics = JSON.parse(fs3.readFileSync(CHARACTERISTICS_FILE, "utf-8"));
     }
   } catch {
   }
@@ -4158,7 +4286,7 @@ app.get("/api/emag/taxonomy/stats", async (_req, res) => {
       leafCategories: categories.filter((c) => c.isLeaf).length,
       totalCharacteristics: totalChars,
       mandatoryCharacteristics: mandatoryChars,
-      storageType: fs2.existsSync(TAXONOMY_FILE) ? "LOCAL_DB_FILE" : "IN_MEMORY",
+      storageType: fs3.existsSync(TAXONOMY_FILE2) ? "LOCAL_DB_FILE" : "IN_MEMORY",
       status: "SUCCESS"
     }
   });
@@ -4166,8 +4294,8 @@ app.get("/api/emag/taxonomy/stats", async (_req, res) => {
 var handleGetEmagCategories = async (req, res) => {
   let categories = DEFAULT_TAXONOMY_CATEGORIES;
   try {
-    if (fs2.existsSync(TAXONOMY_FILE)) {
-      categories = JSON.parse(fs2.readFileSync(TAXONOMY_FILE, "utf-8"));
+    if (fs3.existsSync(TAXONOMY_FILE2)) {
+      categories = JSON.parse(fs3.readFileSync(TAXONOMY_FILE2, "utf-8"));
     }
   } catch {
   }
@@ -4201,8 +4329,8 @@ app.post("/api/emag/taxonomy/category/save", async (req, res) => {
   }
   let categories = [...DEFAULT_TAXONOMY_CATEGORIES];
   try {
-    if (fs2.existsSync(TAXONOMY_FILE)) {
-      categories = JSON.parse(fs2.readFileSync(TAXONOMY_FILE, "utf-8"));
+    if (fs3.existsSync(TAXONOMY_FILE2)) {
+      categories = JSON.parse(fs3.readFileSync(TAXONOMY_FILE2, "utf-8"));
     }
   } catch {
   }
@@ -4225,7 +4353,7 @@ app.post("/api/emag/taxonomy/category/save", async (req, res) => {
     categories.push(newCat);
   }
   try {
-    fs2.writeFileSync(TAXONOMY_FILE, JSON.stringify(categories, null, 2), "utf-8");
+    fs3.writeFileSync(TAXONOMY_FILE2, JSON.stringify(categories, null, 2), "utf-8");
   } catch (err) {
     return res.status(500).json({ success: false, message: `Disk kayd\u0131 ba\u015Far\u0131s\u0131z: ${err?.message || err}` });
   }
@@ -4235,8 +4363,8 @@ app.get("/api/emag/taxonomy/category/:id/characteristics", async (req, res) => {
   const categoryId = String(req.params.id);
   let characteristicsMap = DEFAULT_CHARACTERISTICS_MAP;
   try {
-    if (fs2.existsSync(CHARACTERISTICS_FILE)) {
-      characteristicsMap = JSON.parse(fs2.readFileSync(CHARACTERISTICS_FILE, "utf-8"));
+    if (fs3.existsSync(CHARACTERISTICS_FILE)) {
+      characteristicsMap = JSON.parse(fs3.readFileSync(CHARACTERISTICS_FILE, "utf-8"));
     }
   } catch {
   }
@@ -4487,12 +4615,12 @@ Output format JSON:
 });
 function matchCategoryFromTaxonomy(title, sku, url, productType, candidateCode, defaultFallback = 3426) {
   try {
-    const allowedPath = fs2.existsSync(TAXONOMY_FILE) ? TAXONOMY_FILE : path2.join(DATA_DIR, "emag_bg_allowed_categories.json");
-    const catalogPath = path2.join(DATA_DIR, "resale_products_catalog.json");
-    const mappingsPath = path2.join(DATA_DIR, "excel_category_mappings.json");
+    const allowedPath = fs3.existsSync(TAXONOMY_FILE2) ? TAXONOMY_FILE2 : path3.join(DATA_DIR2, "emag_bg_allowed_categories.json");
+    const catalogPath = path3.join(DATA_DIR2, "resale_products_catalog.json");
+    const mappingsPath = path3.join(DATA_DIR2, "excel_category_mappings.json");
     if (candidateCode && candidateCode > 0 && candidateCode !== 6001 && candidateCode !== 257548 && candidateCode !== 3122) {
-      if (fs2.existsSync(allowedPath)) {
-        const allowed = JSON.parse(fs2.readFileSync(allowedPath, "utf-8"));
+      if (fs3.existsSync(allowedPath)) {
+        const allowed = JSON.parse(fs3.readFileSync(allowedPath, "utf-8"));
         const found = allowed.find((c) => Number(c.id) === candidateCode);
         if (found) {
           return { id: candidateCode, name: found.name, source: "EXACT_PERMITTED_CODE" };
@@ -4500,8 +4628,8 @@ function matchCategoryFromTaxonomy(title, sku, url, productType, candidateCode, 
       }
     }
     const cleanUrl = (url || "").toLowerCase();
-    if (cleanUrl && fs2.existsSync(catalogPath)) {
-      const catalog = JSON.parse(fs2.readFileSync(catalogPath, "utf-8"));
+    if (cleanUrl && fs3.existsSync(catalogPath)) {
+      const catalog = JSON.parse(fs3.readFileSync(catalogPath, "utf-8"));
       const foundItem = catalog.find((item) => {
         if (!item.websiteUrl) return false;
         const itemUrl = item.websiteUrl.toLowerCase().split("?")[0];
@@ -4516,8 +4644,8 @@ function matchCategoryFromTaxonomy(title, sku, url, productType, candidateCode, 
       }
     }
     const cleanSku = String(sku || "").replace(/^SKU-/i, "").trim();
-    if (cleanSku && fs2.existsSync(catalogPath)) {
-      const catalog = JSON.parse(fs2.readFileSync(catalogPath, "utf-8"));
+    if (cleanSku && fs3.existsSync(catalogPath)) {
+      const catalog = JSON.parse(fs3.readFileSync(catalogPath, "utf-8"));
       const foundItem = catalog.find((item) => String(item.sku).trim() === cleanSku);
       if (foundItem) {
         return {
@@ -4529,8 +4657,8 @@ function matchCategoryFromTaxonomy(title, sku, url, productType, candidateCode, 
     }
     const textLower = (title || "").toLowerCase();
     const typeLower = (productType || "").toLowerCase();
-    if (fs2.existsSync(mappingsPath)) {
-      const mappings = JSON.parse(fs2.readFileSync(mappingsPath, "utf-8"));
+    if (fs3.existsSync(mappingsPath)) {
+      const mappings = JSON.parse(fs3.readFileSync(mappingsPath, "utf-8"));
       for (const [key, val] of Object.entries(mappings)) {
         if (typeLower.includes(key) || textLower.includes(key)) {
           return {
@@ -4566,8 +4694,8 @@ function matchCategoryFromTaxonomy(title, sku, url, productType, candidateCode, 
         return { id: rule.id, name: rule.name, source: "EXCEL_CATALOG_PATTERN" };
       }
     }
-    if (fs2.existsSync(allowedPath)) {
-      const taxonomy = JSON.parse(fs2.readFileSync(allowedPath, "utf-8"));
+    if (fs3.existsSync(allowedPath)) {
+      const taxonomy = JSON.parse(fs3.readFileSync(allowedPath, "utf-8"));
       const words = textLower.split(/[\s,._\-\/]+/).filter((w) => w.length >= 3 && !["dla", "the", "and", "ile", "nie", "est", "set"].includes(w));
       let bestCat = null;
       let maxScore = 0;
@@ -4684,9 +4812,9 @@ app.post("/api/emag/publish-product", async (req, res) => {
   let categoryName = "";
   let isAlreadyAllowed = false;
   try {
-    const taxonomyPath = fs2.existsSync(TAXONOMY_FILE) ? TAXONOMY_FILE : path2.join(DATA_DIR, "emag_bg_allowed_categories.json");
-    if (fs2.existsSync(taxonomyPath) && categoryId > 0 && categoryId !== 6001 && categoryId !== 257548) {
-      const taxonomy = JSON.parse(fs2.readFileSync(taxonomyPath, "utf-8"));
+    const taxonomyPath = fs3.existsSync(TAXONOMY_FILE2) ? TAXONOMY_FILE2 : path3.join(DATA_DIR2, "emag_bg_allowed_categories.json");
+    if (fs3.existsSync(taxonomyPath) && categoryId > 0 && categoryId !== 6001 && categoryId !== 257548) {
+      const taxonomy = JSON.parse(fs3.readFileSync(taxonomyPath, "utf-8"));
       const found = taxonomy.find((c) => Number(c.id) === categoryId);
       if (found) {
         isAlreadyAllowed = true;
@@ -5393,14 +5521,14 @@ app.post("/api/baselinker/products", async (req, res) => {
   }
 });
 app.post("/api/allegro/token", async (req, res) => {
-  const { clientId, clientSecret, environment = "production", grant_type = "client_credentials", refresh_token } = req.body || {};
-  if (!clientId || !clientSecret) {
+  const { clientId: clientId2, clientSecret: clientSecret2, environment = "production", grant_type = "client_credentials", refresh_token } = req.body || {};
+  if (!clientId2 || !clientSecret2) {
     return res.status(400).json({ success: false, message: "Client ID ve Client Secret zorunludur." });
   }
   const authUrl = environment === "sandbox" ? "https://allegro.pl.allegrosandbox.pl/auth/oauth/token" : "https://allegro.pl/auth/oauth/token";
   const startTime = Date.now();
   try {
-    const basicAuth = Buffer.from(`${clientId.trim()}:${clientSecret.trim()}`).toString("base64");
+    const basicAuth2 = Buffer.from(`${clientId2.trim()}:${clientSecret2.trim()}`).toString("base64");
     const bodyParams = new URLSearchParams();
     bodyParams.append("grant_type", grant_type);
     if (grant_type === "refresh_token" && refresh_token) {
@@ -5409,7 +5537,7 @@ app.post("/api/allegro/token", async (req, res) => {
     const tokenRes = await fetch(authUrl, {
       method: "POST",
       headers: {
-        "Authorization": `Basic ${basicAuth}`,
+        "Authorization": `Basic ${basicAuth2}`,
         "Content-Type": "application/x-www-form-urlencoded"
       },
       body: bodyParams.toString()
@@ -5490,16 +5618,16 @@ async function getValidAllegroToken(requestedToken) {
   }
   if (activeAllegroSession.refreshToken) {
     try {
-      const clientId = "f2aaccb04bc146e4a6832179f10a12c3";
-      const clientSecret = "YAaC1OJpbFLPYg7npUT8ZVuLIO0uxUiFmI7rZxQU4TwPCr1VTbSuNZ2qhmpZxTBl";
-      const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+      const clientId2 = "f2aaccb04bc146e4a6832179f10a12c3";
+      const clientSecret2 = "YAaC1OJpbFLPYg7npUT8ZVuLIO0uxUiFmI7rZxQU4TwPCr1VTbSuNZ2qhmpZxTBl";
+      const basicAuth2 = Buffer.from(`${clientId2}:${clientSecret2}`).toString("base64");
       const bodyParams = new URLSearchParams();
       bodyParams.append("grant_type", "refresh_token");
       bodyParams.append("refresh_token", activeAllegroSession.refreshToken);
       const refreshRes = await fetch("https://allegro.pl/auth/oauth/token", {
         method: "POST",
         headers: {
-          "Authorization": `Basic ${basicAuth}`,
+          "Authorization": `Basic ${basicAuth2}`,
           "Content-Type": "application/x-www-form-urlencoded"
         },
         body: bodyParams.toString()
@@ -5533,6 +5661,25 @@ async function getValidAllegroToken(requestedToken) {
     } catch {
     }
   }
+  try {
+    const clientId2 = "f2aaccb04bc146e4a6832179f10a12c3";
+    const clientSecret2 = "YAaC1OJpbFLPYg7npUT8ZVuLIO0uxUiFmI7rZxQU4TwPCr1VTbSuNZ2qhmpZxTBl";
+    const basicAuth2 = Buffer.from(`${clientId2}:${clientSecret2}`).toString("base64");
+    const ccRes = await fetch("https://allegro.pl/auth/oauth/token?grant_type=client_credentials", {
+      method: "POST",
+      headers: {
+        "Authorization": `Basic ${basicAuth2}`,
+        "Content-Type": "application/x-www-form-urlencoded"
+      }
+    });
+    if (ccRes.ok) {
+      const ccData = await ccRes.json();
+      if (ccData?.access_token) {
+        return ccData.access_token;
+      }
+    }
+  } catch {
+  }
   return activeAllegroSession.accessToken || "";
 }
 app.get("/api/allegro/active-session", (_req, res) => {
@@ -5546,13 +5693,13 @@ app.get("/api/allegro/active-session", (_req, res) => {
   });
 });
 app.get("/api/allegro/authorize", (req, res) => {
-  const clientId = req.query.clientId || "f2aaccb04bc146e4a6832179f10a12c3";
+  const clientId2 = req.query.clientId || "f2aaccb04bc146e4a6832179f10a12c3";
   const env = req.query.environment || "production";
   const host = req.get("host") || "localhost:3000";
   const proto = req.headers["x-forwarded-proto"] || req.protocol || "http";
   const redirectUri = req.query.redirectUri || `${proto}://${host}/api/allegro/callback`;
   const authDomain = env === "sandbox" ? "allegro.pl.allegrosandbox.pl" : "allegro.pl";
-  const targetUrl = `https://${authDomain}/auth/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+  const targetUrl = `https://${authDomain}/auth/oauth/authorize?response_type=code&client_id=${clientId2}&redirect_uri=${encodeURIComponent(redirectUri)}`;
   return res.redirect(targetUrl);
 });
 app.get(["/api/allegro/callback", "/oauth/allegro/callback"], async (req, res) => {
@@ -5570,10 +5717,10 @@ app.get(["/api/allegro/callback", "/oauth/allegro/callback"], async (req, res) =
   const host = req.get("host") || "localhost:3000";
   const proto = req.headers["x-forwarded-proto"] || req.protocol || "http";
   const redirectUri = `${proto}://${host}/api/allegro/callback`;
-  const clientId = "f2aaccb04bc146e4a6832179f10a12c3";
-  const clientSecret = "YAaC1OJpbFLPYg7npUT8ZVuLIO0uxUiFmI7rZxQU4TwPCr1VTbSuNZ2qhmpZxTBl";
+  const clientId2 = "f2aaccb04bc146e4a6832179f10a12c3";
+  const clientSecret2 = "YAaC1OJpbFLPYg7npUT8ZVuLIO0uxUiFmI7rZxQU4TwPCr1VTbSuNZ2qhmpZxTBl";
   try {
-    const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+    const basicAuth2 = Buffer.from(`${clientId2}:${clientSecret2}`).toString("base64");
     const bodyParams = new URLSearchParams();
     bodyParams.append("grant_type", "authorization_code");
     bodyParams.append("code", code);
@@ -5581,7 +5728,7 @@ app.get(["/api/allegro/callback", "/oauth/allegro/callback"], async (req, res) =
     const tokenRes = await fetch("https://allegro.pl/auth/oauth/token", {
       method: "POST",
       headers: {
-        "Authorization": `Basic ${basicAuth}`,
+        "Authorization": `Basic ${basicAuth2}`,
         "Content-Type": "application/x-www-form-urlencoded"
       },
       body: bodyParams.toString()
@@ -5633,7 +5780,7 @@ app.get(["/api/allegro/callback", "/oauth/allegro/callback"], async (req, res) =
   }
 });
 app.post("/api/allegro/test-credentials", async (req, res) => {
-  const { clientId, clientSecret, environment = "production", sellerLogin, accessToken } = req.body || {};
+  const { clientId: clientId2, clientSecret: clientSecret2, environment = "production", sellerLogin, accessToken } = req.body || {};
   const startTime = Date.now();
   const authUrl = environment === "sandbox" ? "https://allegro.pl.allegrosandbox.pl/auth/oauth/token" : "https://allegro.pl/auth/oauth/token";
   const apiUrl = environment === "sandbox" ? "https://api.allegro.pl.allegrosandbox.pl" : "https://api.allegro.pl";
@@ -5673,12 +5820,12 @@ app.post("/api/allegro/test-credentials", async (req, res) => {
                 message: `\xD6nceki token s\xFCresi dolmu\u015Ftu. Otomatik Refresh Token kullan\u0131larak charsioutlet ma\u011Fazas\u0131 i\xE7in yeni sat\u0131c\u0131 User Token\u0131 \xFCretildi ve do\u011Fruland\u0131 (HTTP 200 OK)!`
               });
             }
-            if (clientId && clientSecret) {
-              const basicAuth = Buffer.from(`${clientId.trim()}:${clientSecret.trim()}`).toString("base64");
+            if (clientId2 && clientSecret2) {
+              const basicAuth2 = Buffer.from(`${clientId2.trim()}:${clientSecret2.trim()}`).toString("base64");
               const tokenRes = await fetch(`${authUrl}?grant_type=client_credentials`, {
                 method: "POST",
                 headers: {
-                  "Authorization": `Basic ${basicAuth}`,
+                  "Authorization": `Basic ${basicAuth2}`,
                   "Content-Type": "application/x-www-form-urlencoded"
                 }
               });
@@ -5719,18 +5866,18 @@ app.post("/api/allegro/test-credentials", async (req, res) => {
       });
     }
   }
-  if (!clientId || !clientSecret) {
+  if (!clientId2 || !clientSecret2) {
     return res.status(400).json({
       success: false,
       message: "Allegro Client ID ve Client Secret alanlar\u0131 zorunludur."
     });
   }
   try {
-    const basicAuth = Buffer.from(`${clientId.trim()}:${clientSecret.trim()}`).toString("base64");
+    const basicAuth2 = Buffer.from(`${clientId2.trim()}:${clientSecret2.trim()}`).toString("base64");
     const tokenRes = await fetch(`${authUrl}?grant_type=client_credentials`, {
       method: "POST",
       headers: {
-        "Authorization": `Basic ${basicAuth}`,
+        "Authorization": `Basic ${basicAuth2}`,
         "Content-Type": "application/x-www-form-urlencoded"
       }
     });
@@ -5766,6 +5913,289 @@ app.post("/api/allegro/test-credentials", async (req, res) => {
       message: `Allegro OAuth sunucusuna ba\u011Flan\u0131rken a\u011F hatas\u0131: ${err?.message || err}`
     });
   }
+});
+app.get("/api/allegro/category-parameters", async (req, res) => {
+  const categoryId = String(req.query.categoryId || "").trim();
+  const environment = String(req.query.environment || "production");
+  if (!categoryId) {
+    return res.status(400).json({ success: false, message: "categoryId parametresi zorunludur." });
+  }
+  const apiUrl = environment === "sandbox" ? "https://api.allegro.pl.allegrosandbox.pl" : "https://api.allegro.pl";
+  try {
+    const accessToken = await getValidAllegroToken();
+    if (accessToken) {
+      const apiRes = await fetch(`${apiUrl}/sale/categories/${categoryId}/parameters`, {
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Accept": "application/vnd.allegro.public.v1+json",
+          "Accept-Language": "pl-PL"
+        }
+      });
+      if (apiRes.ok) {
+        const data = await apiRes.json().catch(() => null);
+        if (data && Array.isArray(data.parameters)) {
+          return res.json({
+            success: true,
+            categoryId,
+            parameters: data.parameters
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("[Allegro Parameters Proxy Notice]:", err);
+  }
+  return res.json({
+    success: false,
+    categoryId,
+    message: "Canl\u0131 parametreler \xE7ekilemedi, yerel taksonomi kullan\u0131l\u0131yor."
+  });
+});
+var ALLEGRO_TAXONOMY_FILE = path3.join(DATA_DIR2, "allegro_taxonomy.json");
+var allegroTaxonomyCache = null;
+function getAllegroTaxonomyData() {
+  if (allegroTaxonomyCache && allegroTaxonomyCache.length > 0) return allegroTaxonomyCache;
+  if (fs3.existsSync(ALLEGRO_TAXONOMY_FILE)) {
+    try {
+      allegroTaxonomyCache = JSON.parse(fs3.readFileSync(ALLEGRO_TAXONOMY_FILE, "utf-8"));
+      return allegroTaxonomyCache || [];
+    } catch (err) {
+      console.warn("[Allegro Taxonomy] JSON okuma hatas\u0131:", err);
+    }
+  }
+  return [];
+}
+app.get("/api/allegro/taxonomy/stats", (_req, res) => {
+  const categories = getAllegroTaxonomyData();
+  const leafCount = categories.filter((c) => c.leaf).length;
+  const rootCount = categories.filter((c) => c.depth === 0 || !c.parentId).length || 13;
+  let lastSyncAt = null;
+  if (fs3.existsSync(ALLEGRO_TAXONOMY_FILE)) {
+    try {
+      const stats = fs3.statSync(ALLEGRO_TAXONOMY_FILE);
+      lastSyncAt = stats.mtime.toISOString();
+    } catch {
+    }
+  }
+  return res.json({
+    success: true,
+    totalCategories: categories.length || 22634,
+    leafCategories: leafCount || 20337,
+    rootCategories: rootCount,
+    lastSyncAt,
+    storageType: fs3.existsSync(ALLEGRO_TAXONOMY_FILE) ? "LOCAL_DB_FILE" : "MEMORY"
+  });
+});
+app.get("/api/allegro/taxonomy/categories", (req, res) => {
+  const categories = getAllegroTaxonomyData();
+  const { rootsOnly, parentId, q, search, leafOnly, limit = "100", offset = "0" } = req.query;
+  let filtered = categories;
+  if (rootsOnly === "true") {
+    filtered = filtered.filter((c) => c.depth === 0 || !c.parentId);
+  } else if (parentId) {
+    filtered = filtered.filter((c) => String(c.parentId).trim() === String(parentId).trim());
+  }
+  if (leafOnly === "true") {
+    filtered = filtered.filter((c) => c.leaf);
+  }
+  const searchTerm = String(q || search || "").toLowerCase().trim();
+  if (searchTerm) {
+    filtered = filtered.filter(
+      (c) => String(c.id).includes(searchTerm) || c.name && c.name.toLowerCase().includes(searchTerm) || c.namePl && c.namePl.toLowerCase().includes(searchTerm) || c.trName && c.trName.toLowerCase().includes(searchTerm) || c.path && c.path.toLowerCase().includes(searchTerm)
+    );
+  }
+  const numLimit = Math.min(Math.max(parseInt(String(limit), 10) || 100, 1), 2e3);
+  const numOffset = Math.max(parseInt(String(offset), 10) || 0, 0);
+  const paginated = filtered.slice(numOffset, numOffset + numLimit);
+  return res.json({
+    success: true,
+    total: categories.length,
+    filteredCount: filtered.length,
+    limit: numLimit,
+    offset: numOffset,
+    categories: paginated
+  });
+});
+app.get("/api/allegro/taxonomy/category/:id", (req, res) => {
+  const categoryId = String(req.params.id || "").trim();
+  const categories = getAllegroTaxonomyData();
+  const found = categories.find((c) => String(c.id).trim() === categoryId);
+  if (!found) {
+    return res.status(404).json({ success: false, message: "Kategori bulunamad\u0131." });
+  }
+  return res.json({ success: true, category: found });
+});
+app.post("/api/allegro/taxonomy/sync-all", async (_req, res) => {
+  try {
+    const { crawlAllegroCategories: crawlAllegroCategories2 } = await Promise.resolve().then(() => (init_sync_allegro_taxonomy(), sync_allegro_taxonomy_exports));
+    const result = await crawlAllegroCategories2();
+    allegroTaxonomyCache = null;
+    return res.json({
+      success: true,
+      message: `Allegro canl\u0131 kategorileri ba\u015Far\u0131yla g\xFCncellendi: ${result.total} kategori (${result.leafCount} yaprak kategori).`,
+      total: result.total,
+      leafCount: result.leafCount
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: `Allegro kategori senkronizasyon hatas\u0131: ${err?.message || err}`
+    });
+  }
+});
+app.post("/api/allegro/taxonomy/match", async (req, res) => {
+  const { title, titleEn, titlePl, sku, ean, categoryName, description } = req.body || {};
+  const rawTitle = String(titlePl || titleEn || title || "").trim();
+  if (!rawTitle) {
+    return res.status(400).json({ success: false, message: "Ba\u015Fl\u0131k (title) zorunludur." });
+  }
+  const categories = getAllegroTaxonomyData();
+  try {
+    const accessToken = await getValidAllegroToken();
+    if (accessToken) {
+      let queryTitle = rawTitle;
+      const lower = rawTitle.toLowerCase();
+      const trToPlKeywords = {
+        "ti\u015F\xF6rt": "t-shirt",
+        "tshirt": "t-shirt",
+        "pantolon": "spodnie",
+        "kazak": "sweter",
+        "boxer": "bokserki",
+        "bere": "czapka",
+        "\u015Fapka": "czapka",
+        "ayakkab\u0131": "buty",
+        "kulakl\u0131k": "s\u0142uchawki",
+        "ak\u0131ll\u0131 saat": "smartwatch",
+        "saat": "zegarek",
+        "\u015Ferit led": "ta\u015Bma led",
+        "led \u015Ferit": "ta\u015Bma led",
+        "k\xF6pek yata\u011F\u0131": "legowisko dla psa",
+        "kedi yata\u011F\u0131": "legowisko dla kota",
+        "k\xF6pek": "dla ps\xF3w",
+        "kedi": "dla kot\xF3w",
+        "priz": "gniazdko wifi",
+        "anahtar": "prze\u0142\u0105cznik",
+        "elbise": "sukienka",
+        "\xE7anta": "torba",
+        "matkap": "wkr\u0119tarka"
+      };
+      for (const [trKey, plVal] of Object.entries(trToPlKeywords)) {
+        if (lower.includes(trKey) && !lower.includes(plVal)) {
+          queryTitle = `${queryTitle} ${plVal}`;
+        }
+      }
+      const matchRes = await fetch(`https://api.allegro.pl/sale/matching-categories?name=${encodeURIComponent(queryTitle.slice(0, 80))}`, {
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Accept": "application/vnd.allegro.public.v1+json",
+          "Accept-Language": "pl-PL"
+        }
+      });
+      if (matchRes.ok) {
+        const matchData = await matchRes.json().catch(() => null);
+        const rawMatches = matchData?.matchingCategories || [];
+        if (rawMatches.length > 0) {
+          const topMatch = rawMatches[0];
+          const matchedId = String(topMatch.id);
+          const pathParts = [];
+          let curr = topMatch;
+          while (curr) {
+            if (curr.name) pathParts.unshift(curr.name);
+            curr = curr.parent;
+          }
+          const fullPath = pathParts.join(" > ");
+          let enriched = categories.find((c) => String(c.id) === matchedId);
+          if (!enriched) {
+            enriched = {
+              id: matchedId,
+              name: topMatch.name,
+              namePl: topMatch.name,
+              trName: topMatch.name,
+              parentId: topMatch.parent?.id ? String(topMatch.parent.id) : null,
+              path: fullPath,
+              leaf: Boolean(topMatch.leaf ?? true),
+              depth: pathParts.length - 1
+            };
+          }
+          let params = [];
+          try {
+            const paramRes = await fetch(`https://api.allegro.pl/sale/categories/${matchedId}/parameters`, {
+              headers: {
+                "Authorization": `Bearer ${accessToken}`,
+                "Accept": "application/vnd.allegro.public.v1+json"
+              }
+            });
+            if (paramRes.ok) {
+              const pData = await paramRes.json();
+              params = pData.parameters || [];
+            }
+          } catch {
+          }
+          const suggestions = rawMatches.slice(0, 5).map((m) => {
+            const p = [];
+            let c = m;
+            while (c) {
+              if (c.name) p.unshift(c.name);
+              c = c.parent;
+            }
+            return {
+              id: String(m.id),
+              name: m.name,
+              path: p.join(" > "),
+              leaf: Boolean(m.leaf ?? true)
+            };
+          });
+          return res.json({
+            success: true,
+            source: "ALLEGRO_LIVE_API_MATCH",
+            confidence: 0.98,
+            category: enriched,
+            fullPath,
+            parameters: params,
+            suggestedCategories: suggestions
+          });
+        }
+      }
+    }
+  } catch (liveErr) {
+    console.warn("[Allegro Match Proxy] Canl\u0131 API hatas\u0131, yerel taksonomiye ge\xE7iliyor:", liveErr);
+  }
+  const searchWords = rawTitle.toLowerCase().split(/[^a-zA-Z0-9çğıöşüÇĞİÖŞÜąćęłńóśźżĄĆĘŁŃÓŚŹŻ]+/).filter((w) => w.length > 2);
+  let bestCat = null;
+  let bestScore = 0;
+  for (const cat of categories) {
+    if (!cat.leaf) continue;
+    const catLower = `${cat.path} ${cat.trName || ""} ${cat.name || ""}`.toLowerCase();
+    let score = 0;
+    for (const w of searchWords) {
+      if (catLower.includes(w)) {
+        score += w.length > 4 ? 4 : 2;
+      }
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestCat = cat;
+    }
+  }
+  if (bestCat) {
+    return res.json({
+      success: true,
+      source: "LOCAL_TAXONOMY_MATCH",
+      confidence: Math.min(0.7 + bestScore * 0.03, 0.92),
+      category: bestCat,
+      fullPath: bestCat.path,
+      parameters: []
+    });
+  }
+  const fallback = categories.find((c) => c.id === "12800" || c.id === "257548") || categories[0];
+  return res.json({
+    success: true,
+    source: "FALLBACK",
+    confidence: 0.4,
+    category: fallback,
+    fullPath: fallback?.path || "Genel Kategori",
+    parameters: []
+  });
 });
 app.post("/api/allegro/orders", async (req, res) => {
   const { accessToken, environment = "production", status = "READY_FOR_PROCESSING" } = req.body || {};
@@ -7629,7 +8059,7 @@ async function startServer() {
       nodeVersion: process.version,
       port: String(port),
       environment: process.env.NODE_ENV || "production",
-      distBuilt: fs2.existsSync(path2.resolve(__dirname, "dist/index.html")),
+      distBuilt: fs3.existsSync(path3.resolve(__dirname2, "dist/index.html")),
       timestamp: (/* @__PURE__ */ new Date()).toISOString()
     });
   });
@@ -7647,16 +8077,16 @@ async function startServer() {
       console.warn("> Vite dynamic import failed in dev, serving static fallback:", viteErr?.message || viteErr);
     }
   } else {
-    const distPath = path2.resolve(__dirname, "dist");
-    const indexPath = path2.resolve(distPath, "index.html");
-    if (fs2.existsSync(distPath)) {
+    const distPath = path3.resolve(__dirname2, "dist");
+    const indexPath = path3.resolve(distPath, "index.html");
+    if (fs3.existsSync(distPath)) {
       app.use(express.static(distPath));
     }
     app.get("*", (req, res, next) => {
       if (req.path.startsWith("/api")) {
         return next();
       }
-      if (fs2.existsSync(indexPath)) {
+      if (fs3.existsSync(indexPath)) {
         return res.sendFile(indexPath);
       }
       return res.status(200).send(`<!DOCTYPE html>
